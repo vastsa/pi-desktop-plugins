@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "demo.workspace-summary",
+  "name": "Workspace Summary",
+  "version": "0.1.0",
+  "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
+  "author": "PI-Desktop",
+  "main": "main.js",
+  "categories": ["productivity", "template", "official"],
+  "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
+  "safetyNotes": "Reads the current project only. No network or write access.",
+  "ui": {
+    "panel": "renderer/index.html",
+    "width": 520,
+    "height": 560,
+    "title": "Workspace Summary"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "summary.open",
+        "title": "Workspace: Open Summary",
+        "keywords": ["summary", "workspace", "inventory", "template"],
+        "category": "Productivity"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "workspace_summary",
+        "description": "Summarize the current workspace: top-level entries, README excerpt, and rough file counts.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "maxEntries": {
+              "type": "number",
+              "description": "Max top-level entries to include (default 30)"
+            }
+          }
+        }
+      }
+    ],
+    "settings": [
+      {
+        "key": "maxEntries",
+        "type": "number",
+        "default": 30,
+        "title": "Max top-level entries"
+      },
+      {
+        "key": "includeDotfiles",
+        "type": "boolean",
+        "default": false,
+        "title": "Include dotfiles"
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "fs.read.workspace",
+    "clipboard.write",
+    "notify",
+    "agent.tool.register"
+  ],
+  "engines": {
+    "piDesktop": ">=0.2.0"
+  }
+}

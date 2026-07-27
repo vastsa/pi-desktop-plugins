@@ -66,8 +66,7 @@ def main() -> int:
         "plugins": plugins,
     }
     out = ROOT / "catalog.json"
-    out.write_text(json.dumps(catalog, indent=2) + "
-", encoding="utf-8")
+    out.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out} ({len(plugins)} plugins)")
     return 0
 

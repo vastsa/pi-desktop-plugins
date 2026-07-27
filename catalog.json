@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-07-28T00:00:00Z",
+  "updatedAt": "2026-07-27T17:23:04Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -11,20 +11,19 @@
       "description": "Official sample plugin with panel, command, and echo tool.",
       "author": "PI-Desktop",
       "categories": [
-        "demo",
         "official"
       ],
       "verified": true,
-      "downloads": 1280,
+      "downloads": 0,
       "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/demo.hello",
       "repository": "https://github.com/vastsa/pi-desktop-plugins",
-      "readmeMarkdown": "# Hello\n\nOfficial demo plugin for the PI-Desktop marketplace.",
-      "safetyNotes": "Low risk demo. Registers one agent tool and one panel.",
+      "readmeMarkdown": "# Hello\n\nOfficial demo plugin for PI-Desktop marketplace.\n",
+      "safetyNotes": null,
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-07-28T00:00:00Z",
-          "changelog": "Marketplace package with isolated panel bridge.",
+          "publishedAt": "2026-07-27T17:23:04Z",
+          "changelog": "Release 0.2.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "7c6b2b45e43481b62cdf565a02465bfd712919288fd14effaac190c7be0d7716",
           "url": "packages/demo.hello-0.2.0.piplug",
@@ -40,23 +39,22 @@
     {
       "id": "demo.workspace-notes",
       "name": "Workspace Notes",
-      "description": "Read/write a notes file in the current workspace and fetch optional snippets.",
+      "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
       "author": "PI-Desktop",
       "categories": [
-        "productivity",
         "official"
       ],
       "verified": true,
-      "downloads": 420,
+      "downloads": 0,
       "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/demo.workspace-notes",
       "repository": "https://github.com/vastsa/pi-desktop-plugins",
-      "readmeMarkdown": "# Workspace Notes\n\nDemonstrates high-risk plugin capabilities with explicit grants.",
-      "safetyNotes": "Requests workspace write and network access. Review permissions before install.",
+      "readmeMarkdown": "# Workspace Notes\n\nDemonstrates high-risk plugin capabilities with explicit grants.\n",
+      "safetyNotes": null,
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-07-28T00:00:00Z",
-          "changelog": "Initial marketplace release.",
+          "publishedAt": "2026-07-27T17:23:04Z",
+          "changelog": "Release 0.1.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "fe234301add106de9d0aef56302ec8d85bf39a6e6bbd28ca40c071c094ea15aa",
           "url": "packages/demo.workspace-notes-0.1.0.piplug",
@@ -68,6 +66,41 @@
             "net.fetch",
             "shell.openExternal",
             "clipboard.read",
+            "clipboard.write",
+            "notify",
+            "agent.tool.register"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo.workspace-summary",
+      "name": "Workspace Summary",
+      "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
+      "author": "PI-Desktop",
+      "categories": [
+        "productivity",
+        "template",
+        "official"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/demo.workspace-summary",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Workspace Summary\n\nPractical official template plugin for PI-Desktop.\n\n## What it does\n\n- Opens an isolated panel with a workspace inventory\n- Reads top-level entries and a README excerpt\n- Copies a markdown summary to the clipboard\n- Registers an agent tool: `plugin_demo_workspace_summary_workspace_summary`\n\n## Permissions\n\n- `ui.panel`\n- `fs.read.workspace`\n- `clipboard.write`\n- `notify`\n- `agent.tool.register`\n\n## Why this template\n\nUse this as the starting point for real productivity plugins:\n\n1. Keep a small `manifest.json`\n2. Register commands/tools in `main.js`\n3. Put UI in `renderer/index.html`\n4. Request only the permissions you need\n",
+      "safetyNotes": "Reads the current project only. No network or write access.",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishedAt": "2026-07-27T17:23:04Z",
+          "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
+          "minPiDesktop": ">=0.2.0",
+          "shasum": "31a5302330f281c8e933c3d3b4cb807f8b4fe8a8949fbc152dfbcd76f5a1ab68",
+          "url": "packages/demo.workspace-summary-0.1.0.piplug",
+          "sizeBytes": 12629,
+          "permissions": [
+            "ui.panel",
+            "fs.read.workspace",
             "clipboard.write",
             "notify",
             "agent.tool.register"

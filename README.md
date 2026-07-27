@@ -39,3 +39,16 @@ python3 scripts/rebuild_catalog.py
 - No symlinks / path traversal
 - Store-compressed zip packaged as `.piplug`
 - Max package size 50MB
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Practical template:
+
+```bash
+cp -R plugins/demo.workspace-summary plugins/my.plugin-id
+python3 scripts/pack_plugin.py plugins/my.plugin-id
+python3 scripts/rebuild_catalog.py
+```
+
