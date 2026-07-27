@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "providerId": "official",
+  "name": "PI-Desktop Official Plugins",
+  "updatedAt": "2026-07-28T00:00:00Z",
+  "homepage": "https://github.com/vastsa/pi-desktop-plugins",
+  "plugins": [
+    {
+      "id": "demo.hello",
+      "name": "Hello",
+      "description": "Official sample plugin with panel, command, and echo tool.",
+      "author": "PI-Desktop",
+      "categories": [
+        "demo",
+        "official"
+      ],
+      "verified": true,
+      "downloads": 1280,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/demo.hello",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Hello\n\nOfficial demo plugin for the PI-Desktop marketplace.",
+      "safetyNotes": "Low risk demo. Registers one agent tool and one panel.",
+      "versions": [
+        {
+          "version": "0.2.0",
+          "publishedAt": "2026-07-28T00:00:00Z",
+          "changelog": "Marketplace package with isolated panel bridge.",
+          "minPiDesktop": ">=0.2.0",
+          "shasum": "7c6b2b45e43481b62cdf565a02465bfd712919288fd14effaac190c7be0d7716",
+          "url": "packages/demo.hello-0.2.0.piplug",
+          "sizeBytes": 3267,
+          "permissions": [
+            "ui.panel",
+            "agent.tool.register",
+            "notify"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo.workspace-notes",
+      "name": "Workspace Notes",
+      "description": "Read/write a notes file in the current workspace and fetch optional snippets.",
+      "author": "PI-Desktop",
+      "categories": [
+        "productivity",
+        "official"
+      ],
+      "verified": true,
+      "downloads": 420,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/demo.workspace-notes",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Workspace Notes\n\nDemonstrates high-risk plugin capabilities with explicit grants.",
+      "safetyNotes": "Requests workspace write and network access. Review permissions before install.",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishedAt": "2026-07-28T00:00:00Z",
+          "changelog": "Initial marketplace release.",
+          "minPiDesktop": ">=0.2.0",
+          "shasum": "fe234301add106de9d0aef56302ec8d85bf39a6e6bbd28ca40c071c094ea15aa",
+          "url": "packages/demo.workspace-notes-0.1.0.piplug",
+          "sizeBytes": 5165,
+          "permissions": [
+            "ui.panel",
+            "fs.read.workspace",
+            "fs.write.workspace",
+            "net.fetch",
+            "shell.openExternal",
+            "clipboard.read",
+            "clipboard.write",
+            "notify",
+            "agent.tool.register"
+          ]
+        }
+      ]
+    }
+  ]
+}

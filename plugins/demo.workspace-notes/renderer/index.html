@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workspace Notes</title>
+  <style>
+    body { margin: 0; font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b1020; color: #e8eefc; padding: 16px; }
+    textarea { width: 100%; min-height: 180px; border-radius: 10px; border: 1px solid #24304d; background: #121a2f; color: inherit; padding: 10px; box-sizing: border-box; }
+    .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    button { border: 0; border-radius: 8px; padding: 8px 12px; background: #4f7cff; color: white; cursor: pointer; }
+    button.secondary { background: #24304d; }
+    .meta { color: #9db0d4; font-size: 12px; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="meta">High-risk demo: workspace files, clipboard, network, external links.</div>
+  <textarea id="notes" placeholder="Workspace NOTES.md"></textarea>
+  <div class="row">
+    <button id="reload">Reload</button>
+    <button id="save">Save</button>
+    <button class="secondary" id="clip">Copy</button>
+    <button class="secondary" id="fetch">Fetch sample</button>
+    <button class="secondary" id="docs">Open docs</button>
+  </div>
+  <script>
+    const notes = document.getElementById('notes');
+    async function reload() {
+      try { notes.value = await window.pluginBridge.invoke('fs.readText', { path: 'NOTES.md' }); }
+      catch { notes.value = '# Notes\n\n'; }
+    }
+    document.getElementById('reload').onclick = reload;
+    document.getElementById('save').onclick = async () => {
+      await window.pluginBridge.invoke('fs.writeText', { path: 'NOTES.md', content: notes.value });
+      await window.pluginBridge.invoke('ui.showToast', { message: 'Saved NOTES.md' });
+    };
+    document.getElementById('clip').onclick = async () => {
+      await window.pluginBridge.invoke('clipboard.writeText', { text: notes.value });
+      await window.pluginBridge.invoke('ui.showToast', { message: 'Copied to clipboard' });
+    };
+    document.getElementById('fetch').onclick = async () => {
+      const res = await window.pluginBridge.invoke('net.fetch', {
+        url: 'https://example.com',
+        method: 'GET',
+        timeoutMs: 8000,
+      });
+      notes.value = `${notes.value.trim()}\n\n<!-- fetched status ${res.status} -->\n`;
+    };
+    document.getElementById('docs').onclick = async () => {
+      await window.pluginBridge.invoke('shell.openExternal', { url: 'https://example.com' });
+    };
+    reload();
+  </script>
+</body>
+</html>

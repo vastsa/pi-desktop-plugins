@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "demo.workspace-notes",
+  "name": "Workspace Notes",
+  "version": "0.1.0",
+  "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
+  "author": "PI-Desktop",
+  "main": "main.js",
+  "ui": {"panel": "renderer/index.html", "width": 480, "height": 420, "title": "Workspace Notes"},
+  "contributes": {
+    "commands": [{"id": "notes.open", "title": "Notes: Open Panel", "keywords": ["notes", "workspace"], "category": "Productivity"}],
+    "agentTools": [{"name": "save_note", "description": "Append a note to NOTES.md in the workspace", "risk": "high", "schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}]
+  },
+  "permissions": ["ui.panel", "fs.read.workspace", "fs.write.workspace", "net.fetch", "shell.openExternal", "clipboard.read", "clipboard.write", "notify", "agent.tool.register"]
+}

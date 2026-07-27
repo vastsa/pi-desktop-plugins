@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hello Plugin</title>
+    <style>
+      body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 16px; background: #0b1020; color: #e8eefc; }
+      .card { border: 1px solid #24304d; border-radius: 12px; padding: 16px; background: #121a2f; }
+      button { margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px; background: #4f7cff; color: white; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Hello Plugin</h2>
+      <p>Official marketplace panel with host bridge.</p>
+      <button id="ping">Toast Ping</button>
+    </div>
+    <script>
+      document.getElementById("ping").addEventListener("click", async () => {
+        if (window.pluginBridge?.invoke) {
+          await window.pluginBridge.invoke("ui.showToast", { message: "Hello panel bridge" });
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "demo.hello",
+  "name": "Hello",
+  "version": "0.2.0",
+  "description": "Official sample plugin with panel, command, and echo tool.",
+  "author": "PI-Desktop",
+  "main": "main.js",
+  "ui": {"panel": "renderer/index.html", "width": 420, "height": 320, "title": "Hello Plugin"},
+  "contributes": {
+    "commands": [{"id": "hello.open", "title": "Hello: Open Panel", "keywords": ["hello", "demo"], "category": "Demo"}],
+    "agentTools": [{"name": "echo_text", "description": "Echo text back to the agent", "risk": "low", "schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}],
+    "settings": [{"key": "greeting", "type": "string", "default": "Hello from marketplace", "title": "Greeting"}]
+  },
+  "permissions": ["ui.panel", "agent.tool.register", "notify"]
+}
