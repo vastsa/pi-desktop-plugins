@@ -20,20 +20,12 @@
         <button type="button" class="segment" data-range="1y">1Y</button>
         <button type="button" class="segment" data-range="all">ALL</button>
       </div>
-      <button type="button" class="icon-button" id="refreshBtn" title="Refresh" aria-label="Refresh">
+      <button type="button" class="icon-button" id="refreshBtn" title="Reload latest snapshot" aria-label="Reload latest snapshot">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
           <path d="M21 3v5h-5" />
           <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
           <path d="M8 16H3v5" />
-        </svg>
-      </button>
-      <button type="button" class="icon-button" id="pricesBtn" title="Prices" aria-label="Prices">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20 7h-9" />
-          <path d="M14 17H5" />
-          <circle cx="17" cy="17" r="3" />
-          <circle cx="7" cy="7" r="3" />
         </svg>
       </button>
     </div>
@@ -71,11 +63,6 @@
           <div class="tile-label" id="tileCacheLabel">Cache reuse</div>
           <div class="tile-value" id="tileCache">—</div>
           <div class="tile-note" id="tileCacheNote"></div>
-        </div>
-        <div class="tile">
-          <div class="tile-label" id="tileCostLabel">Estimated spend</div>
-          <div class="tile-value" id="tileCost">—</div>
-          <div class="tile-note" id="tileCostNote"></div>
         </div>
       </section>
 
@@ -125,7 +112,7 @@
       <div class="split">
         <section class="block">
           <div class="block-head">
-            <h2 id="projectsTitle">Projects</h2>
+            <h2 id="providersTitle">Providers</h2>
           </div>
           <div class="ranking" id="projectList"></div>
         </section>
@@ -144,29 +131,6 @@
       </footer>
     </div>
   </main>
-
-  <div class="drawer-scrim" id="drawerScrim" hidden></div>
-  <aside class="drawer" id="drawer" hidden aria-labelledby="drawerTitle">
-    <div class="drawer-head">
-      <h2 id="drawerTitle">Price table</h2>
-      <button type="button" class="icon-button" id="drawerClose" aria-label="Close">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-      </button>
-    </div>
-    <p class="drawer-intro" id="drawerIntro"></p>
-    <label class="field">
-      <span id="currencyLabel">Currency</span>
-      <input type="text" id="currencyInput" maxlength="8" spellcheck="false" />
-    </label>
-    <div class="price-rows" id="priceRows"></div>
-    <div class="drawer-foot">
-      <span class="drawer-status" id="drawerStatus"></span>
-      <button type="button" class="primary" id="savePrices">Save</button>
-    </div>
-  </aside>
 
   <script src="panel.js"></script>
 </body>

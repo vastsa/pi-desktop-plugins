@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "id": "pi.token-insights",
   "name": "Token Insights",
-  "version": "0.1.0",
-  "description": "A themed dashboard for the tokens you have spent on this machine: trends, models, projects, rhythm, streak, and an optional cost estimate from your own price table.",
+  "version": "0.2.0",
+  "description": "A private, local JSONL scanner that turns recorded PI-Desktop token usage into trends, model and provider rankings, rhythm, and encouraging streaks.",
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": ["productivity", "official"],
-  "changelog": "First release: hero totals with period delta, 12-month activity heatmap, model and project rankings, hourly and weekday rhythm, streak, user-supplied price table, and a token_usage_summary agent tool.",
-  "safetyNotes": "Reads aggregate token counts from local sessions only. It never reads message content, never writes to your data, and never touches the network.",
+  "changelog": "Native local scanning: parses session JSONL files in the plugin process, stores a de-identified dashboard snapshot, adds provider categories, and removes the unavailable host usage API dependency.",
+  "safetyNotes": "Scans local session JSONL metadata only. It aggregates usage, time, model, provider, and short session IDs; it does not retain or expose message content, tool arguments, project paths, or session titles, and it makes no network requests.",
   "ui": {
     "panel": "renderer/index.html",
     "width": 1120,
@@ -21,14 +21,14 @@
       {
         "id": "tokenInsights.open",
         "title": "Token Insights: Open",
-        "keywords": ["token", "usage", "tokens", "cost", "spend", "stats", "用量", "统计"],
+        "keywords": ["token", "usage", "tokens", "stats", "用量", "统计"],
         "category": "Productivity"
       }
     ],
     "agentTools": [
       {
         "name": "token_usage_summary",
-        "description": "Summarize local token usage: totals, per-model and per-project rankings, busiest hours, activity streak, and estimated cost when the user has filled in a price table. Use it for questions like 'which model cost me the most this month' or 'how many tokens did I use last week'.",
+        "description": "Scan local PI-Desktop session JSONL metadata and summarize token usage by model, provider, day, or short session ID without returning message text.",
         "risk": "medium",
         "schema": {
           "type": "object",
@@ -43,7 +43,7 @@
             },
             "groupBy": {
               "type": "string",
-              "enum": ["model", "project", "day", "session"],
+              "enum": ["model", "provider", "day", "session"],
               "description": "Which ranking to expand in the reply. Defaults to model."
             },
             "limit": {
@@ -53,26 +53,10 @@
           }
         }
       }
-    ],
-    "settings": [
-      {
-        "key": "currency",
-        "type": "string",
-        "default": "USD",
-        "title": "Currency",
-        "description": "ISO code used to render estimated cost, e.g. USD, EUR, CNY, JPY."
-      },
-      {
-        "key": "prices",
-        "type": "json",
-        "default": {},
-        "title": "Price table",
-        "description": "Your own price per million tokens, keyed by model id: { \"model-id\": { \"input\": 3, \"output\": 15, \"cacheRead\": 0.3, \"cacheWrite\": 3.75 } }. Models you leave out are shown without a cost. No vendor prices ship with this plugin."
-      }
     ]
   },
-  "permissions": ["ui.panel", "usage.read", "agent.tool.register"],
+  "permissions": ["ui.panel", "agent.tool.register"],
   "engines": {
-    "piDesktop": ">=0.2.9"
+    "piDesktop": ">=0.2.0"
   }
 }

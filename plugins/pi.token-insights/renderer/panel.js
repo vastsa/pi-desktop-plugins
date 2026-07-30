@@ -3,15 +3,10 @@
  *
  * A panel window has no `pi` object — it reaches the host through
  * window.pluginBridge, which passes the same permission gate the plugin process
- * does. Everything here is read-only except the price table.
- *
- * The cost formula is duplicated in main.js (the agent tool cannot call into a
- * panel and vice versa). Keep the two in step.
+ * does. The panel only renders the latest de-identified local snapshot.
  */
 
 const bridge = window.pluginBridge;
-const MILLION = 1_000_000;
-const PRICE_KEYS = ["input", "output", "cacheRead", "cacheWrite"];
 const HEAT_WEEKS = 53;
 const SPARK_BARS = 60;
 
@@ -32,13 +27,9 @@ const STRINGS = {
     input: "Input",
     output: "Output",
     cache: "Cache reuse",
-    cost: "Estimated spend",
     shareOfTotal: (p) => `${p}% of total`,
     cacheNote: (t) => `${t} tokens replayed from cache`,
     cacheNone: "No cached reads in this window",
-    costUnpriced: (n) => `${n} ${n === 1 ? "model" : "models"} unpriced`,
-    costEmpty: "Add prices to see an estimate",
-    costAllPriced: "Every model in this window is priced",
     activity: "Activity",
     activityNote: "last 12 months",
     streakNote: (c, l) => `Current ${c} ${c === 1 ? "day" : "days"} · longest ${l}`,
@@ -49,9 +40,8 @@ const STRINGS = {
     modelsNote: (n) => `${n} in this window`,
     rhythm: "Rhythm",
     rhythmNote: (h) => `Peak ${pad(h)}:00–${pad((h + 1) % 24)}:00`,
-    projects: "Projects",
+    providers: "Providers",
     sessions: "Top sessions",
-    noProject: "(no project)",
     untitled: "(untitled)",
     empty: "Nothing here yet",
     provenance: (files, time) =>
@@ -61,22 +51,9 @@ const STRINGS = {
       "Aggregate counts only — message content is never read. Not a statement of your remaining subscription balance.",
     emptyTitle: "Nothing counted yet",
     emptyBody:
-      "Token Insights reads the usage recorded on each assistant reply. Have a conversation, then come back — this page fills itself in.",
+      "A local snapshot is being prepared. Run Token Insights: Open from the command palette to scan again right away.",
     errorTitle: "Could not read usage",
-    deniedBody:
-      "This plugin needs the “Read local token usage” permission. Grant it in Settings → Plugins, then reopen this panel.",
-    drawerTitle: "Price table",
-    drawerIntro:
-      "Enter what you actually pay, per million tokens. Nothing is pre-filled: vendor prices change, and a stale guess is worse than no number. Models you leave blank show no cost and stay out of the total.",
-    currency: "Currency",
-    save: "Save",
-    saved: "Saved",
-    saveFailed: "Could not save",
-    priceIn: "In",
-    priceOut: "Out",
-    priceCacheRead: "C·read",
-    priceCacheWrite: "C·write",
-    noModels: "No models to price yet.",
+    deniedBody: "This plugin needs panel and agent-tool permissions. Grant them in Settings → Plugins, then reopen this panel.",
     weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     dayInitials: ["M", "", "W", "", "F", "", ""],
     months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -98,13 +75,9 @@ const STRINGS = {
     input: "输入",
     output: "输出",
     cache: "缓存复用",
-    cost: "预估花费",
     shareOfTotal: (p) => `占总量 ${p}%`,
     cacheNote: (t) => `${t} tokens 来自缓存复用`,
     cacheNone: "这段时间没有缓存读取",
-    costUnpriced: (n) => `${n} 个模型未定价`,
-    costEmpty: "填入价格后显示金额",
-    costAllPriced: "这段时间的模型都已定价",
     activity: "活动",
     activityNote: "最近 12 个月",
     streakNote: (c, l) => `当前连续 ${c} 天 · 最长 ${l} 天`,
@@ -115,9 +88,8 @@ const STRINGS = {
     modelsNote: (n) => `共 ${n} 个`,
     rhythm: "节奏",
     rhythmNote: (h) => `高光时段 ${pad(h)}:00–${pad((h + 1) % 24)}:00`,
-    projects: "项目",
+    providers: "提供商",
     sessions: "高消耗会话",
-    noProject: "（无项目）",
     untitled: "（未命名）",
     empty: "暂无数据",
     provenance: (files, time) =>
@@ -125,22 +97,9 @@ const STRINGS = {
     disclaimer: "仅统计聚合数量，从不读取消息内容；也不代表订阅剩余额度。",
     emptyTitle: "还没有可统计的数据",
     emptyBody:
-      "Token Insights 读取每条助手回复上记录的用量。先聊几句再回来，这一页会自己长出来。",
+      "本地快照正在准备中。从命令面板运行 Token Insights: Open，即可立即重新扫描。",
     errorTitle: "无法读取用量",
-    deniedBody:
-      "此插件需要“读取本机 token 用量”权限。请在 设置 → 插件 中授权后重新打开面板。",
-    drawerTitle: "价格表",
-    drawerIntro:
-      "按每百万 token 填入你实际支付的价格。插件不预置任何厂商价格：价格会变，过期的猜测比没有数字更糟。留空的模型不显示金额，也不计入总额。",
-    currency: "币种",
-    save: "保存",
-    saved: "已保存",
-    saveFailed: "保存失败",
-    priceIn: "输入",
-    priceOut: "输出",
-    priceCacheRead: "缓存读",
-    priceCacheWrite: "缓存写",
-    noModels: "暂无可定价的模型。",
+    deniedBody: "此插件需要面板与 Agent 工具权限。请在 设置 → 插件 中授权后重新打开面板。",
     weekdays: ["一", "二", "三", "四", "五", "六", "日"],
     dayInitials: ["一", "", "三", "", "五", "", ""],
     months: [
@@ -156,7 +115,6 @@ const state = {
   t: STRINGS.en,
   locale: "en",
   range: "30d",
-  settings: { currency: "USD", prices: {} },
   allSummary: null,
   rangeSummary: null,
   reduceMotion: false,
@@ -188,18 +146,6 @@ function compact(value) {
 
 function grouped(value) {
   return num(value).toLocaleString(state.locale === "zh" ? "zh-CN" : "en-US");
-}
-
-function money(amount, currency) {
-  try {
-    return new Intl.NumberFormat(state.locale === "zh" ? "zh-CN" : "en-US", {
-      style: "currency",
-      currency: currency || "USD",
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${amount.toFixed(2)} ${currency || "USD"}`;
-  }
 }
 
 function share(part, whole) {
@@ -244,55 +190,6 @@ function svgIcon(paths) {
 
 const TRENDING_UP = ["M16 7h6v6", "m22 7-8.5 8.5-5-5L2 17"];
 const TRENDING_DOWN = ["M16 17h6v-6", "m22 17-8.5-8.5-5 5L2 7"];
-
-/* -------------------------------------------------------------------- cost */
-
-function rateFor(prices, modelId) {
-  const entry = prices && typeof prices === "object" ? prices[modelId] : null;
-  if (!entry || typeof entry !== "object") return null;
-  const rate = {};
-  let priced = false;
-  for (const key of PRICE_KEYS) {
-    const value = num(entry[key]);
-    rate[key] = value;
-    if (value > 0) priced = true;
-  }
-  return priced ? rate : null;
-}
-
-/** Priced models only; unpriced ones are counted, not silently zeroed. */
-function estimateCost(models, prices) {
-  let total = 0;
-  let pricedModels = 0;
-  let unpriced = 0;
-  const perModel = new Map();
-  for (const model of models || []) {
-    const rate = rateFor(prices, model.modelId);
-    if (!rate) {
-      unpriced += 1;
-      continue;
-    }
-    const cost =
-      (num(model.input) * rate.input +
-        num(model.output) * rate.output +
-        num(model.cacheRead) * rate.cacheRead +
-        num(model.cacheWrite) * rate.cacheWrite) /
-      MILLION;
-    perModel.set(model.modelId, cost);
-    total += cost;
-    pricedModels += 1;
-  }
-  return { total, pricedModels, unpriced, perModel };
-}
-
-/* ------------------------------------------------------------------ ranges */
-
-function rangeParams(range) {
-  const tzOffsetMinutes = -new Date().getTimezoneOffset();
-  if (range === "all") return { tzOffsetMinutes };
-  const days = range === "1y" ? 364 : 29;
-  return { sinceMs: addDays(startOfToday(), -days).getTime(), tzOffsetMinutes };
-}
 
 /**
  * Sparse daily buckets -> a dense series over the visible window, then folded
@@ -392,7 +289,7 @@ function countUp(node, target) {
   requestAnimationFrame(frame);
 }
 
-function renderTiles(summary, cost) {
+function renderTiles(summary) {
   const t = state.t;
   const totals = summary.totals || {};
   const total = num(totals.total);
@@ -400,7 +297,6 @@ function renderTiles(summary, cost) {
   el("tileInputLabel").textContent = t.input;
   el("tileOutputLabel").textContent = t.output;
   el("tileCacheLabel").textContent = t.cache;
-  el("tileCostLabel").textContent = t.cost;
 
   el("tileInput").textContent = compact(totals.input);
   el("tileInputNote").textContent = t.shareOfTotal(share(totals.input, total));
@@ -412,17 +308,6 @@ function renderTiles(summary, cost) {
   el("tileCache").textContent = readable > 0 ? `${share(cacheRead, readable)}%` : "—";
   el("tileCacheNote").textContent = cacheRead > 0 ? t.cacheNote(compact(cacheRead)) : t.cacheNone;
 
-  const costValue = el("tileCost");
-  const costNote = el("tileCostNote");
-  if (cost.pricedModels > 0) {
-    costValue.textContent = money(cost.total, state.settings.currency);
-    costNote.textContent = cost.unpriced > 0 ? t.costUnpriced(cost.unpriced) : t.costAllPriced;
-    costNote.dataset.tone = cost.unpriced > 0 ? "warning" : "";
-  } else {
-    costValue.textContent = "—";
-    costNote.textContent = t.costEmpty;
-    costNote.dataset.tone = "";
-  }
 }
 
 function renderHeatmap(summary) {
@@ -542,12 +427,12 @@ function emptyRow(text) {
   return row;
 }
 
-function renderRankings(summary, cost) {
+function renderRankings(summary) {
   const t = state.t;
   const total = num(summary.totals?.total);
 
   el("modelsTitle").textContent = t.models;
-  el("projectsTitle").textContent = t.projects;
+  el("providersTitle").textContent = t.providers;
   el("sessionsTitle").textContent = t.sessions;
 
   const models = (summary.models || []).slice(0, 6);
@@ -557,32 +442,27 @@ function renderRankings(summary, cost) {
   clear(modelList);
   if (!models.length) modelList.appendChild(emptyRow(t.empty));
   for (const model of models) {
-    const modelCost = cost.perModel.get(model.modelId);
-    const meta = [
-      `${compact(model.input)} ${t.priceIn.toLowerCase()} · ${compact(model.output)} ${t.priceOut.toLowerCase()}`,
-    ];
-    if (typeof modelCost === "number") meta.push(money(modelCost, state.settings.currency));
     modelList.appendChild(
       rankRow(
         model.modelId,
         `${compact(model.total)} · ${share(model.total, total)}%`,
         num(model.total) / top,
-        meta.join("  ·  "),
+        `${compact(model.input)} input · ${compact(model.output)} output`,
       ),
     );
   }
 
-  const projects = (summary.projects || []).slice(0, 6);
-  const topProject = num(projects[0]?.total) || 1;
+  const providers = (summary.providers || []).slice(0, 6);
+  const topProvider = num(providers[0]?.total) || 1;
   const projectList = el("projectList");
   clear(projectList);
-  if (!projects.length) projectList.appendChild(emptyRow(t.empty));
-  for (const project of projects) {
+  if (!providers.length) projectList.appendChild(emptyRow(t.empty));
+  for (const provider of providers) {
     projectList.appendChild(
       rankRow(
-        project.name || project.path || t.noProject,
-        `${compact(project.total)} · ${share(project.total, total)}%`,
-        num(project.total) / topProject,
+        provider.providerId || "Unknown provider",
+        `${compact(provider.total)} · ${share(provider.total, total)}%`,
+        num(provider.total) / topProvider,
       ),
     );
   }
@@ -670,111 +550,6 @@ function renderFooter(summary) {
   el("disclaimerLine").textContent = t.disclaimer;
 }
 
-/* ------------------------------------------------------------------ drawer */
-
-function renderDrawer() {
-  const t = state.t;
-  el("drawerTitle").textContent = t.drawerTitle;
-  el("drawerIntro").textContent = t.drawerIntro;
-  el("currencyLabel").textContent = t.currency;
-  el("savePrices").textContent = t.save;
-  el("currencyInput").value = state.settings.currency || "USD";
-
-  const rows = el("priceRows");
-  clear(rows);
-  const models = (state.allSummary?.models || []).slice(0, 40);
-  if (!models.length) {
-    rows.appendChild(emptyRow(t.noModels));
-    return;
-  }
-  for (const model of models) {
-    const block = document.createElement("div");
-
-    const head = document.createElement("div");
-    head.className = "price-row-head";
-    const name = document.createElement("div");
-    name.className = "price-model";
-    name.textContent = model.modelId;
-    name.title = model.modelId;
-    const usage = document.createElement("div");
-    usage.className = "price-usage";
-    usage.textContent = `${compact(model.total)} tokens`;
-    head.appendChild(name);
-    head.appendChild(usage);
-    block.appendChild(head);
-
-    const grid = document.createElement("div");
-    grid.className = "price-grid";
-    const labels = {
-      input: t.priceIn,
-      output: t.priceOut,
-      cacheRead: t.priceCacheRead,
-      cacheWrite: t.priceCacheWrite,
-    };
-    for (const key of PRICE_KEYS) {
-      const cell = document.createElement("label");
-      cell.className = "price-cell";
-      const label = document.createElement("span");
-      label.textContent = labels[key];
-      const input = document.createElement("input");
-      input.type = "number";
-      input.min = "0";
-      input.step = "0.01";
-      input.dataset.model = model.modelId;
-      input.dataset.key = key;
-      const existing = state.settings.prices?.[model.modelId]?.[key];
-      input.value = Number.isFinite(Number(existing)) && Number(existing) > 0 ? String(existing) : "";
-      cell.appendChild(label);
-      cell.appendChild(input);
-      grid.appendChild(cell);
-    }
-    block.appendChild(grid);
-    rows.appendChild(block);
-  }
-}
-
-function openDrawer() {
-  renderDrawer();
-  el("drawerStatus").textContent = "";
-  el("drawer").hidden = false;
-  el("drawerScrim").hidden = false;
-  el("currencyInput").focus();
-}
-
-function closeDrawer() {
-  el("drawer").hidden = true;
-  el("drawerScrim").hidden = true;
-}
-
-async function savePrices() {
-  // plugin.setSettings merges only at the top level, so `prices` is replaced
-  // wholesale. Start from what is stored and rewrite just the rendered models,
-  // or a model further down the list than the drawer shows would lose its price.
-  const prices = { ...(state.settings.prices || {}) };
-  const touched = new Set();
-  for (const input of el("priceRows").querySelectorAll("input[data-model]")) {
-    const modelId = input.dataset.model;
-    if (!touched.has(modelId)) {
-      touched.add(modelId);
-      delete prices[modelId];
-    }
-    const value = Number(input.value);
-    if (!Number.isFinite(value) || value <= 0) continue;
-    prices[modelId] = prices[modelId] || {};
-    prices[modelId][input.dataset.key] = value;
-  }
-  const currency = (el("currencyInput").value || "USD").trim().toUpperCase().slice(0, 8) || "USD";
-  try {
-    await bridge.invoke("plugin.setSettings", { currency, prices });
-    state.settings = { currency, prices };
-    el("drawerStatus").textContent = state.t.saved;
-    renderDrawer();
-    paint();
-  } catch (error) {
-    el("drawerStatus").textContent = `${state.t.saveFailed}: ${error?.message || error}`;
-  }
-}
-
 /* ------------------------------------------------------------------- shell */
 
 function showState(title, body) {
@@ -787,34 +562,32 @@ function showState(title, body) {
 function paint() {
   const summary = state.rangeSummary;
   if (!summary) return;
-  const cost = estimateCost(summary.models, state.settings.prices);
   renderHero(summary);
-  renderTiles(summary, cost);
+  renderTiles(summary);
   renderHeatmap(state.allSummary || summary);
-  renderRankings(summary, cost);
+  renderRankings(summary);
   renderRhythm(summary);
   renderFooter(summary);
   el("stateBox").hidden = true;
   el("content").hidden = false;
 }
 
-async function load({ force = false } = {}) {
+async function load() {
   const button = el("refreshBtn");
   button.classList.add("is-busy");
   try {
     const settings = await bridge.invoke("plugin.getSettings");
-    state.settings = {
-      currency: typeof settings?.currency === "string" && settings.currency ? settings.currency : "USD",
-      prices: settings?.prices && typeof settings.prices === "object" ? settings.prices : {},
-    };
-
-    if (force || !state.allSummary) {
-      state.allSummary = await bridge.invoke("usage.summary", rangeParams("all"));
+    const snapshot = settings?.usageSnapshot;
+    if (!snapshot?.all || !snapshot?.thirtyDays || !snapshot?.oneYear) {
+      showState(state.t.emptyTitle, state.t.emptyBody);
+      return;
     }
-    state.rangeSummary =
-      state.range === "all"
-        ? state.allSummary
-        : await bridge.invoke("usage.summary", rangeParams(state.range));
+    state.allSummary = snapshot.all;
+    state.rangeSummary = state.range === "all"
+      ? snapshot.all
+      : state.range === "1y"
+        ? snapshot.oneYear
+        : snapshot.thirtyDays;
 
     if (num(state.allSummary?.totals?.total) <= 0) {
       showState(state.t.emptyTitle, state.t.emptyBody);
@@ -878,20 +651,12 @@ async function boot() {
   bridge.on("theme", (payload) => applyTheme(payload?.theme));
 
   wireRange();
-  el("refreshBtn").addEventListener("click", () => load({ force: true }));
-  el("pricesBtn").addEventListener("click", openDrawer);
-  el("drawerClose").addEventListener("click", closeDrawer);
-  el("drawerScrim").addEventListener("click", closeDrawer);
-  el("savePrices").addEventListener("click", savePrices);
+  el("refreshBtn").addEventListener("click", load);
   // Bound once: renderHeatmap only refills the grid, it never replaces it.
   el("heatmap").addEventListener("mouseleave", () => {
     el("heatTip").textContent = "";
   });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !el("drawer").hidden) closeDrawer();
-  });
-
-  await load({ force: true });
+  await load();
 }
 
 boot();

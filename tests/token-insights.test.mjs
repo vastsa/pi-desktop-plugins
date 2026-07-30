@@ -1,139 +1,210 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import vm from "node:vm";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(join(here, "../plugins/pi.token-insights/main.js"), "utf8");
+const require = createRequire(import.meta.url);
+const plugin = require("../plugins/pi.token-insights/main.js");
 const manifest = JSON.parse(
   readFileSync(join(here, "../plugins/pi.token-insights/manifest.json"), "utf8"),
 );
 
-function summary() {
+function createFixture() {
+  const root = mkdtempSync(join(tmpdir(), "token-insights-"));
+  const sessions = join(root, "sessions");
+  mkdirSync(sessions, { recursive: true });
   return {
-    generatedAt: Date.now(),
-    scannedFiles: 3,
-    sinceMs: null,
-    untilMs: null,
-    totals: {
-      input: 1_000_000,
-      output: 500_000,
-      cacheRead: 100,
-      cacheWrite: 200,
-      reasoning: 0,
-      total: 1_500_300,
-      messages: 8,
-      sessions: 2,
-      activeDays: 3,
-    },
-    previousTotals: { total: 1_000_000 },
-    models: [
-      {
-        modelId: "alpha",
-        providerId: "local",
-        input: 1_000_000,
-        output: 500_000,
-        cacheRead: 100,
-        cacheWrite: 200,
-        reasoning: 0,
-        total: 1_500_300,
-        messages: 8,
-        sessions: 2,
-      },
-    ],
-    projects: [{ name: "desktop", path: "/work/desktop", total: 1_500_300, sessions: 2 }],
-    topSessions: [{ id: "s1", title: "Implement dashboard", total: 1_500_300, messages: 8 }],
-    daily: [
-      { date: "2026-07-02", total: 1_000_000, messages: 4 },
-      { date: "2026-07-01", total: 500_300, messages: 4 },
-    ],
-    hourly: Array.from({ length: 24 }, (_, hour) => ({ total: hour === 15 ? 500 : 0 })),
-    weekday: Array.from({ length: 7 }, () => ({ total: 0, messages: 0 })),
-    streak: { current: 4, longest: 8 },
+    root,
+    sessions,
+    dataPath: join(root, "plugins", "data", "pi.token-insights"),
+    cleanup: () => rmSync(root, { recursive: true, force: true }),
   };
 }
 
-function loadPlugin(overrides = {}) {
-  const calls = { registered: [], unregistered: [], ranges: [] };
-  const pi = {
-    plugin: {
-      getSettings: async () => ({
-        currency: "USD",
-        prices: { alpha: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 3 } },
-        ...overrides.settings,
-      }),
-    },
-    usage: {
-      summary: async (range) => {
-        calls.ranges.push(range);
-        return overrides.summary ?? summary();
-      },
-    },
-    commands: {
-      register: async (command) => calls.registered.push({ type: "command", value: command }),
-      unregister: async (id) => calls.unregistered.push({ type: "command", value: id }),
-    },
-    agent: {
-      registerTool: async (tool) => calls.registered.push({ type: "tool", value: tool }),
-      unregisterTool: async (name) => calls.unregistered.push({ type: "tool", value: name }),
-    },
-    ui: { openPanel: async () => undefined },
-  };
-  const module = { exports: {} };
-  vm.runInNewContext(source, { module, exports: module.exports, pi, Date, Intl, Map, Math, Number, Object, String, Array, RegExp }, { filename: "main.js" });
-  return { calls, plugin: module.exports };
+function writeJsonl(directory, name, records) {
+  writeFileSync(join(directory, name), `${records.map((record) => JSON.stringify(record)).join("\n")}\n`);
 }
 
-test("manifest requests only the dashboard, usage, and agent-tool permissions", () => {
-  assert.deepEqual(manifest.permissions, ["ui.panel", "usage.read", "agent.tool.register"]);
-  assert.equal(manifest.engines.piDesktop, ">=0.2.9");
-  assert.equal(manifest.ui.panel, "renderer/index.html");
-});
+function usageRecord({ createdAt, modelId = "alpha", providerId = "local", usage, content = "private" }) {
+  return {
+    type: "message",
+    role: "assistant",
+    createdAt,
+    content: [{ type: "text", text: content }],
+    meta: { modelId, providerId, usage },
+  };
+}
 
-test("loads the command and agent tool, then removes both on unload", async () => {
-  const { calls, plugin } = loadPlugin();
-  await plugin.onLoad();
+function waitForBackgroundScan() {
+  return new Promise((resolve) => setTimeout(resolve, 10));
+}
 
-  assert.equal(calls.registered.length, 2);
-  assert.equal(calls.registered[0].value.id, "tokenInsights.open");
-  assert.equal(calls.registered[1].value.name, "token_usage_summary");
-
-  await plugin.onUnload();
-  assert.deepEqual(calls.unregistered, [
-    { type: "command", value: "tokenInsights.open" },
-    { type: "tool", value: "token_usage_summary" },
-  ]);
-});
-
-test("returns a local-time range, cost estimate, and selected ranking", async () => {
-  const { calls, plugin } = loadPlugin();
-  await plugin.onLoad();
-  const tool = calls.registered.find((item) => item.type === "tool").value;
-  const report = await tool.execute({ since: "2026-07-01", until: "2026-07-03", groupBy: "day", limit: 1 });
-
-  assert.equal(calls.ranges.length, 1);
-  assert.equal(calls.ranges[0].sinceMs, new Date(2026, 6, 1).getTime());
-  assert.equal(calls.ranges[0].untilMs, new Date(2026, 6, 3).getTime());
-  assert.equal(calls.ranges[0].tzOffsetMinutes, -new Date().getTimezoneOffset());
-  assert.equal(report.groupBy, "day");
-  assert.equal(report.ranking.length, 1);
-  assert.equal(report.ranking[0].key, "2026-07-02");
-  assert.equal(report.cost.total, 7);
-  assert.match(report.text, /Estimated cost: \$7\.00/);
-  assert.match(report.text, /Token usage/);
-});
-
-test("rejects invalid and inverted time windows before reading usage", async () => {
-  const { calls, plugin } = loadPlugin();
-  await plugin.onLoad();
-  const tool = calls.registered.find((item) => item.type === "tool").value;
-
-  await assert.rejects(() => tool.execute({ since: "not-a-date" }), /Invalid since value/);
-  await assert.rejects(
-    () => tool.execute({ since: "2026-07-03", until: "2026-07-01" }),
-    /must be earlier/,
+test("manifest declares the independent scanner and minimal host permissions", () => {
+  assert.equal(manifest.version, "0.2.0");
+  assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
+  assert.equal(manifest.engines.piDesktop, ">=0.2.0");
+  assert.deepEqual(
+    manifest.contributes.agentTools[0].schema.properties.groupBy.enum,
+    ["model", "provider", "day", "session"],
   );
-  assert.equal(calls.ranges.length, 0);
+  assert.doesNotMatch(JSON.stringify(manifest), /usage\.read|project rankings|price table/i);
+});
+
+test("scanner aggregates usage metadata, excludes revisions, and drops transcript content", async () => {
+  const fixture = createFixture();
+  try {
+    writeJsonl(fixture.sessions, "session-a.jsonl", [
+      usageRecord({
+        createdAt: "2026-07-30T08:15:00.000Z",
+        modelId: "alpha",
+        providerId: "openai",
+        usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 2, cacheWriteTokens: 1, reasoningTokens: 3 },
+        content: "do not retain this message",
+      }),
+      usageRecord({
+        createdAt: "2026-07-30T09:15:00.000Z",
+        usage: { inputTokens: 7, outputTokens: 0, cacheReadTokens: null, cacheWriteTokens: null },
+        content: "do not retain this fallback either",
+      }),
+      { type: "message", role: "user", createdAt: "2026-07-30T08:16:00.000Z", content: "do not retain this either" },
+    ]);
+    writeFileSync(join(fixture.sessions, "session-b.jsonl"), "{bad json}\n");
+    writeJsonl(fixture.sessions, "session-c.revisions.jsonl", [
+      usageRecord({
+        createdAt: "2026-07-30T08:30:00.000Z",
+        usage: { inputTokens: 999, outputTokens: 999 },
+      }),
+    ]);
+
+    const result = await plugin.__test.scanTranscriptDirectory(fixture.sessions);
+    assert.equal(result.events.length, 2);
+    assert.deepEqual(result.events[0].tokens, {
+      input: 10,
+      output: 5,
+      cacheRead: 2,
+      cacheWrite: 1,
+      reasoning: 3,
+      total: 21,
+    });
+    assert.equal(result.diagnostics.filesScanned, 2);
+    assert.equal(result.diagnostics.filesSkipped, 0);
+    assert.equal(result.diagnostics.malformedLines, 1);
+    assert.deepEqual(result.events[1].tokens, {
+      input: 7,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      reasoning: 0,
+      total: 7,
+    });
+    assert.equal(result.diagnostics.usageMessages, 2);
+    assert.doesNotMatch(JSON.stringify(result), /content|private|message text|tool arguments/i);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("summary groups models, providers, sessions, time buckets, and streaks", () => {
+  const today = new Date();
+  today.setHours(9, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const events = [
+    {
+      sessionId: "1234567890abcdef",
+      timestamp: today.getTime(),
+      modelId: "alpha",
+      providerId: "openai",
+      tokens: { input: 10, output: 5, cacheRead: 3, cacheWrite: 2, reasoning: 1, total: 21 },
+    },
+    {
+      sessionId: "1234567890abcdef",
+      timestamp: yesterday.getTime(),
+      modelId: "beta",
+      providerId: "anthropic",
+      tokens: { input: 4, output: 6, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 10 },
+    },
+  ];
+  const summary = plugin.__test.summarize(events, plugin.__test.makeRange(null, null), events, Date.now(), {
+    filesScanned: 2,
+    malformedLines: 1,
+    usageMessages: 2,
+  });
+
+  assert.equal(summary.totals.total, 31);
+  assert.equal(summary.totals.sessions, 1);
+  assert.equal(summary.models.length, 2);
+  assert.equal(summary.providers.length, 2);
+  assert.equal(summary.topSessions[0].title, "Session 12345678");
+  assert.equal(summary.hourly[9].total, 31);
+  assert.equal(summary.weekday.reduce((sum, slot) => sum + slot.total, 0), 31);
+  assert.deepEqual(summary.streak, { current: 2, longest: 2 });
+  assert.equal(summary.scannedFiles, 2);
+  assert.equal(summary.malformedLines, 1);
+});
+
+test("on-load writes a snapshot before opening the panel and the tool groups by provider", async () => {
+  const fixture = createFixture();
+  const calls = { registered: [], unregistered: [], timeline: [], snapshots: [] };
+  const previousPi = globalThis.pi;
+  try {
+    mkdirSync(fixture.dataPath, { recursive: true });
+    writeJsonl(fixture.sessions, "session-a.jsonl", [
+      usageRecord({
+        createdAt: "2026-07-30T08:15:00.000Z",
+        modelId: "alpha",
+        providerId: "openai",
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      }),
+    ]);
+    globalThis.pi = {
+      plugin: {
+        getDataPath: async () => fixture.dataPath,
+        getSettings: async () => ({}),
+        setSettings: async (value) => {
+          calls.timeline.push("settings");
+          calls.snapshots.push(value.usageSnapshot);
+        },
+      },
+      commands: {
+        register: async (command) => calls.registered.push({ type: "command", value: command }),
+        unregister: async (id) => calls.unregistered.push({ type: "command", value: id }),
+      },
+      agent: {
+        registerTool: async (tool) => calls.registered.push({ type: "tool", value: tool }),
+        unregisterTool: async (name) => calls.unregistered.push({ type: "tool", value: name }),
+      },
+      ui: {
+        openPanel: async () => calls.timeline.push("panel"),
+        showToast: () => undefined,
+      },
+    };
+
+    await plugin.onLoad();
+    await waitForBackgroundScan();
+    const command = calls.registered.find((item) => item.type === "command").value;
+    const tool = calls.registered.find((item) => item.type === "tool").value;
+    calls.timeline.length = 0;
+    await command.run();
+
+    assert.deepEqual(calls.timeline, ["settings", "panel"]);
+    assert.equal(calls.snapshots.at(-1).all.totals.total, 15);
+    const report = await tool.execute({ groupBy: "provider", limit: 1 });
+    assert.equal(report.groupBy, "provider");
+    assert.equal(report.ranking[0].key, "openai");
+    assert.doesNotMatch(JSON.stringify(report), /private|content|tool arguments/i);
+
+    await plugin.onUnload();
+    assert.deepEqual(calls.unregistered, [
+      { type: "command", value: "tokenInsights.open" },
+      { type: "tool", value: "token_usage_summary" },
+    ]);
+  } finally {
+    globalThis.pi = previousPi;
+    fixture.cleanup();
+  }
 });
