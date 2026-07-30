@@ -110,6 +110,7 @@ Request the minimum set:
 | `net.fetch` | Outbound network |
 | `shell.openExternal` | Open external links |
 | `agent.tool.register` | Expose tools to the agent |
+| `usage.read` | Read aggregate local token usage without message content |
 
 High-risk permissions are reviewed in the install UI. Auto-update will not silently expand permissions.
 

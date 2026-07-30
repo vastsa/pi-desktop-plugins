@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-07-27T17:23:04Z",
+  "updatedAt": "2026-07-30T15:59:51Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -103,6 +103,38 @@
             "fs.read.workspace",
             "clipboard.write",
             "notify",
+            "agent.tool.register"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pi.token-insights",
+      "name": "Token Insights",
+      "description": "A themed dashboard for the tokens you have spent on this machine: trends, models, projects, rhythm, streak, and an optional cost estimate from your own price table.",
+      "author": "PI-Desktop",
+      "categories": [
+        "productivity",
+        "official"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.token-insights",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Token Insights\n\nEvery conversation you have had on this machine already wrote its token counts to\ndisk. Token Insights reads them back and turns them into a single themed window:\nhow much you have spent, on which models, in which projects, and at what hours of\nthe night.\n\nOpen it from the command palette \u2014 **Token Insights: Open**.\n\n## What you get\n\n- **The headline.** Total tokens for the selected window, the change versus the\n  previous window of the same length, a sparkline of the daily trend, and a\n  small context-aware line that celebrates sustained work without treating a\n  quieter period as failure.\n- **A 12-month activity heatmap.** One square per day, so a habit becomes visible\n  as a shape. Hover any square for that day's count.\n- **Model and project rankings.** Where the tokens actually went, with each row's\n  share of the total.\n- **Rhythm.** A 24-hour clock and a weekday strip that show when you work, plus\n  your current and longest daily streak.\n- **Input / output / cache reuse tiles.** Cache reuse is the share of prompt\n  tokens served from cache rather than re-sent \u2014 the higher it is, the more of\n  your context you got for free.\n- **Estimated cost**, once you have entered prices. See below.\n\nThree ranges are available in the title bar: **30D**, **1Y**, and **ALL**.\n\n## Where the numbers come from\n\nFrom your own session transcripts in the PI-Desktop data directory, and nowhere\nelse. Each assistant message records the token usage the provider reported for\nit; Token Insights adds those up. The footer of the panel always states how many\nsession files were scanned.\n\nTwo consequences worth knowing:\n\n- Sessions created before usage recording existed contribute nothing.\n- These are **provider-reported counts, not your billing statement**, and not a\n  statement of the balance left on any subscription. Treat cost as an estimate.\n\n## Cost estimates and the price table\n\n**No vendor prices ship with this plugin.** Prices change, they vary per account,\nand a stale hard-coded number is worse than no number at all. So the plugin ships\nempty and asks you once.\n\nClick the price icon in the title bar. The drawer lists every model that appears\nin your history. Fill in the price **per million tokens**, in whatever currency\nyou set at the top of the drawer:\n\n| Field | Meaning |\n|---|---|\n| `input` | Fresh prompt tokens sent to the model |\n| `output` | Tokens the model generated |\n| `cacheRead` | Prompt tokens served from cache (usually much cheaper) |\n| `cacheWrite` | Tokens written into the cache (often slightly dearer than input) |\n\nYou do not have to fill in all four, or all models. A model counts as priced once\nit has at least one number.\n\nModels you leave blank are **excluded from the total and labelled as unpriced** \u2014\nthey are never silently counted as free. The estimated-spend tile shows `\u2014` until\nat least one model has a price.\n\nThe same values live in **Settings \u2192 Plugins \u2192 Token Insights \u2192 Price table** as\nJSON, if you would rather paste them:\n\n```json\n{\n  \"claude-opus-5\": { \"input\": 3, \"output\": 15, \"cacheRead\": 0.3, \"cacheWrite\": 3.75 },\n  \"some-local-model\": { \"input\": 0, \"output\": 0 }\n}\n```\n\n## Ask the agent\n\nThe plugin registers one agent tool, exposed as\n`plugin_pi_token_insights_token_usage_summary`. Once the plugin is installed and\nthe tool is allowed, you can simply ask:\n\n- \"Which model cost me the most this month?\"\n- \"How many tokens did I burn last week versus the week before?\"\n- \"Which project is eating my budget?\"\n- \"What time of day do I actually work?\"\n\nThe tool takes `since` / `until` (an ISO date, or a shorthand like `7d`, `12w`,\n`1y`), `groupBy` (`model`, `project`, `day`, `session`) and `limit`. It returns\nboth structured data and a short markdown summary, using the same price table as\nthe panel.\n\n## Permissions\n\n| Permission | Why it is needed |\n|---|---|\n| `usage.read` | Read aggregate token counts from local sessions. This is the whole plugin. |\n| `ui.panel` | Open the dashboard window. |\n| `agent.tool.register` | Expose `token_usage_summary` so the agent can answer usage questions. |\n\nNothing else is requested. In particular there is **no `net.fetch`**, so the\nplugin cannot make a network request even if it wanted to \u2014 the panel's own\ncontent-security policy sets `connect-src 'none'` on top of that.\n\n## Privacy\n\n`usage.read` returns counts and labels, never conversation content. Concretely,\nthe plugin can see:\n\n- token counts per day, hour, weekday, model, project and session\n- model ids and provider ids\n- project names and paths, and session titles (to label the rankings)\n\nIt cannot see, and never requests, the text of any message, tool call, or file.\nIt writes nothing back to your sessions; the only thing it stores is your own\nprice table, in the plugin's own settings.\n\nEverything stays on this machine.\n\n## The window\n\nThe panel draws its own 46px title bar so that it matches PI-Desktop instead of\nsitting inside a grey OS frame. The window buttons are still the real ones, drawn\nby the system \u2014 the plugin has no way to control your window.\n\nIt follows the app's theme (switching live when you change it) and its language\n(English and \u7b80\u4f53\u4e2d\u6587).\n\n`renderer/panel.css` is a **hand-kept mirror** of the PI-Desktop design system\n(`docs/spec/04-ux/07-ui-design-system.md`): the same `--ds-*` semantic tokens,\ntype ramp, spacing and motion durations. Plugin panels load from `file://` in an\nisolated window and cannot import the app's stylesheet, so the tokens are copied.\nIf the app's palette changes, that file is the one to update.\n\n## Requirements\n\nPI-Desktop **0.2.9** or newer \u2014 earlier versions do not provide the documented\n`usage.read` API, so the plugin will refuse to install.\n",
+      "safetyNotes": "Reads aggregate token counts from local sessions only. It never reads message content, never writes to your data, and never touches the network.",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishedAt": "2026-07-30T15:59:51Z",
+          "changelog": "First release: hero totals with period delta, 12-month activity heatmap, model and project rankings, hourly and weekday rhythm, streak, user-supplied price table, and a token_usage_summary agent tool.",
+          "minPiDesktop": ">=0.2.9",
+          "shasum": "9bde39b50b71d3e599cd039c21d724cf3d08b8c379975f036a43ea3dcc0ca44d",
+          "url": "packages/pi.token-insights-0.1.0.piplug",
+          "sizeBytes": 80046,
+          "permissions": [
+            "ui.panel",
+            "usage.read",
             "agent.tool.register"
           ]
         }
