@@ -46,7 +46,7 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.3.0");
+  assert.equal(manifest.version, "0.3.1");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.0");
   assert.deepEqual(
@@ -58,6 +58,9 @@ test("manifest declares the independent scanner and minimal host permissions", (
   assert.match(panelSource, /Tool sources/);
   assert.match(panelSource, /工具来源/);
   assert.match(panelSource, /applyTheme/);
+  assert.match(panelSource, /t: STRINGS\.zh/);
+  assert.match(panelSource, /tileReasoning/);
+  assert.match(panelSource, /"app\.getLocale"\)\.catch\(\(\) => "zh-CN"\)/);
   assert.match(panelCss, /:root\[data-theme="dark"\]/);
   assert.match(panelCss, /:root\[data-theme="light"\]/);
 });

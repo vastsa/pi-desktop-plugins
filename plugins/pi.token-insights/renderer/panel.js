@@ -27,10 +27,9 @@ const STRINGS = {
     delta: (p) => `${p}% vs previous period`,
     input: "Input",
     output: "Output",
-    cache: "Cache reuse",
+    cache: "Cache read",
+    reasoning: "Reasoning",
     shareOfTotal: (p) => `${p}% of total`,
-    cacheNote: (t) => `${t} tokens replayed from cache`,
-    cacheNone: "No cached reads in this window",
     activity: "Activity",
     activityNote: "last 12 months",
     streakNote: (c, l) => `Current ${c} ${c === 1 ? "day" : "days"} · longest ${l}`,
@@ -75,10 +74,9 @@ const STRINGS = {
     delta: (p) => `较上一周期 ${p}%`,
     input: "输入",
     output: "输出",
-    cache: "缓存复用",
+    cache: "缓存读取",
+    reasoning: "推理",
     shareOfTotal: (p) => `占总量 ${p}%`,
-    cacheNote: (t) => `${t} tokens 来自缓存复用`,
-    cacheNone: "这段时间没有缓存读取",
     activity: "活动",
     activityNote: "最近 12 个月",
     streakNote: (c, l) => `当前连续 ${c} 天 · 最长 ${l} 天`,
@@ -113,8 +111,8 @@ const STRINGS = {
 };
 
 const state = {
-  t: STRINGS.en,
-  locale: "en",
+  t: STRINGS.zh,
+  locale: "zh",
   range: "30d",
   allSummary: null,
   rangeSummary: null,
@@ -298,6 +296,7 @@ function renderTiles(summary) {
   el("tileInputLabel").textContent = t.input;
   el("tileOutputLabel").textContent = t.output;
   el("tileCacheLabel").textContent = t.cache;
+  el("tileReasoningLabel").textContent = t.reasoning;
 
   el("tileInput").textContent = compact(totals.input);
   el("tileInputNote").textContent = t.shareOfTotal(share(totals.input, total));
@@ -305,9 +304,12 @@ function renderTiles(summary) {
   el("tileOutputNote").textContent = t.shareOfTotal(share(totals.output, total));
 
   const cacheRead = num(totals.cacheRead);
-  const readable = cacheRead + num(totals.input);
-  el("tileCache").textContent = readable > 0 ? `${share(cacheRead, readable)}%` : "—";
-  el("tileCacheNote").textContent = cacheRead > 0 ? t.cacheNote(compact(cacheRead)) : t.cacheNone;
+  el("tileCache").textContent = compact(cacheRead);
+  el("tileCacheNote").textContent = t.shareOfTotal(share(cacheRead, total));
+
+  const reasoning = num(totals.reasoning);
+  el("tileReasoning").textContent = compact(reasoning);
+  el("tileReasoningNote").textContent = t.shareOfTotal(share(reasoning, total));
 
 }
 
@@ -648,7 +650,7 @@ async function boot() {
 
   const [theme, locale] = await Promise.all([
     bridge.invoke("app.getTheme").catch(() => "dark"),
-    bridge.invoke("app.getLocale").catch(() => "en"),
+    bridge.invoke("app.getLocale").catch(() => "zh-CN"),
   ]);
   applyTheme(theme);
   applyLocale(locale);

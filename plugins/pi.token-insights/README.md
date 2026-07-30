@@ -41,12 +41,16 @@ Codex are skipped when the original source is scanned. Codex uses only
 
 The panel follows PI-Desktop automatically:
 
-- English and Simplified Chinese text update live with the application locale.
+- Simplified Chinese is the default when the host locale is unavailable; English
+  and Simplified Chinese text otherwise update live with the application locale.
 - Light and dark palettes update live with the application color mode.
 - The dashboard also honors the operating system's reduced-motion preference.
 
 The streak, milestone, and quieter-day copy is part of both languages and both
 color modes; changing appearance never changes the underlying totals.
+
+The overview uses four number cards: input, output, cache-read, and reasoning
+tokens. Each card also shows its share of the selected period total.
 
 ## Refresh behavior
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="zh-CN" data-lang="zh" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta
@@ -15,12 +15,12 @@
   <header class="titlebar" id="titlebar">
     <div class="titlebar-title" id="appTitle">Token Insights</div>
     <div class="titlebar-actions">
-      <div class="segmented" id="rangeSwitch" role="group" aria-label="Range">
+      <div class="segmented" id="rangeSwitch" role="group" aria-label="时间范围">
         <button type="button" class="segment" data-range="30d">30D</button>
         <button type="button" class="segment" data-range="1y">1Y</button>
         <button type="button" class="segment" data-range="all">ALL</button>
       </div>
-      <button type="button" class="icon-button" id="refreshBtn" title="Reload latest snapshot" aria-label="Reload latest snapshot">
+      <button type="button" class="icon-button" id="refreshBtn" title="重新载入最新快照" aria-label="重新载入最新快照">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
           <path d="M21 3v5h-5" />
@@ -50,19 +50,24 @@
 
       <section class="tiles">
         <div class="tile">
-          <div class="tile-label" id="tileInputLabel">Input</div>
+          <div class="tile-label" id="tileInputLabel">输入</div>
           <div class="tile-value" id="tileInput">—</div>
           <div class="tile-note" id="tileInputNote"></div>
         </div>
         <div class="tile">
-          <div class="tile-label" id="tileOutputLabel">Output</div>
+          <div class="tile-label" id="tileOutputLabel">输出</div>
           <div class="tile-value" id="tileOutput">—</div>
           <div class="tile-note" id="tileOutputNote"></div>
         </div>
         <div class="tile">
-          <div class="tile-label" id="tileCacheLabel">Cache reuse</div>
+          <div class="tile-label" id="tileCacheLabel">缓存读取</div>
           <div class="tile-value" id="tileCache">—</div>
           <div class="tile-note" id="tileCacheNote"></div>
+        </div>
+        <div class="tile">
+          <div class="tile-label" id="tileReasoningLabel">推理</div>
+          <div class="tile-value" id="tileReasoning">—</div>
+          <div class="tile-note" id="tileReasoningNote"></div>
         </div>
       </section>
 
