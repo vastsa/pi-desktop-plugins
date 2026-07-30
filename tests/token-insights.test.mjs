@@ -12,6 +12,7 @@ const plugin = require("../plugins/pi.token-insights/main.js");
 const manifest = JSON.parse(
   readFileSync(join(here, "../plugins/pi.token-insights/manifest.json"), "utf8"),
 );
+const panelSource = readFileSync(join(here, "../plugins/pi.token-insights/renderer/panel.js"), "utf8");
 
 function createFixture() {
   const root = mkdtempSync(join(tmpdir(), "token-insights-"));
@@ -44,7 +45,7 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.2.0");
+  assert.equal(manifest.version, "0.2.1");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.0");
   assert.deepEqual(
@@ -52,6 +53,7 @@ test("manifest declares the independent scanner and minimal host permissions", (
     ["model", "provider", "day", "session"],
   );
   assert.doesNotMatch(JSON.stringify(manifest), /usage\.read|project rankings|price table/i);
+  assert.match(panelSource, /const MILLION = 1_000_000;/);
 });
 
 test("scanner aggregates usage metadata, excludes revisions, and drops transcript content", async () => {

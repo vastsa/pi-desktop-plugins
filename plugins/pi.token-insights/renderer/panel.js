@@ -7,6 +7,7 @@
  */
 
 const bridge = window.pluginBridge;
+const MILLION = 1_000_000;
 const HEAT_WEEKS = 53;
 const SPARK_BARS = 60;
 

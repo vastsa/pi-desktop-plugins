@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-07-30T16:30:48Z",
+  "updatedAt": "2026-07-30T16:35:07Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -125,13 +125,13 @@
       "safetyNotes": "Scans local session JSONL metadata only. It aggregates usage, time, model, provider, and short session IDs; it does not retain or expose message content, tool arguments, project paths, or session titles, and it makes no network requests.",
       "versions": [
         {
-          "version": "0.2.0",
-          "publishedAt": "2026-07-30T16:30:48Z",
-          "changelog": "Native local scanning: parses session JSONL files in the plugin process, stores a de-identified dashboard snapshot, adds provider categories, and removes the unavailable host usage API dependency.",
+          "version": "0.2.1",
+          "publishedAt": "2026-07-30T16:35:07Z",
+          "changelog": "Fix the dashboard token formatter so local usage snapshots render correctly.",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "70ab243c88de41d74c311ddd69043c2ea095afb18baa03f839e3b41f3ecfdbbb",
-          "url": "packages/pi.token-insights-0.2.0.piplug",
-          "sizeBytes": 65407,
+          "shasum": "2f5faefff229f6e04bfbfb3e494b141d0f4a1826099636556d5b53b4053832e6",
+          "url": "packages/pi.token-insights-0.2.1.piplug",
+          "sizeBytes": 65314,
           "permissions": [
             "ui.panel",
             "agent.tool.register"
