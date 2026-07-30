@@ -13,6 +13,7 @@ const manifest = JSON.parse(
   readFileSync(join(here, "../plugins/pi.token-insights/manifest.json"), "utf8"),
 );
 const panelSource = readFileSync(join(here, "../plugins/pi.token-insights/renderer/panel.js"), "utf8");
+const panelCss = readFileSync(join(here, "../plugins/pi.token-insights/renderer/panel.css"), "utf8");
 
 function createFixture() {
   const root = mkdtempSync(join(tmpdir(), "token-insights-"));
@@ -45,15 +46,20 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.2.1");
+  assert.equal(manifest.version, "0.3.0");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.0");
   assert.deepEqual(
     manifest.contributes.agentTools[0].schema.properties.groupBy.enum,
-    ["model", "provider", "day", "session"],
+    ["model", "provider", "source", "day", "session"],
   );
   assert.doesNotMatch(JSON.stringify(manifest), /usage\.read|project rankings|price table/i);
   assert.match(panelSource, /const MILLION = 1_000_000;/);
+  assert.match(panelSource, /Tool sources/);
+  assert.match(panelSource, /工具来源/);
+  assert.match(panelSource, /applyTheme/);
+  assert.match(panelCss, /:root\[data-theme="dark"\]/);
+  assert.match(panelCss, /:root\[data-theme="light"\]/);
 });
 
 test("scanner aggregates usage metadata, excludes revisions, and drops transcript content", async () => {
@@ -82,7 +88,7 @@ test("scanner aggregates usage metadata, excludes revisions, and drops transcrip
       }),
     ]);
 
-    const result = await plugin.__test.scanTranscriptDirectory(fixture.sessions);
+    const result = await plugin.__test.scanPiTranscriptDirectory(fixture.sessions);
     assert.equal(result.events.length, 2);
     assert.deepEqual(result.events[0].tokens, {
       input: 10,
@@ -110,6 +116,60 @@ test("scanner aggregates usage metadata, excludes revisions, and drops transcrip
   }
 });
 
+test("adapters normalize Claude Code, Codex, and OpenCode without cumulative Codex double-counting", async () => {
+  const fixture = createFixture();
+  const claude = join(fixture.root, "claude-projects", "project-a");
+  const codex = join(fixture.root, "codex-sessions", "2026", "07", "31");
+  const opencode = join(fixture.root, "opencode-message", "open-session");
+  try {
+    mkdirSync(claude, { recursive: true });
+    mkdirSync(codex, { recursive: true });
+    mkdirSync(opencode, { recursive: true });
+    writeJsonl(claude, "claude-session.jsonl", [
+      {
+        type: "assistant",
+        sessionId: "claude-private-id",
+        timestamp: "2026-07-30T08:00:00.000Z",
+        message: {
+          model: "claude-sonnet",
+          usage: { input_tokens: 10, output_tokens: 4, cache_read_input_tokens: 2, cache_creation_input_tokens: 1 },
+        },
+      },
+      { type: "user", timestamp: "2026-07-30T08:01:00.000Z", message: { content: "not usage" } },
+    ]);
+    writeJsonl(codex, "rollout-private-id.jsonl", [
+      { type: "session_meta", payload: { id: "codex-private-id", model_provider: "openai" } },
+      { type: "turn_context", payload: { model: "gpt-5" } },
+      { type: "event_msg", timestamp: "2026-07-30T09:00:00.000Z", payload: { type: "token_count", info: { last_token_usage: { input_tokens: 7, output_tokens: 3, total_tokens: 10 }, total_token_usage: { total_tokens: 10 } } } },
+      { type: "event_msg", timestamp: "2026-07-30T09:01:00.000Z", payload: { type: "token_count", info: { last_token_usage: { input_tokens: 5, output_tokens: 5, total_tokens: 10 }, total_token_usage: { total_tokens: 20 } } } },
+    ]);
+    writeFileSync(join(opencode, "msg-private-id.json"), JSON.stringify({
+      role: "assistant",
+      sessionID: "opencode-private-id",
+      modelID: "qwen",
+      providerID: "openrouter",
+      time: { completed: "2026-07-30T10:00:00.000Z" },
+      tokens: { input: 3, output: 2, reasoning: 1, cache: { read: 4, write: 2 } },
+      content: "not retained",
+    }));
+
+    const [claudeResult, codexResult, openCodeResult] = await Promise.all([
+      plugin.__test.scanClaudeCodeDirectory(dirname(claude)),
+      plugin.__test.scanCodexDirectory(join(fixture.root, "codex-sessions")),
+      plugin.__test.scanOpenCodeDirectory(join(fixture.root, "opencode-message")),
+    ]);
+    const events = [...claudeResult.events, ...codexResult.events, ...openCodeResult.events];
+    assert.equal(events.reduce((sum, item) => sum + item.tokens.total, 0), 49);
+    assert.equal(codexResult.events.reduce((sum, item) => sum + item.tokens.total, 0), 20);
+    assert.equal(claudeResult.events[0].sourceId, "claude-code");
+    assert.equal(openCodeResult.events[0].sourceId, "opencode");
+    const summary = plugin.__test.summarize(events, plugin.__test.makeRange(null, null), events, Date.now());
+    assert.doesNotMatch(JSON.stringify(summary), /private-id|not retained|content/i);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
 test("summary groups models, providers, sessions, time buckets, and streaks", () => {
   const today = new Date();
   today.setHours(9, 0, 0, 0);
@@ -117,6 +177,7 @@ test("summary groups models, providers, sessions, time buckets, and streaks", ()
   yesterday.setDate(yesterday.getDate() - 1);
   const events = [
     {
+      sourceId: "pi-desktop",
       sessionId: "1234567890abcdef",
       timestamp: today.getTime(),
       modelId: "alpha",
@@ -124,6 +185,7 @@ test("summary groups models, providers, sessions, time buckets, and streaks", ()
       tokens: { input: 10, output: 5, cacheRead: 3, cacheWrite: 2, reasoning: 1, total: 21 },
     },
     {
+      sourceId: "claude-code",
       sessionId: "1234567890abcdef",
       timestamp: yesterday.getTime(),
       modelId: "beta",
@@ -138,10 +200,11 @@ test("summary groups models, providers, sessions, time buckets, and streaks", ()
   });
 
   assert.equal(summary.totals.total, 31);
-  assert.equal(summary.totals.sessions, 1);
+  assert.equal(summary.totals.sessions, 2);
   assert.equal(summary.models.length, 2);
   assert.equal(summary.providers.length, 2);
-  assert.equal(summary.topSessions[0].title, "Session 12345678");
+  assert.equal(summary.sources.length, 2);
+  assert.equal(summary.topSessions[0].title, "PI-Desktop · Session 12345678");
   assert.equal(summary.hourly[9].total, 31);
   assert.equal(summary.weekday.reduce((sum, slot) => sum + slot.total, 0), 31);
   assert.deepEqual(summary.streak, { current: 2, longest: 2 });
@@ -155,6 +218,12 @@ test("on-load writes a snapshot before opening the panel and the tool groups by 
   const previousPi = globalThis.pi;
   try {
     mkdirSync(fixture.dataPath, { recursive: true });
+    plugin.__test.setScanRoots({
+      piDesktop: fixture.sessions,
+      claudeCode: join(fixture.root, "missing-claude"),
+      codex: join(fixture.root, "missing-codex"),
+      openCode: join(fixture.root, "missing-opencode"),
+    });
     writeJsonl(fixture.sessions, "session-a.jsonl", [
       usageRecord({
         createdAt: "2026-07-30T08:15:00.000Z",
@@ -206,6 +275,7 @@ test("on-load writes a snapshot before opening the panel and the tool groups by 
       { type: "tool", value: "token_usage_summary" },
     ]);
   } finally {
+    plugin.__test.setScanRoots(null);
     globalThis.pi = previousPi;
     fixture.cleanup();
   }

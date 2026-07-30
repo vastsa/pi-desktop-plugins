@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "id": "pi.token-insights",
   "name": "Token Insights",
-  "version": "0.2.1",
-  "description": "A private, local JSONL scanner that turns recorded PI-Desktop token usage into trends, model and provider rankings, rhythm, and encouraging streaks.",
+  "version": "0.3.0",
+  "description": "A private local scanner for PI-Desktop, Claude Code, Codex, and OpenCode token metadata, with per-tool trends, categories, and encouraging streaks.",
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": ["productivity", "official"],
-  "changelog": "Fix the dashboard token formatter so local usage snapshots render correctly.",
-  "safetyNotes": "Scans local session JSONL metadata only. It aggregates usage, time, model, provider, and short session IDs; it does not retain or expose message content, tool arguments, project paths, or session titles, and it makes no network requests.",
+  "changelog": "Multi-tool local scanning: adds Claude Code, Codex, and OpenCode adapters, tool-source categories, and a schema-v2 snapshot while preserving multilingual and light/dark theme support.",
+  "safetyNotes": "Scans only supported local tool metadata locations. It aggregates usage, time, tool source, model, provider, and short session IDs; it does not retain or expose message content, tool arguments, project paths, or full session IDs, and it makes no network requests.",
   "ui": {
     "panel": "renderer/index.html",
     "width": 1120,
@@ -28,7 +28,7 @@
     "agentTools": [
       {
         "name": "token_usage_summary",
-        "description": "Scan local PI-Desktop session JSONL metadata and summarize token usage by model, provider, day, or short session ID without returning message text.",
+        "description": "Scan supported local AI-tool metadata and summarize token usage by tool source, model, provider, day, or short session ID without returning message text.",
         "risk": "medium",
         "schema": {
           "type": "object",
@@ -43,7 +43,7 @@
             },
             "groupBy": {
               "type": "string",
-              "enum": ["model", "provider", "day", "session"],
+              "enum": ["model", "provider", "source", "day", "session"],
               "description": "Which ranking to expand in the reply. Defaults to model."
             },
             "limit": {

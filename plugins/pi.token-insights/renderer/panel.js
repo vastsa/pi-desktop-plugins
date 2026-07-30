@@ -41,12 +41,12 @@ const STRINGS = {
     modelsNote: (n) => `${n} in this window`,
     rhythm: "Rhythm",
     rhythmNote: (h) => `Peak ${pad(h)}:00–${pad((h + 1) % 24)}:00`,
-    providers: "Providers",
+    sources: "Tool sources",
     sessions: "Top sessions",
     untitled: "(untitled)",
     empty: "Nothing here yet",
-    provenance: (files, time) =>
-      `Counted from ${files} local session ${files === 1 ? "file" : "files"} · ` +
+    provenance: (files, sources, time) =>
+      `Counted from ${files} local ${sources === 1 ? "source file" : "source files"} across ${sources} tool ${sources === 1 ? "source" : "sources"} · ` +
       `never leaves this device · updated ${time}`,
     disclaimer:
       "Aggregate counts only — message content is never read. Not a statement of your remaining subscription balance.",
@@ -89,12 +89,12 @@ const STRINGS = {
     modelsNote: (n) => `共 ${n} 个`,
     rhythm: "节奏",
     rhythmNote: (h) => `高光时段 ${pad(h)}:00–${pad((h + 1) % 24)}:00`,
-    providers: "提供商",
+    sources: "工具来源",
     sessions: "高消耗会话",
     untitled: "（未命名）",
     empty: "暂无数据",
-    provenance: (files, time) =>
-      `统计自 ${files} 个本地会话文件 · 数据从未离开这台设备 · ${time} 更新`,
+    provenance: (files, sources, time) =>
+      `统计自 ${sources} 个工具来源的 ${files} 个本地文件 · 数据从未离开这台设备 · ${time} 更新`,
     disclaimer: "仅统计聚合数量，从不读取消息内容；也不代表订阅剩余额度。",
     emptyTitle: "还没有可统计的数据",
     emptyBody:
@@ -433,7 +433,7 @@ function renderRankings(summary) {
   const total = num(summary.totals?.total);
 
   el("modelsTitle").textContent = t.models;
-  el("providersTitle").textContent = t.providers;
+  el("sourcesTitle").textContent = t.sources;
   el("sessionsTitle").textContent = t.sessions;
 
   const models = (summary.models || []).slice(0, 6);
@@ -445,25 +445,25 @@ function renderRankings(summary) {
   for (const model of models) {
     modelList.appendChild(
       rankRow(
-        model.modelId,
+        model.label || model.modelId,
         `${compact(model.total)} · ${share(model.total, total)}%`,
         num(model.total) / top,
-        `${compact(model.input)} input · ${compact(model.output)} output`,
+        `${compact(model.input)} ${t.input.toLowerCase()} · ${compact(model.output)} ${t.output.toLowerCase()}`,
       ),
     );
   }
 
-  const providers = (summary.providers || []).slice(0, 6);
-  const topProvider = num(providers[0]?.total) || 1;
-  const projectList = el("projectList");
-  clear(projectList);
-  if (!providers.length) projectList.appendChild(emptyRow(t.empty));
-  for (const provider of providers) {
-    projectList.appendChild(
+  const sources = (summary.sources || []).slice(0, 6);
+  const topSource = num(sources[0]?.total) || 1;
+  const sourceList = el("sourceList");
+  clear(sourceList);
+  if (!sources.length) sourceList.appendChild(emptyRow(t.empty));
+  for (const source of sources) {
+    sourceList.appendChild(
       rankRow(
-        provider.providerId || "Unknown provider",
-        `${compact(provider.total)} · ${share(provider.total, total)}%`,
-        num(provider.total) / topProvider,
+        source.label || source.sourceId || "Unknown source",
+        `${compact(source.total)} · ${share(source.total, total)}%`,
+        num(source.total) / topSource,
       ),
     );
   }
@@ -547,7 +547,11 @@ function renderFooter(summary) {
     state.locale === "zh" ? "zh-CN" : "en-US",
     { hour: "2-digit", minute: "2-digit" },
   );
-  el("provenanceLine").textContent = t.provenance(num(summary.scannedFiles), time);
+  el("provenanceLine").textContent = t.provenance(
+    num(summary.scannedFiles),
+    (summary.sourceDiagnostics || []).filter((item) => num(item.filesScanned) > 0).length,
+    time,
+  );
   el("disclaimerLine").textContent = t.disclaimer;
 }
 
@@ -579,7 +583,7 @@ async function load() {
   try {
     const settings = await bridge.invoke("plugin.getSettings");
     const snapshot = settings?.usageSnapshot;
-    if (!snapshot?.all || !snapshot?.thirtyDays || !snapshot?.oneYear) {
+    if (snapshot?.schemaVersion !== 2 || !snapshot?.all || !snapshot?.thirtyDays || !snapshot?.oneYear) {
       showState(state.t.emptyTitle, state.t.emptyBody);
       return;
     }
