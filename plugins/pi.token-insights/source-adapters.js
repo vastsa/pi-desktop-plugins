@@ -42,6 +42,14 @@ function sourceLabel(sourceId) {
   return SOURCE_LABELS[sourceId] || sourceId;
 }
 
+/**
+ * Progress sink. Adapters report how many files they will read and tick once per
+ * file, so a caller can show a determinate bar instead of a spinner that lies.
+ */
+function noopProgress() {
+  return { addTotal() {}, tick() {} };
+}
+
 function diagnostics(sourceId) {
   return { sourceId, filesScanned: 0, filesSkipped: 0, malformedLines: 0, usageMessages: 0 };
 }
@@ -60,7 +68,7 @@ function listFiles(root, suffix, recursive = true) {
   return files.sort();
 }
 
-async function scanJsonl(root, sourceId, acceptFile, createParser) {
+async function scanJsonl(root, sourceId, acceptFile, createParser, progress = noopProgress()) {
   const result = { events: [], diagnostics: diagnostics(sourceId) };
   let files;
   try {
@@ -69,8 +77,10 @@ async function scanJsonl(root, sourceId, acceptFile, createParser) {
     result.diagnostics.filesSkipped += 1;
     return result;
   }
-  for (const file of files) {
-    if (acceptFile && !acceptFile(file)) continue;
+  // Filter before announcing the total so the bar cannot exceed 100%.
+  const planned = acceptFile ? files.filter((file) => acceptFile(file)) : files;
+  progress.addTotal(planned.length);
+  for (const file of planned) {
     try {
       const parser = createParser(file);
       const reader = createInterface({ input: createReadStream(file), crlfDelay: Infinity });
@@ -90,6 +100,9 @@ async function scanJsonl(root, sourceId, acceptFile, createParser) {
       result.diagnostics.filesScanned += 1;
     } catch {
       result.diagnostics.filesSkipped += 1;
+    } finally {
+      // In a finally so that any future early exit still counts the file.
+      progress.tick();
     }
   }
   return result;
@@ -108,7 +121,7 @@ function event(sourceId, sessionId, timestamp, modelId, providerId, tokens) {
   };
 }
 
-function scanPiTranscriptDirectory(root) {
+function scanPiTranscriptDirectory(root, progress) {
   return scanJsonl(
     root,
     "pi-desktop",
@@ -127,10 +140,11 @@ function scanPiTranscriptDirectory(root) {
         toTokens(record.meta?.usage),
       );
     },
+    progress,
   );
 }
 
-function scanClaudeCodeDirectory(root) {
+function scanClaudeCodeDirectory(root, progress) {
   return scanJsonl(root, "claude-code", null, (file) => (record) => {
     if (record?.type !== "assistant") return null;
     return event(
@@ -141,10 +155,10 @@ function scanClaudeCodeDirectory(root) {
       "anthropic",
       toTokens(record.message?.usage),
     );
-  });
+  }, progress);
 }
 
-function scanCodexDirectory(root) {
+function scanCodexDirectory(root, progress) {
   return scanJsonl(root, "codex", null, (file) => {
     const state = { sessionId: path.basename(file, ".jsonl"), modelId: "Unknown model", providerId: "openai" };
     return (record) => {
@@ -167,10 +181,10 @@ function scanCodexDirectory(root) {
         toTokens(record.payload?.info?.last_token_usage),
       );
     };
-  });
+  }, progress);
 }
 
-function scanOpenCodeDirectory(root) {
+function scanOpenCodeDirectory(root, progress = noopProgress()) {
   const result = { events: [], diagnostics: diagnostics("opencode") };
   let files;
   try {
@@ -179,31 +193,38 @@ function scanOpenCodeDirectory(root) {
     result.diagnostics.filesSkipped += 1;
     return result;
   }
+  progress.addTotal(files.length);
   for (const file of files) {
     try {
       const record = JSON.parse(readFileSync(file, "utf8"));
-      if (record?.role !== "assistant") continue;
-      const tokens = toTokens({
-        input: record.tokens?.input,
-        output: record.tokens?.output,
-        reasoning: record.tokens?.reasoning,
-        cacheRead: record.tokens?.cache?.read,
-        cacheWrite: record.tokens?.cache?.write,
-      });
-      const scanned = event(
-        "opencode",
-        record.sessionID || record.sessionId || path.basename(path.dirname(file)),
-        Date.parse(record.time?.completed || record.time?.created || ""),
-        record.modelID,
-        record.providerID,
-        tokens,
-      );
-      result.diagnostics.filesScanned += 1;
-      if (!scanned) continue;
-      result.events.push(scanned);
-      result.diagnostics.usageMessages += 1;
+      // Every file counts towards progress, including the ones that carry no
+      // assistant usage — otherwise the bar can never reach its own total.
+      if (record?.role === "assistant") {
+        const tokens = toTokens({
+          input: record.tokens?.input,
+          output: record.tokens?.output,
+          reasoning: record.tokens?.reasoning,
+          cacheRead: record.tokens?.cache?.read,
+          cacheWrite: record.tokens?.cache?.write,
+        });
+        const scanned = event(
+          "opencode",
+          record.sessionID || record.sessionId || path.basename(path.dirname(file)),
+          Date.parse(record.time?.completed || record.time?.created || ""),
+          record.modelID,
+          record.providerID,
+          tokens,
+        );
+        result.diagnostics.filesScanned += 1;
+        if (scanned) {
+          result.events.push(scanned);
+          result.diagnostics.usageMessages += 1;
+        }
+      }
     } catch {
       result.diagnostics.filesSkipped += 1;
+    } finally {
+      progress.tick();
     }
   }
   return result;
@@ -225,6 +246,7 @@ function mergeResults(results) {
 
 module.exports = {
   mergeResults,
+  noopProgress,
   scanClaudeCodeDirectory,
   scanCodexDirectory,
   scanOpenCodeDirectory,

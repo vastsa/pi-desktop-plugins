@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-07-30T16:57:14Z",
+  "updatedAt": "2026-08-06T14:32:36Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -22,7 +22,7 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-07-27T17:23:04Z",
+          "publishedAt": "2026-08-06T14:32:36Z",
           "changelog": "Release 0.2.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "7c6b2b45e43481b62cdf565a02465bfd712919288fd14effaac190c7be0d7716",
@@ -53,7 +53,7 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-07-27T17:23:04Z",
+          "publishedAt": "2026-08-06T14:32:36Z",
           "changelog": "Release 0.1.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "fe234301add106de9d0aef56302ec8d85bf39a6e6bbd28ca40c071c094ea15aa",
@@ -92,7 +92,7 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-07-27T17:23:04Z",
+          "publishedAt": "2026-08-06T14:32:36Z",
           "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
           "minPiDesktop": ">=0.2.0",
           "shasum": "31a5302330f281c8e933c3d3b4cb807f8b4fe8a8949fbc152dfbcd76f5a1ab68",
@@ -111,7 +111,7 @@
     {
       "id": "pi.token-insights",
       "name": "Token Insights",
-      "description": "A private local scanner for PI-Desktop, Claude Code, Codex, and OpenCode token metadata, with per-tool trends, categories, and encouraging streaks.",
+      "description": "A private local dashboard for the tokens you spend across PI-Desktop, Claude Code, Codex and OpenCode: follows the app's theme and language, filters by tool, model, provider, date range or keyword, and keeps a streak and milestone worth looking at.",
       "author": "PI-Desktop",
       "categories": [
         "productivity",
@@ -121,17 +121,17 @@
       "downloads": 0,
       "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.token-insights",
       "repository": "https://github.com/vastsa/pi-desktop-plugins",
-      "readmeMarkdown": "# Token Insights\n\nToken Insights is an independent, local-only dashboard for usage metadata from\nsupported AI tools. It scans known on-device transcript locations and turns\nrecorded token counts into trends, categories, rhythm, and encouraging streaks.\n\nOpen **Token Insights: Open** from the command palette. It performs a fresh\nscan, stores a de-identified dashboard snapshot in the plugin's settings, then\nopens the panel.\n\n## Supported local sources\n\n| Tool | Local location | Counted metadata |\n|---|---|---|\n| PI-Desktop | Its `sessions/*.jsonl` directory | `meta.usage` on assistant records |\n| Claude Code | `~/.claude/projects/**/*.jsonl` | `message.usage` on assistant records |\n| Codex | `~/.codex/sessions/**/*.jsonl` | Incremental `last_token_usage` records |\n| OpenCode | `~/.local/share/opencode/storage/message/**/*.json` | Completed assistant `tokens` records |\n\nOnly tools that persist per-response token metadata can be counted accurately.\nWeb applications or local tools without compatible usage records remain absent\nrather than receiving guessed totals.\n\n## Categories and privacy\n\nThe dashboard groups usage by tool source, model, provider, short session ID,\ndate, hour, and weekday. It supports 30 days, one year, and all-time windows.\n\nThe scanner parses records only to extract timestamps and token metadata. Its\nsnapshot retains only aggregated token counts, model/provider IDs, tool source,\nand the first eight characters of each session ID. It does not retain or expose\nmessage text, message blocks, tool arguments, project paths, full session IDs,\nor full session titles. No data is uploaded and the plugin has no network\npermission.\n\nTo prevent double counting, PI-Desktop sessions imported from Claude Code or\nCodex are skipped when the original source is scanned. Codex uses only\n`last_token_usage`, never its cumulative `total_token_usage` field.\n\n## Language and color mode\n\nThe panel follows PI-Desktop automatically:\n\n- Simplified Chinese is the default when the host locale is unavailable; English\n  and Simplified Chinese text otherwise update live with the application locale.\n- Light and dark palettes update live with the application color mode.\n- The dashboard also honors the operating system's reduced-motion preference.\n\nThe streak, milestone, and quieter-day copy is part of both languages and both\ncolor modes; changing appearance never changes the underlying totals.\n\nThe overview uses four number cards: input, output, cache-read, and reasoning\ntokens. Each card also shows its share of the selected period total.\n\n## Refresh behavior\n\nThe isolated panel can read only the latest plugin snapshot. Its refresh icon\nreloads that snapshot. Run **Token Insights: Open** for a new multi-tool scan;\na background scan also runs after plugin load.\n\n## Agent tool\n\n`plugin_pi_token_insights_token_usage_summary` performs an on-demand scan. It\naccepts optional `since`, `until`, `groupBy` (`source`, `model`, `provider`,\n`day`, or `session`), and `limit` arguments. Dates can be ISO values or short\nperiods such as `7d`, `12w`, or `1y`.\n\n## Permissions\n\n| Permission | Purpose |\n|---|---|\n| `ui.panel` | Open the dashboard. |\n| `agent.tool.register` | Register the on-demand summary tool. |\n\nThe scanner uses the plugin's bundled Node runtime to read supported local data\npaths; it does not depend on a PI-Desktop host usage API.\n\n## Requirements\n\nPI-Desktop **0.2.0** or newer.\n",
-      "safetyNotes": "Scans only supported local tool metadata locations. It aggregates usage, time, tool source, model, provider, and short session IDs; it does not retain or expose message content, tool arguments, project paths, or full session IDs, and it makes no network requests.",
+      "readmeMarkdown": "# Token Insights\n\nA private dashboard for the tokens you spend on this machine. It reads the usage\nmetadata your tools already write locally, aggregates it, and shows you the\ntrend, the models, the rhythm, the streak \u2014 and nothing that isn't yours.\n\n## What it shows\n\n- **Hero** \u2014 total tokens in the selected window, the change against the\n  previous window of equal length, your best day and your busiest hour.\n- **Four counters** \u2014 input, output, cache read, reasoning.\n- **Activity** \u2014 a 53-week heatmap; days outside the current filter stay dimmed\n  so the window you picked is visible at a glance.\n- **Models / Tools / Providers / Sessions** \u2014 rankings with share of total.\n- **Rhythm** \u2014 hour-of-day and weekday distribution.\n- **Streak and milestones** \u2014 current and longest streak, the last milestone you\n  crossed and how far the next one is. Milestones are derived from your real\n  cumulative curve, so every date shown is a date that happened.\n\n## Filters\n\nThe filter bar composes freely, and the whole page \u2014 hero, counters, heatmap,\nrhythm, every ranking and the footer \u2014 recomputes from the filtered set:\n\n- time range: 7D / 30D / 90D / 1Y / ALL, or a custom from\u2013to pair. The from/to\n  fields always read out the window the current range covers, so switching to\n  Custom starts from exactly what you were looking at\n- tool source, model and provider (multi-select; the model list is searchable)\n- free text over tool, model, provider, short session id or date\n\nActive filters appear as removable chips, `Clear filters` restores everything,\nand your selection is remembered the next time you open the panel. If a\ncombination matches nothing, the page says so and offers the way out instead of\nshowing a wall of zeros.\n\n## Follows the app\n\nThe panel is its own window, so it cannot inherit the app's stylesheet. Instead\nthe plugin reads PI-Desktop's own appearance record and the panel mirrors it:\n\n- light, dark, or **a theme contributed by another plugin** \u2014 the panel adopts\n  that theme's `--ds-*` palette, including its accent\n- the app's language (Simplified Chinese or English), including number and date\n  formatting\n- changes apply within a couple of seconds, with no need to reopen the panel\n- the palette is cached locally, so reopening never flashes the wrong theme\n\nIf the appearance cannot be read (older runtime, moved data directory), the\npanel follows your system colour scheme and the theme/language switches in its\nown appearance menu \u2014 never a blank page.\n\n## The agent tool\n\n`token_usage_summary` answers from the same aggregation the dashboard renders,\nso the two can never disagree. It accepts `since`, `until`, `groupBy`\n(`model` / `provider` / `source` / `day` / `session`), `sources`, `models`,\n`providers`, `query` and `limit`.\n\n> which model cost me the most in the last 30 days?\n> how many tokens did Codex use last week?\n\n## Privacy\n\nEverything is local and read-only:\n\n| Read | Why |\n| --- | --- |\n| `~/.pi-desktop/sessions/*.jsonl` | assistant-reply usage counts |\n| `~/.claude/projects`, `~/.codex/sessions`, `~/.local/share/opencode/storage/message` | the same, for those tools |\n| `pi.sqlite` \u2192 `kv(ns='app')` | the app's theme and language |\n| `pi.sqlite` \u2192 `providers(id, name)` | so a ranking shows `openlux`, not a UUID |\n| `plugins/registry.json` + a theme plugin's CSS | to mirror an active plugin theme |\n\nIt never reads message text, tool arguments, project paths or credentials. Full\nsession ids are never kept \u2014 only an 8-character prefix, enough to tell two\nsessions apart. The plugin writes nothing except its own settings, and makes no\nnetwork request. Requested permissions are `ui.panel` and `agent.tool.register`\nonly.\n\n## Notes\n\n- The four counters are summed from each tool's own fields. For some tools cache\n  reads and reasoning are already counted inside input and output, so the four\n  cards can add up to more than the total. The footer says so on screen.\n- Token counts are what the tools recorded. They are not a statement about your\n  remaining subscription balance.\n- Opening the panel triggers a rescan in the background; the page renders the\n  previous cube immediately and swaps in the fresh one when it lands. While a\n  scan runs you see the real file count and a progress bar, not a spinner.\n- The plugin also watches the source directories (heavily debounced, and never\n  more than one scan per five minutes) so the numbers keep up on their own.\n- A plugin panel is read-only by design \u2014 it cannot ask the plugin for a rescan \u2014\n  so the toolbar button says what it does: reload the latest data. For an\n  immediate rescan run **Token Insights: Open** from the command palette.\n- Motion respects `prefers-reduced-motion`: with it on, the count-up and the\n  milestone pulse are gone and every number is still there.\n",
+      "safetyNotes": "Reads only local metadata, always read-only, always on this device. Usage comes from the tool metadata files PI-Desktop, Claude Code, Codex and OpenCode already write; appearance (theme, language, active plugin theme CSS) and provider display names come from PI-Desktop's own local records. It never reads message text, tool arguments, project paths or credentials, never keeps a full session id (only an 8-character prefix), never writes anywhere except its own plugin settings, and makes no network request.",
       "versions": [
         {
-          "version": "0.3.1",
-          "publishedAt": "2026-07-30T16:57:14Z",
-          "changelog": "Default the dashboard to Simplified Chinese and show four token cards: input, output, cache read, and reasoning.",
-          "minPiDesktop": ">=0.2.0",
-          "shasum": "eaabca17d07dbbcbfb317428a5e7ef22c2179d0ba922d8468b10c5929e370880",
-          "url": "packages/pi.token-insights-0.3.1.piplug",
-          "sizeBytes": 73864,
+          "version": "0.4.2",
+          "publishedAt": "2026-08-06T14:32:36Z",
+          "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
+          "minPiDesktop": ">=0.2.9",
+          "shasum": "2e298db811f59d92ff9f355be67236e2601945d811411cc341a3e0bf1c1ff426",
+          "url": "packages/pi.token-insights-0.4.2.piplug",
+          "sizeBytes": 156955,
           "permissions": [
             "ui.panel",
             "agent.tool.register"

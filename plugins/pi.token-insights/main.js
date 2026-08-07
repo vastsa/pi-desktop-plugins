@@ -1,9 +1,19 @@
 /**
- * Token Insights scans local usage metadata from supported AI tools. It never
- * stores transcript content in its plugin snapshot or agent-tool output.
+ * Token Insights scans local usage metadata from supported AI tools and hands a
+ * compact, de-identified fact cube to its panel through plugin settings.
+ *
+ * Three things are published into settings:
+ *   usageFacts     the fact cube the panel filters and aggregates locally
+ *   hostAppearance the app's current theme/locale, so the panel can follow it
+ *   scanState      whether a scan is running, so the panel can say so
+ *
+ * The panel bridge has no channel for usage or appearance, which is why the
+ * plugin process resolves both and the panel only reads settings. Nothing here
+ * writes outside the plugin's own settings, and nothing reaches the network.
  */
 
 const path = require("node:path");
+const { watch } = require("node:fs");
 const { homedir } = require("node:os");
 const {
   mergeResults,
@@ -14,288 +24,277 @@ const {
   sourceLabel,
   toTokens,
 } = require("./source-adapters");
+const aggregateApi = require("./aggregate");
+const { hostRootFromDataPath, readHostAppearance, readProviderLabels } = require("./host-read");
+
+const { aggregate, buildFacts, dayKeyFromTimestamp, milestones, shiftDayKey, todayKey } = aggregateApi;
 
 const RELATIVE = /^(\d+)\s*(d|w|m|y)$/i;
+/** How often the host's appearance record is re-checked while the plugin lives. */
+const APPEARANCE_POLL_MS = 2_000;
+/**
+ * Scan progress is published at most this often. Each publish rewrites the
+ * plugin settings file, so the cadence is a compromise between a bar that moves
+ * and disk the user never asked us to churn.
+ */
+const SCAN_PROGRESS_MS = 400;
+/** A change under a source directory waits this long for the flurry to settle. */
+const WATCH_DEBOUNCE_MS = 30_000;
+/** …and a watch-triggered rescan never runs more often than this. */
+const WATCH_MIN_GAP_MS = 5 * 60_000;
+/** Data older than this refreshes on the next change, debounce or not. */
+const WATCH_MAX_STALE_MS = 15 * 60_000;
+
 let testRoots = null;
+let appearanceTimer = null;
+let appearanceFingerprint = null;
+let scanning = null;
+let watchers = [];
+let watchTimer = null;
+let lastScanFinishedAt = 0;
 
 function number(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
-function emptyTokens() {
-  return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 0 };
+async function hostRoot() {
+  return hostRootFromDataPath(await pi.plugin.getDataPath());
 }
 
-function emptyTotals() {
-  return { ...emptyTokens(), messages: 0, sessions: 0, activeDays: 0 };
+/** PI-Desktop transcripts live next to the plugin data directory. */
+async function transcriptRoot() {
+  return path.join(await hostRoot(), "sessions");
 }
 
-function addTokens(target, source) {
-  for (const key of ["input", "output", "cacheRead", "cacheWrite", "reasoning", "total"]) {
-    target[key] += number(source[key]);
-  }
-}
-
-function dayKey(timestamp) {
-  const date = new Date(timestamp);
-  const pad = (value) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function startOfToday() {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-function addDays(date, days) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function makeRange(sinceMs, untilMs) {
-  return { sinceMs: sinceMs ?? null, untilMs: untilMs ?? null };
-}
-
-function contains(range, timestamp) {
-  return (range.sinceMs == null || timestamp >= range.sinceMs) &&
-    (range.untilMs == null || timestamp < range.untilMs);
-}
-
-function zeroSlots(length) {
-  return Array.from({ length }, () => ({ total: 0, messages: 0 }));
-}
-
-function groupEntry(map, key) {
-  if (!map.has(key)) {
-    map.set(key, { tokens: emptyTokens(), messages: 0, sessions: new Set(), lastActivityAt: 0 });
-  }
-  return map.get(key);
-}
-
-function pushGroup(group, event) {
-  addTokens(group.tokens, event.tokens);
-  group.messages += 1;
-  group.sessions.add(event.sessionId);
-  group.lastActivityAt = Math.max(group.lastActivityAt, event.timestamp);
-}
-
-function namespacedSessionId(event) {
-  const sourceId = String(event.sourceId || "unknown");
-  const sessionId = String(event.sessionId || "unknown");
-  return sessionId.startsWith(`${sourceId}:`) ? sessionId : `${sourceId}:${sessionId}`;
-}
-
-function sortByTotal(entries) {
-  return entries.sort((left, right) => right.total - left.total || left.label.localeCompare(right.label));
-}
-
-function streak(events) {
-  const active = new Set(events.map((event) => dayKey(event.timestamp)));
-  if (!active.size) return { current: 0, longest: 0 };
-
-  let longest = 0;
-  let run = 0;
-  const ordered = [...active].sort();
-  let previous = null;
-  for (const key of ordered) {
-    const date = new Date(`${key}T00:00:00`);
-    if (previous && date.getTime() - previous.getTime() === 86_400_000) run += 1;
-    else run = 1;
-    longest = Math.max(longest, run);
-    previous = date;
-  }
-
-  let current = 0;
-  for (let cursor = startOfToday(); ; cursor = addDays(cursor, -1)) {
-    if (!active.has(dayKey(cursor.getTime()))) break;
-    current += 1;
-  }
-  return { current, longest };
-}
-
-function totalsForRange(events, range) {
-  const totals = emptyTotals();
-  const sessions = new Set();
-  const days = new Set();
-  for (const event of events) {
-    if (!contains(range, event.timestamp)) continue;
-    addTokens(totals, event.tokens);
-    totals.messages += 1;
-    sessions.add(namespacedSessionId(event));
-    days.add(dayKey(event.timestamp));
-  }
-  totals.sessions = sessions.size;
-  totals.activeDays = days.size;
-  return totals;
-}
-
-function summarize(events, range, allEvents, generatedAt, diagnostics = {}) {
-  const selected = events.filter((event) => contains(range, event.timestamp));
-  const totals = emptyTotals();
-  const daily = new Map();
-  const models = new Map();
-  const providers = new Map();
-  const sources = new Map();
-  const sessions = new Map();
-  const sessionIds = new Set();
-  const hourly = zeroSlots(24);
-  const weekday = zeroSlots(7);
-
-  for (const inputEvent of selected) {
-    const event = { ...inputEvent, sessionId: namespacedSessionId(inputEvent) };
-    addTokens(totals, event.tokens);
-    totals.messages += 1;
-    sessionIds.add(event.sessionId);
-
-    const day = groupEntry(daily, dayKey(event.timestamp));
-    pushGroup(day, event);
-    pushGroup(groupEntry(models, `${event.sourceId}\u0000${event.providerId}\u0000${event.modelId}`), event);
-    pushGroup(groupEntry(providers, event.providerId), event);
-    pushGroup(groupEntry(sources, event.sourceId), event);
-    pushGroup(groupEntry(sessions, event.sessionId), event);
-
-    const timestamp = new Date(event.timestamp);
-    hourly[timestamp.getHours()].total += event.tokens.total;
-    hourly[timestamp.getHours()].messages += 1;
-    const dayIndex = (timestamp.getDay() + 6) % 7;
-    weekday[dayIndex].total += event.tokens.total;
-    weekday[dayIndex].messages += 1;
-  }
-
-  totals.sessions = sessionIds.size;
-  totals.activeDays = daily.size;
-  const previousRange = range.sinceMs == null
-    ? null
-    : makeRange(
-        range.sinceMs - ((range.untilMs ?? generatedAt) - range.sinceMs),
-        range.sinceMs,
-      );
-  const previousTotals = previousRange ? totalsForRange(events, previousRange) : emptyTotals();
-
-  const asDaily = [...daily.entries()]
-    .map(([date, value]) => ({ date, ...value.tokens, messages: value.messages }))
-    .sort((left, right) => left.date.localeCompare(right.date));
-  const asModels = sortByTotal(
-    [...models.entries()].map(([key, value]) => {
-      const [sourceId, providerId, modelId] = key.split("\u0000");
-      return {
-        label: `${sourceLabel(sourceId)} / ${providerId}/${modelId}`,
-        sourceId,
-        providerId,
-        modelId,
-        ...value.tokens,
-        messages: value.messages,
-        sessions: value.sessions.size,
-      };
-    }),
-  );
-  const asProviders = sortByTotal(
-    [...providers.entries()].map(([providerId, value]) => ({
-      label: providerId,
-      providerId,
-      ...value.tokens,
-      messages: value.messages,
-      sessions: value.sessions.size,
-    })),
-  );
-  const asSources = sortByTotal(
-    [...sources.entries()].map(([sourceId, value]) => ({
-      label: sourceLabel(sourceId),
-      sourceId,
-      ...value.tokens,
-      messages: value.messages,
-      sessions: value.sessions.size,
-    })),
-  );
-  const asSessions = sortByTotal(
-    [...sessions.entries()].map(([id, value]) => {
-      const [sourceId, ...sessionParts] = id.split(":");
-      const shortId = sessionParts.join(":").slice(0, 8);
-      return {
-        label: `${sourceLabel(sourceId)} · Session ${shortId}`,
-        title: `${sourceLabel(sourceId)} · Session ${shortId}`,
-        total: value.tokens.total,
-        messages: value.messages,
-        lastActivityAt: value.lastActivityAt,
-      };
-    }),
-  ).slice(0, 12);
-  let firstActivityAt = null;
-  let lastActivityAt = null;
-  for (const event of allEvents) {
-    if (firstActivityAt == null || event.timestamp < firstActivityAt) firstActivityAt = event.timestamp;
-    if (lastActivityAt == null || event.timestamp > lastActivityAt) lastActivityAt = event.timestamp;
-  }
-
+/** The four directories this plugin ever reads usage from. */
+async function sourceRoots() {
+  const home = homedir();
   return {
-    generatedAt,
-    scannedFiles: number(diagnostics.filesScanned),
-    skippedFiles: number(diagnostics.filesSkipped),
-    malformedLines: number(diagnostics.malformedLines),
-    usageMessages: number(diagnostics.usageMessages),
-    sourceDiagnostics: diagnostics.sources || [],
-    sinceMs: range.sinceMs,
-    untilMs: range.untilMs,
-    firstActivityAt,
-    lastActivityAt,
-    totals,
-    previousTotals,
-    daily: asDaily,
-    hourly,
-    weekday,
-    models: asModels,
-    providers: asProviders,
-    sources: asSources,
-    topSessions: asSessions,
-    streak: streak(allEvents),
+    piDesktop: testRoots?.piDesktop || (await transcriptRoot()),
+    claudeCode: testRoots?.claudeCode || path.join(home, ".claude", "projects"),
+    codex: testRoots?.codex || path.join(home, ".codex", "sessions"),
+    openCode: testRoots?.openCode || path.join(home, ".local", "share", "opencode", "storage", "message"),
   };
 }
 
-async function transcriptRoot() {
-  const pluginData = await pi.plugin.getDataPath();
-  return path.resolve(pluginData, "..", "..", "..", "sessions");
-}
-
-async function scanEvents() {
-  const piRoot = testRoots?.piDesktop || await transcriptRoot();
-  const home = homedir();
+async function scanEvents(progress) {
+  const roots = await sourceRoots();
   const results = await Promise.all([
-    scanPiTranscriptDirectory(piRoot),
-    scanClaudeCodeDirectory(testRoots?.claudeCode || path.join(home, ".claude", "projects")),
-    scanCodexDirectory(testRoots?.codex || path.join(home, ".codex", "sessions")),
-    scanOpenCodeDirectory(testRoots?.openCode || path.join(home, ".local", "share", "opencode", "storage", "message")),
+    scanPiTranscriptDirectory(roots.piDesktop, progress),
+    scanClaudeCodeDirectory(roots.claudeCode, progress),
+    scanCodexDirectory(roots.codex, progress),
+    scanOpenCodeDirectory(roots.openCode, progress),
   ]);
   return mergeResults(results);
 }
 
-async function collectSnapshot() {
-  const generatedAt = Date.now();
-  const { events, diagnostics } = await scanEvents();
-  const today = startOfToday();
+/**
+ * Counts every adapter's files into one total and ticks per file, throttling the
+ * publish so the panel gets a bar that moves without a write per file.
+ */
+function progressReporter(publish) {
+  const counts = { filesTotal: 0, filesScanned: 0 };
+  let lastAt = 0;
+  const emit = (force) => {
+    const now = Date.now();
+    if (!force && now - lastAt < SCAN_PROGRESS_MS) return;
+    lastAt = now;
+    publish({ ...counts, updatedAt: now });
+  };
   return {
-    schemaVersion: 2,
-    generatedAt,
-    all: summarize(events, makeRange(null, null), events, generatedAt, diagnostics),
-    thirtyDays: summarize(events, makeRange(addDays(today, -29).getTime(), generatedAt), events, generatedAt, diagnostics),
-    oneYear: summarize(events, makeRange(addDays(today, -364).getTime(), generatedAt), events, generatedAt, diagnostics),
+    counts,
+    // A new total is worth showing at once: it is what turns the bar determinate.
+    addTotal(count) {
+      counts.filesTotal += count;
+      emit(true);
+    },
+    tick() {
+      counts.filesScanned += 1;
+      // Always publish the final file, or the bar freezes short of the end and
+      // then vanishes — which reads as "it stalled", not "it finished".
+      emit(counts.filesTotal > 0 && counts.filesScanned >= counts.filesTotal);
+    },
   };
 }
 
-async function refreshSnapshot() {
-  const snapshot = await collectSnapshot();
-  await pi.plugin.setSettings({ usageSnapshot: snapshot });
-  return snapshot;
+async function collectFacts(progress) {
+  const startedAt = Date.now();
+  // Resolving provider names is best-effort: an unreadable host only means the
+  // panel keeps showing the raw provider id it already had.
+  let providerLabels = {};
+  try {
+    providerLabels = readProviderLabels(await hostRoot());
+  } catch {
+    providerLabels = {};
+  }
+  const { events, diagnostics } = await scanEvents(progress);
+  const facts = buildFacts(events, {
+    generatedAt: startedAt,
+    labelForSource: sourceLabel,
+    labelForProvider: (id) => providerLabels[id] || id,
+    diagnostics,
+  });
+  facts.scanMs = Date.now() - startedAt;
+  return facts;
 }
 
-function parseInstant(input, now) {
+/**
+ * Rescan and publish. Concurrent callers share one scan: the command, the tool
+ * and the load hook all want the same fresh cube, not three of them.
+ */
+function refreshFacts(reason = "manual") {
+  if (scanning) return scanning;
+  scanning = (async () => {
+    const startedAt = Date.now();
+    // Settings writes are read-modify-write over the whole file, so only one is
+    // ever in flight. A sample that arrives during a write is remembered rather
+    // than dropped, which is what guarantees the last one — 100% — lands.
+    let writing = false;
+    let queued = null;
+    const write = (counts) => {
+      writing = true;
+      void pi.plugin
+        .setSettings({ scanState: { status: "scanning", startedAt, reason, ...counts } })
+        .catch(() => undefined)
+        .finally(() => {
+          writing = false;
+          if (queued) {
+            const next = queued;
+            queued = null;
+            write(next);
+          }
+        });
+    };
+    const publish = (counts) => {
+      if (writing) queued = counts;
+      else write(counts);
+    };
+    await pi.plugin.setSettings({
+      scanState: { status: "scanning", startedAt, reason, filesTotal: 0, filesScanned: 0, updatedAt: startedAt },
+    });
+    try {
+      const facts = await collectFacts(progressReporter(publish));
+      lastScanFinishedAt = Date.now();
+      await pi.plugin.setSettings({
+        usageFacts: facts,
+        scanState: {
+          status: "ready",
+          finishedAt: lastScanFinishedAt,
+          scanMs: facts.scanMs,
+          filesScanned: facts.diagnostics.filesScanned,
+          reason,
+        },
+        // v2 snapshots are no longer read; drop the payload instead of leaving a
+        // stale copy of it behind in settings.json.
+        usageSnapshot: null,
+      });
+      return facts;
+    } catch (error) {
+      lastScanFinishedAt = Date.now();
+      await pi.plugin.setSettings({
+        scanState: { status: "failed", finishedAt: lastScanFinishedAt, message: String(error?.message || error) },
+      });
+      throw error;
+    } finally {
+      scanning = null;
+    }
+  })();
+  return scanning;
+}
+
+/**
+ * Watch the source directories so the dashboard keeps up on its own.
+ *
+ * The panel bridge is read-only, so a panel cannot ask for a rescan — without
+ * this, data would only refresh when the command runs. Debounced hard and rate
+ * limited, because a full scan costs seconds of CPU and the answer changes
+ * slowly.
+ */
+function startSourceWatch(roots) {
+  stopSourceWatch();
+  for (const root of Object.values(roots)) {
+    try {
+      const watcher = watch(root, { recursive: true, persistent: false }, () => {
+        // Continuous activity keeps resetting the debounce, so a long busy
+        // session would never refresh; past this age the next event scans.
+        const stale = Date.now() - lastScanFinishedAt > WATCH_MAX_STALE_MS;
+        if (stale && !scanning) {
+          if (watchTimer) clearTimeout(watchTimer);
+          watchTimer = null;
+          void refreshFacts("watch").catch(() => undefined);
+          return;
+        }
+        if (watchTimer) clearTimeout(watchTimer);
+        watchTimer = setTimeout(() => {
+          watchTimer = null;
+          if (scanning) return;
+          if (Date.now() - lastScanFinishedAt < WATCH_MIN_GAP_MS) return;
+          void refreshFacts("watch").catch(() => undefined);
+        }, WATCH_DEBOUNCE_MS);
+        watchTimer.unref?.();
+      });
+      watcher.on?.("error", () => undefined);
+      watchers.push(watcher);
+    } catch {
+      // A missing or unwatchable directory just means no auto-refresh from it.
+    }
+  }
+}
+
+function stopSourceWatch() {
+  if (watchTimer) clearTimeout(watchTimer);
+  watchTimer = null;
+  for (const watcher of watchers) {
+    try {
+      watcher.close();
+    } catch {
+      /* already gone */
+    }
+  }
+  watchers = [];
+}
+
+/** Appearance is cheap to read and changes at human speed; a small poll is enough. */
+async function publishAppearance(root) {
+  const appearance = readHostAppearance(root);
+  const fingerprint = JSON.stringify([
+    appearance.ok,
+    appearance.themePreference,
+    appearance.base,
+    appearance.locale,
+    appearance.pluginTheme?.id ?? null,
+    appearance.pluginTheme?.css?.length ?? 0,
+  ]);
+  if (fingerprint === appearanceFingerprint) return appearance;
+  appearanceFingerprint = fingerprint;
+  await pi.plugin.setSettings({ hostAppearance: appearance });
+  return appearance;
+}
+
+function startAppearanceWatch(root) {
+  stopAppearanceWatch();
+  appearanceTimer = setInterval(() => {
+    void publishAppearance(root).catch(() => undefined);
+  }, APPEARANCE_POLL_MS);
+  appearanceTimer.unref?.();
+}
+
+function stopAppearanceWatch() {
+  if (appearanceTimer) clearInterval(appearanceTimer);
+  appearanceTimer = null;
+  appearanceFingerprint = null;
+}
+
+/* -------------------------------------------------------------- agent tool */
+
+function parseInstant(input) {
   if (input == null || input === "") return null;
   const text = String(input).trim();
   const relative = RELATIVE.exec(text);
   if (relative) {
-    const date = startOfToday();
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
     const amount = Number(relative[1]);
     const unit = relative[2].toLowerCase();
     if (unit === "d") date.setDate(date.getDate() - amount);
@@ -313,79 +312,129 @@ function parseInstant(input, now) {
 }
 
 function compact(value) {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return String(Math.round(value));
+  const amount = number(value);
+  if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(2)}B`;
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)}M`;
+  if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)}K`;
+  return String(Math.round(amount));
 }
 
-function ranking(summary, groupBy, limit) {
-  const total = number(summary.totals?.total);
-  const rows = groupBy === "source" ? summary.sources
-    : groupBy === "provider" ? summary.providers
-    : groupBy === "day" ? [...(summary.daily || [])].sort((a, b) => b.total - a.total)
-    : groupBy === "session" ? summary.topSessions
-    : summary.models;
-  return (rows || []).slice(0, limit).map((row) => ({
-    key: row.modelId || row.providerId || row.date || row.title,
-    total: number(row.total),
-    share: total ? Math.round((number(row.total) / total) * 1000) / 10 : 0,
-  }));
+function stringList(value) {
+  if (value == null) return [];
+  const list = Array.isArray(value) ? value : String(value).split(",");
+  return list.map((item) => String(item).trim()).filter(Boolean);
 }
 
+/**
+ * The tool answers from the same cube and the same aggregation the panel uses,
+ * so "which model cost me the most this month" cannot disagree with the screen.
+ */
 async function buildReport(args = {}) {
-  const now = Date.now();
   const sinceInput = args.since == null ? "" : String(args.since).trim();
   const untilInput = args.until == null ? "" : String(args.until).trim();
-  const sinceMs = parseInstant(sinceInput, now);
-  const untilMs = parseInstant(untilInput, now);
-  if (sinceInput && sinceMs == null) throw new Error("Invalid since value. Use an ISO date or a shorthand such as 30d.");
+  const sinceMs = parseInstant(sinceInput);
+  const untilMs = parseInstant(untilInput);
+  if (sinceInput && sinceMs == null) {
+    throw new Error("Invalid since value. Use an ISO date or a shorthand such as 30d.");
+  }
   if (untilInput && untilMs == null) throw new Error("Invalid until value. Use an ISO date or date-time.");
-  if (sinceMs != null && untilMs != null && sinceMs >= untilMs) throw new Error("The since value must be earlier than until.");
+  if (sinceMs != null && untilMs != null && sinceMs >= untilMs) {
+    throw new Error("The since value must be earlier than until.");
+  }
 
-  const { events, diagnostics } = await scanEvents();
-  const summary = summarize(events, makeRange(sinceMs, untilMs), events, now, diagnostics);
-  const groupBy = ["model", "provider", "source", "day", "session"].includes(args.groupBy) ? args.groupBy : "model";
-  const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 25);
-  const previous = number(summary.previousTotals?.total);
-  const deltaPct = previous ? Math.round(((summary.totals.total - previous) / previous) * 1000) / 10 : null;
-  const report = {
-    ok: true,
-    scannedFiles: summary.scannedFiles,
-    totals: summary.totals,
-    groupBy,
-    ranking: ranking(summary, groupBy, limit),
-    deltaPct,
-    streak: summary.streak,
+  const facts = await refreshFacts();
+  const filter = {
+    sinceDay: sinceMs == null ? null : dayKeyFromTimestamp(sinceMs),
+    // `until` is exclusive for callers, inclusive for day buckets.
+    untilDay: untilMs == null ? null : shiftDayKey(dayKeyFromTimestamp(untilMs), -1),
+    sources: stringList(args.sources ?? args.source),
+    models: stringList(args.models ?? args.model),
+    providers: stringList(args.providers ?? args.provider),
+    query: args.query == null ? "" : String(args.query),
   };
+  const summary = aggregate(facts, filter);
+  const groupBy = ["model", "provider", "source", "day", "session"].includes(args.groupBy)
+    ? args.groupBy
+    : "model";
+  const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 25);
+  const rows =
+    groupBy === "day"
+      ? [...summary.daily].sort((left, right) => right.total - left.total)
+      : summary[`${groupBy}s`] || [];
+  const total = summary.totals.total;
+  const ranking = rows.slice(0, limit).map((row) => ({
+    key: row.label ?? row.date,
+    total: number(row.total),
+    messages: number(row.messages),
+    share: total ? Math.round((number(row.total) / total) * 1000) / 10 : 0,
+  }));
+  const reach = milestones(facts);
+
   const lines = [
     "# Token usage",
     "",
-    `- Total: ${summary.totals.total.toLocaleString("en-US")} tokens`,
-    `- Activity: ${summary.totals.messages} assistant replies across ${summary.totals.sessions} sessions`,
-    `- Streak: ${summary.streak.current} days now, longest ${summary.streak.longest}`,
+    `- Window: ${filter.sinceDay || facts.days[0] || "n/a"} → ${filter.untilDay || facts.days[facts.days.length - 1] || "n/a"}`,
+    `- Total: ${total.toLocaleString("en-US")} tokens (in ${compact(summary.totals.input)}, out ${compact(summary.totals.output)}, cache read ${compact(summary.totals.cacheRead)}, reasoning ${compact(summary.totals.reasoning)})`,
+    `- Activity: ${summary.totals.messages} assistant replies across ${summary.totals.sessions} sessions on ${summary.totals.activeDays} active days`,
+    `- Streak: ${summary.streak.current} days${summary.streak.includesToday ? " including today" : summary.streak.endedOn ? " through yesterday" : ""}, longest ${summary.streak.longest}`,
+    summary.deltaPct == null
+      ? "- Previous period: no comparable window"
+      : `- Previous period: ${summary.deltaPct >= 0 ? "+" : ""}${summary.deltaPct}%`,
     "",
     `## Top by ${groupBy}`,
-    ...report.ranking.map((row) => `- ${row.key}: ${compact(row.total)} tokens (${row.share}%)`),
+    ...(ranking.length
+      ? ranking.map((row) => `- ${row.key}: ${compact(row.total)} tokens (${row.share}%, ${row.messages} replies)`)
+      : ["- nothing matched this filter"]),
     "",
-    `_Scanned ${summary.scannedFiles} local transcript files. Message text is never returned._`,
+    `_Scanned ${facts.diagnostics.filesScanned} local metadata files. Message text is never read or returned._`,
   ];
-  return { ...report, text: lines.join("\n") };
+
+  return {
+    ok: true,
+    scannedFiles: facts.diagnostics.filesScanned,
+    window: { sinceDay: filter.sinceDay, untilDay: filter.untilDay },
+    totals: summary.totals,
+    groupBy,
+    ranking,
+    deltaPct: summary.deltaPct,
+    streak: summary.streak,
+    peakHour: summary.peakHour,
+    milestone: reach.latest,
+    nextMilestone: reach.next,
+    text: lines.join("\n"),
+  };
 }
 
+/* ---------------------------------------------------------------- lifecycle */
+
 async function onLoad() {
+  const root = await hostRoot();
+  // Appearance first: the panel should never open in the wrong palette while a
+  // six-second scan finishes.
+  await publishAppearance(root).catch(() => undefined);
+  startAppearanceWatch(root);
+
   await pi.commands.register({
     id: "tokenInsights.open",
     title: "Token Insights: Open",
-    keywords: ["token", "usage", "tokens", "cost", "spend", "stats"],
+    keywords: ["token", "usage", "tokens", "cost", "spend", "stats", "用量", "统计"],
     category: "Productivity",
     run: async () => {
-      await refreshSnapshot();
+      await publishAppearance(root).catch(() => undefined);
+      // Open now, scan behind it: the panel renders the previous cube and
+      // switches to the fresh one as soon as it lands.
       await pi.ui.openPanel({ title: "Token Insights" });
+      void refreshFacts("command").catch((error) =>
+        pi.ui.showToast(`Token Insights scan failed: ${error.message}`, "warn"),
+      );
     },
   });
+
   await pi.agent.registerTool({
     name: "token_usage_summary",
-    description: "Scan supported local AI-tool metadata and summarize token use by tool, model, provider, day, or session without returning message text.",
+    description:
+      "Scan supported local AI-tool metadata and summarize token use by tool source, model, provider, day, " +
+      "or short session id. Supports the same filters as the dashboard and never returns message text.",
     risk: "medium",
     schema: {
       type: "object",
@@ -393,15 +442,25 @@ async function onLoad() {
         since: { type: "string", description: "ISO date/date-time or a shorthand such as 7d, 30d, 12w, 1y." },
         until: { type: "string", description: "Exclusive ISO date/date-time end. Defaults to now." },
         groupBy: { type: "string", enum: ["model", "provider", "source", "day", "session"] },
+        sources: { type: "string", description: "Comma-separated tool sources, e.g. pi-desktop,codex." },
+        models: { type: "string", description: "Comma-separated model ids to keep." },
+        providers: { type: "string", description: "Comma-separated provider ids to keep." },
+        query: { type: "string", description: "Free-text match over source, model, provider or short session id." },
         limit: { type: "number", description: "Maximum ranking rows, from 1 through 25." },
       },
     },
     execute: buildReport,
   });
-  void refreshSnapshot().catch((error) => pi.ui.showToast(`Token Insights scan failed: ${error.message}`, "warn"));
+
+  startSourceWatch(await sourceRoots());
+  void refreshFacts("load").catch((error) =>
+    pi.ui.showToast(`Token Insights scan failed: ${error.message}`, "warn"),
+  );
 }
 
 async function onUnload() {
+  stopAppearanceWatch();
+  stopSourceWatch();
   await pi.commands.unregister("tokenInsights.open");
   await pi.agent.unregisterTool("token_usage_summary");
 }
@@ -410,14 +469,25 @@ module.exports = {
   onLoad,
   onUnload,
   __test: {
+    aggregate,
+    buildFacts,
+    buildReport,
+    collectFacts,
+    progressReporter,
+    refreshFacts,
+    sourceRoots,
+    milestones,
+    parseInstant,
+    readHostAppearance,
+    readProviderLabels,
     scanClaudeCodeDirectory,
     scanCodexDirectory,
     scanOpenCodeDirectory,
     scanPiTranscriptDirectory,
-    summarize,
+    todayKey,
     toTokens,
-    makeRange,
-    parseInstant,
-    setScanRoots: (roots) => { testRoots = roots; },
+    setScanRoots: (roots) => {
+      testRoots = roots;
+    },
   },
 };

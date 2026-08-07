@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-lang="zh" data-theme="dark">
+<html>
 <head>
   <meta charset="UTF-8" />
   <meta
@@ -9,18 +9,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Token Insights</title>
   <link rel="stylesheet" href="panel.css" />
+  <!--
+    boot.js runs before the body is parsed and re-applies the appearance this
+    panel last saw, so a reopen never flashes the wrong palette. Every visible
+    string comes from panel.js, so neither language is baked into this file.
+  -->
+  <script src="boot.js"></script>
 </head>
 <body>
-  <!-- 46px drag strip. OS window controls are drawn by the host, never here. -->
   <header class="titlebar" id="titlebar">
-    <div class="titlebar-title" id="appTitle">Token Insights</div>
+    <div class="titlebar-drag"></div>
+    <div class="titlebar-title" id="appTitle"></div>
     <div class="titlebar-actions">
-      <div class="segmented" id="rangeSwitch" role="group" aria-label="时间范围">
-        <button type="button" class="segment" data-range="30d">30D</button>
-        <button type="button" class="segment" data-range="1y">1Y</button>
-        <button type="button" class="segment" data-range="all">ALL</button>
-      </div>
-      <button type="button" class="icon-button" id="refreshBtn" title="重新载入最新快照" aria-label="重新载入最新快照">
+      <button type="button" class="icon-button" id="appearanceBtn" data-menu="appearance">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 3v18" />
+          <path d="M12 8a4 4 0 0 1 0 8" />
+        </svg>
+      </button>
+      <button type="button" class="icon-button" id="refreshBtn">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
           <path d="M21 3v5h-5" />
@@ -29,43 +37,119 @@
         </svg>
       </button>
     </div>
+
+    <div class="menu" id="appearanceMenu" hidden role="dialog" aria-modal="false">
+      <div class="menu-group">
+        <div class="menu-label" id="menuThemeLabel"></div>
+        <div class="menu-row" id="themeChoices" role="group"></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-label" id="menuLangLabel"></div>
+        <div class="menu-row" id="langChoices" role="group"></div>
+      </div>
+      <p class="menu-note" id="appearanceNote"></p>
+    </div>
   </header>
+
+  <section class="filterbar" id="filterbar">
+    <div class="segmented" id="rangeSwitch" role="group"></div>
+
+    <div class="custom-range" id="customRange" hidden>
+      <input type="date" id="customFrom" />
+      <span class="dash">–</span>
+      <input type="date" id="customTo" />
+    </div>
+
+    <div class="filter-pickers">
+      <div class="picker" data-picker="sources">
+        <button type="button" class="chip-button" id="sourceBtn" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="popover" id="sourcePop" hidden role="group"></div>
+      </div>
+      <div class="picker" data-picker="models">
+        <button type="button" class="chip-button" id="modelBtn" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="popover popover-wide" id="modelPop" hidden role="group">
+          <input type="search" class="popover-search" id="modelSearch" spellcheck="false" />
+          <div class="popover-list" id="modelList"></div>
+        </div>
+      </div>
+      <div class="picker" data-picker="providers">
+        <button type="button" class="chip-button" id="providerBtn" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="popover" id="providerPop" hidden role="group"></div>
+      </div>
+    </div>
+
+    <div class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.6-3.6" />
+      </svg>
+      <input type="search" id="queryInput" spellcheck="false" />
+    </div>
+
+    <div class="filter-tail">
+      <span class="scan-pill" id="scanPill" hidden></span>
+      <button type="button" class="ghost-button" id="clearFilters" hidden></button>
+    </div>
+
+    <div class="scan-bar" id="scanBar" hidden aria-hidden="true"><i id="scanBarFill"></i></div>
+  </section>
+
+  <div class="chiprow" id="chipRow" hidden></div>
 
   <main class="scroll" id="scroll">
     <div class="state" id="stateBox" hidden>
       <div class="state-title" id="stateTitle"></div>
       <div class="state-body" id="stateBody"></div>
+      <div class="state-actions" id="stateActions"></div>
+    </div>
+
+    <div class="skeleton" id="skeleton" hidden aria-hidden="true">
+      <div class="sk sk-hero"></div>
+      <div class="sk-row"><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div>
+      <div class="sk sk-block"></div>
+      <div class="sk-row"><div class="sk sk-half"></div><div class="sk sk-half"></div></div>
     </div>
 
     <div id="content" hidden>
       <section class="hero">
-        <div class="hero-line">
-          <span class="hero-quote" id="heroQuote"></span>
+        <div class="hero-top">
+          <p class="hero-greeting" id="heroGreeting"></p>
+          <div class="hero-badges" id="heroBadges"></div>
+        </div>
+        <div class="hero-main">
+          <div class="hero-number" id="heroNumber">0</div>
           <span class="delta" id="heroDelta" hidden></span>
         </div>
-        <div class="hero-number" id="heroNumber">0</div>
-        <div class="hero-sub" id="heroSub"></div>
+        <p class="hero-sub" id="heroSub"></p>
+        <p class="hero-note" id="heroNote"></p>
         <div class="sparkline" id="sparkline" aria-hidden="true"></div>
+        <div class="milestone" id="milestoneBox" hidden>
+          <div class="milestone-head">
+            <span id="milestoneLabel"></span>
+            <span id="milestoneRemaining"></span>
+          </div>
+          <div class="meter"><i id="milestoneBar"></i></div>
+        </div>
       </section>
 
-      <section class="tiles">
+      <section class="tiles" id="tiles">
         <div class="tile">
-          <div class="tile-label" id="tileInputLabel">输入</div>
+          <div class="tile-label" id="tileInputLabel"></div>
           <div class="tile-value" id="tileInput">—</div>
           <div class="tile-note" id="tileInputNote"></div>
         </div>
         <div class="tile">
-          <div class="tile-label" id="tileOutputLabel">输出</div>
+          <div class="tile-label" id="tileOutputLabel"></div>
           <div class="tile-value" id="tileOutput">—</div>
           <div class="tile-note" id="tileOutputNote"></div>
         </div>
         <div class="tile">
-          <div class="tile-label" id="tileCacheLabel">缓存读取</div>
+          <div class="tile-label" id="tileCacheLabel"></div>
           <div class="tile-value" id="tileCache">—</div>
           <div class="tile-note" id="tileCacheNote"></div>
         </div>
         <div class="tile">
-          <div class="tile-label" id="tileReasoningLabel">推理</div>
+          <div class="tile-label" id="tileReasoningLabel"></div>
           <div class="tile-value" id="tileReasoning">—</div>
           <div class="tile-note" id="tileReasoningNote"></div>
         </div>
@@ -73,23 +157,25 @@
 
       <section class="block">
         <div class="block-head">
-          <h2 id="activityTitle">Activity</h2>
+          <h2 id="activityTitle"></h2>
           <span class="block-note" id="streakNote"></span>
         </div>
         <div class="heatmap-wrap">
-          <div class="heatmap-months" id="heatMonths" aria-hidden="true"></div>
-          <div class="heatmap-body">
-            <div class="heatmap-days" id="heatDays" aria-hidden="true"></div>
-            <div class="heatmap" id="heatmap" role="img" aria-label="Activity heatmap"></div>
+          <div class="heatmap-scroll" id="heatScroll">
+            <div class="heatmap-grid">
+              <div class="heatmap-months" id="heatMonths" aria-hidden="true"></div>
+              <div class="heatmap-days" id="heatDays" aria-hidden="true"></div>
+              <div class="heatmap" id="heatmap" role="img"></div>
+            </div>
           </div>
         </div>
         <div class="heatmap-legend">
           <span class="tooltip" id="heatTip"></span>
           <span class="legend">
-            <span id="legendLess">Less</span>
+            <span id="legendLess"></span>
             <i data-level="0"></i><i data-level="1"></i><i data-level="2"></i>
             <i data-level="3"></i><i data-level="4"></i>
-            <span id="legendMore">More</span>
+            <span id="legendMore"></span>
           </span>
         </div>
       </section>
@@ -97,15 +183,15 @@
       <div class="split">
         <section class="block">
           <div class="block-head">
-            <h2 id="modelsTitle">Models</h2>
+            <h2 id="modelsTitle"></h2>
             <span class="block-note" id="modelsNote"></span>
           </div>
-          <div class="ranking" id="modelList"></div>
+          <div class="ranking" id="modelRanking"></div>
         </section>
 
         <section class="block">
           <div class="block-head">
-            <h2 id="rhythmTitle">Rhythm</h2>
+            <h2 id="rhythmTitle"></h2>
             <span class="block-note" id="rhythmNote"></span>
           </div>
           <div class="clock" id="clock" aria-hidden="true"></div>
@@ -117,16 +203,19 @@
       <div class="split">
         <section class="block">
           <div class="block-head">
-            <h2 id="sourcesTitle">Tool sources</h2>
+            <h2 id="sourcesTitle"></h2>
+            <span class="block-note" id="providersNote"></span>
           </div>
-          <div class="ranking" id="sourceList"></div>
+          <div class="ranking" id="sourceRanking"></div>
+          <div class="ranking ranking-sub" id="providerRanking"></div>
         </section>
 
         <section class="block">
           <div class="block-head">
-            <h2 id="sessionsTitle">Top sessions</h2>
+            <h2 id="sessionsTitle"></h2>
+            <span class="block-note" id="sessionsNote"></span>
           </div>
-          <div class="ranking" id="sessionList"></div>
+          <div class="ranking" id="sessionRanking"></div>
         </section>
       </div>
 
@@ -137,6 +226,8 @@
     </div>
   </main>
 
+  <!-- Same aggregation module the plugin process uses, loaded from the plugin root. -->
+  <script src="../aggregate.js"></script>
   <script src="panel.js"></script>
 </body>
 </html>
