@@ -2,13 +2,16 @@
   "schemaVersion": 1,
   "id": "pi.token-insights",
   "name": "Token Insights",
-  "version": "0.3.1",
-  "description": "A private local scanner for PI-Desktop, Claude Code, Codex, and OpenCode token metadata, with per-tool trends, categories, and encouraging streaks.",
+  "version": "0.4.2",
+  "description": "A private local dashboard for the tokens you spend across PI-Desktop, Claude Code, Codex and OpenCode: follows the app's theme and language, filters by tool, model, provider, date range or keyword, and keeps a streak and milestone worth looking at.",
   "author": "PI-Desktop",
   "main": "main.js",
-  "categories": ["productivity", "official"],
-  "changelog": "Default the dashboard to Simplified Chinese and show four token cards: input, output, cache read, and reasoning.",
-  "safetyNotes": "Scans only supported local tool metadata locations. It aggregates usage, time, tool source, model, provider, and short session IDs; it does not retain or expose message content, tool arguments, project paths, or full session IDs, and it makes no network requests.",
+  "categories": [
+    "productivity",
+    "official"
+  ],
+  "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
+  "safetyNotes": "Reads only local metadata, always read-only, always on this device. Usage comes from the tool metadata files PI-Desktop, Claude Code, Codex and OpenCode already write; appearance (theme, language, active plugin theme CSS) and provider display names come from PI-Desktop's own local records. It never reads message text, tool arguments, project paths or credentials, never keeps a full session id (only an 8-character prefix), never writes anywhere except its own plugin settings, and makes no network request.",
   "ui": {
     "panel": "renderer/index.html",
     "width": 1120,
@@ -21,14 +24,21 @@
       {
         "id": "tokenInsights.open",
         "title": "Token Insights: Open",
-        "keywords": ["token", "usage", "tokens", "stats", "用量", "统计"],
+        "keywords": [
+          "token",
+          "usage",
+          "tokens",
+          "stats",
+          "用量",
+          "统计"
+        ],
         "category": "Productivity"
       }
     ],
     "agentTools": [
       {
         "name": "token_usage_summary",
-        "description": "Scan supported local AI-tool metadata and summarize token usage by tool source, model, provider, day, or short session ID without returning message text.",
+        "description": "Summarize local token usage from supported AI tools: totals, per-tool, per-model, per-provider, per-day and per-session rankings, busiest hours, activity streak and milestones. Answers from the same aggregation the dashboard shows and never returns message text.",
         "risk": "medium",
         "schema": {
           "type": "object",
@@ -43,20 +53,45 @@
             },
             "groupBy": {
               "type": "string",
-              "enum": ["model", "provider", "source", "day", "session"],
+              "enum": [
+                "model",
+                "provider",
+                "source",
+                "day",
+                "session"
+              ],
               "description": "Which ranking to expand in the reply. Defaults to model."
             },
             "limit": {
               "type": "number",
               "description": "Max rows in the expanded ranking (default 10, max 25)."
+            },
+            "sources": {
+              "type": "string",
+              "description": "Comma-separated tool sources to keep, e.g. pi-desktop,codex,claude-code,opencode."
+            },
+            "models": {
+              "type": "string",
+              "description": "Comma-separated model ids to keep."
+            },
+            "providers": {
+              "type": "string",
+              "description": "Comma-separated provider ids to keep."
+            },
+            "query": {
+              "type": "string",
+              "description": "Free-text match over tool source, model, provider or short session id."
             }
           }
         }
       }
     ]
   },
-  "permissions": ["ui.panel", "agent.tool.register"],
+  "permissions": [
+    "ui.panel",
+    "agent.tool.register"
+  ],
   "engines": {
-    "piDesktop": ">=0.2.0"
+    "piDesktop": ">=0.2.9"
   }
 }
