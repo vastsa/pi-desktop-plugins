@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>草稿计算器</title>
+    <style>
+      :root {
+        --paper: #f6f0e3;
+        --card: #fffdf6;
+        --card-border: #e7dbc0;
+        --line: #e0d3b4;
+        --ink: #453d2e;
+        --ink-soft: #a29478;
+        --accent: #c07a1e;
+        --shadow: 0 1px 4px rgba(140, 115, 60, 0.12);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        font: 15px/1.5 Georgia, "Palatino Linotype", "Book Antiqua", "Noto Serif SC",
+          "Songti SC", serif;
+        font-variant-numeric: tabular-nums;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      .app {
+        max-width: 760px;
+        margin: 0 auto;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* 统一卡片尺寸：输入卡片 = 单条结果卡片（单行） */
+      .sheet {
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        padding: 12px 18px;
+        height: 72px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+
+      .input-sheet {
+        margin-bottom: 2px;
+      }
+      #formula {
+        width: 100%;
+        background: transparent;
+        border: 0;
+        outline: none;
+        color: var(--ink);
+        font: 24px/1.3 Georgia, "Palatino Linotype", "Book Antiqua", "Noto Serif SC",
+          "Songti SC", serif;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      #formula.err {
+        animation: shake 0.3s;
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+      }
+      .input-sheet.ok {
+        animation: okflash 0.3s;
+      }
+      @keyframes okflash {
+        0% { border-color: var(--accent); }
+        100% { border-color: var(--card-border); }
+      }
+
+      .divider {
+        border-top: 1px solid var(--line);
+        margin: 8px 0 14px;
+        flex-shrink: 0;
+      }
+
+      /* 可滚动历史区 */
+      .scroll {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-right: 2px;
+      }
+      .scroll::-webkit-scrollbar {
+        width: 8px;
+      }
+      .scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .scroll::-webkit-scrollbar-thumb {
+        background: #dccfa9;
+        border-radius: 4px;
+      }
+
+      .entry {
+        cursor: pointer;
+      }
+      .entry .meta {
+        width: 100%;
+        font: 16px/1.4 Georgia, "Palatino Linotype", "Book Antiqua", "Noto Serif SC",
+          "Songti SC", serif;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink-soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: right;
+      }
+      .entry:hover .meta {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- 输入卡片：尺寸与单条结果卡片一致；回车计算，Esc 清空，↑↓ 浏览历史 -->
+      <div class="sheet input-sheet">
+        <input id="formula" spellcheck="false" autocomplete="off" autofocus />
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 可滚动历史：最新置顶 -->
+      <div class="scroll" id="scroll"></div>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        /* ================= 求值引擎 ================= */
+
+        function normalize(src) {
+          return String(src)
+            .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+            .replace(/．/g, ".")
+            .replace(/[−－–—]/g, "-")
+            .replace(/[×✕✖＊]/g, "*")
+            .replace(/[÷／]/g, "/")
+            .replace(/＋/g, "+")
+            .replace(/（/g, "(")
+            .replace(/）/g, ")")
+            .replace(/\*\*/g, "^")
+            .replace(/π|Π|𝛑/g, "pi");
+        }
+
+        /** 清理：归一化 + 自动去掉尾部孤立的运算符（10+88+ → 10+88）；非运算字符仍会报错 */
+        function cleanFormula(src) {
+          let s = normalize(src).trim();
+          s = s.replace(/\s*[+\-*/^]+\s*$/, "");
+          return s.trim();
+        }
+
+        function tokenize(s) {
+          const tokens = [];
+          let i = 0;
+          const isDigit = (c) => c >= "0" && c <= "9";
+          while (i < s.length) {
+            const c = s[i];
+            if (c === " " || c === "\t" || c === "\n" || c === "\r") {
+              i++;
+              continue;
+            }
+            if (isDigit(c) || c === ".") {
+              let j = i;
+              let dots = 0;
+              while (j < s.length && (isDigit(s[j]) || s[j] === ".")) {
+                if (s[j] === ".") dots++;
+                j++;
+              }
+              if (dots > 1) throw new Error("小数点格式不对");
+              const num = Number(s.slice(i, j));
+              if (!Number.isFinite(num)) throw new Error("数字无效");
+              tokens.push({ type: "num", value: num });
+              i = j;
+              continue;
+            }
+            if (s.startsWith("pi", i)) {
+              tokens.push({ type: "const", value: Math.PI });
+              i += 2;
+              continue;
+            }
+            if (c === "e" || c === "E") {
+              tokens.push({ type: "const", value: Math.E });
+              i += 1;
+              continue;
+            }
+            if ("+-*/^()".includes(c)) {
+              tokens.push({ type: c });
+              i++;
+              continue;
+            }
+            throw new Error(`不支持的字符「${c}」`);
+          }
+          tokens.push({ type: "eof" });
+          return tokens;
+        }
+
+        function makeParser(tokens) {
+          let pos = 0;
+          const peek = () => tokens[pos];
+          const next = () => tokens[pos++];
+
+          function parseExpr() {
+            return parseAddSub();
+          }
+
+          function parseAddSub() {
+            let left = parseMulDiv();
+            for (;;) {
+              const t = peek();
+              if (t.type === "+" || t.type === "-") {
+                next();
+                const right = parseMulDiv();
+                left = t.type === "+" ? left + right : left - right;
+              } else {
+                return left;
+              }
+            }
+          }
+
+          function parseMulDiv() {
+            let left = parseUnary();
+            for (;;) {
+              const t = peek();
+              if (t.type === "*" || t.type === "/") {
+                next();
+                const right = parseUnary();
+                if (t.type === "/" && right === 0) throw new Error("除数不能为 0");
+                left = t.type === "*" ? left * right : left / right;
+              } else if (t.type === "num" || t.type === "const" || t.type === "(") {
+                // 隐式乘法：2π、2(3+1)、(2)(3)
+                left = left * parseUnary();
+              } else {
+                return left;
+              }
+            }
+          }
+
+          function parseUnary() {
+            const t = peek();
+            if (t.type === "-") {
+              next();
+              return -parseUnary();
+            }
+            if (t.type === "+") {
+              next();
+              return parseUnary();
+            }
+            return parsePower();
+          }
+
+          function parsePower() {
+            const base = parsePrimary();
+            if (peek().type === "^") {
+              next();
+              const exp = parseUnary(); // 右结合：2^3^2 = 2^(3^2)；指数允许负号：2^-2
+              return Math.pow(base, exp);
+            }
+            return base;
+          }
+
+          function parsePrimary() {
+            const t = next();
+            if (t.type === "num" || t.type === "const") return t.value;
+            if (t.type === "(") {
+              const v = parseExpr();
+              const close = next();
+              if (close.type !== ")") {
+                if (close.type === "eof") throw new Error("公式不完整（缺少右括号）");
+                throw new Error("括号不匹配");
+              }
+              return v;
+            }
+            if (t.type === ")") throw new Error("公式不完整（括号内为空）");
+            if (t.type === "eof") throw new Error("公式不完整");
+            throw new Error("公式不完整（运算符后缺少数字）");
+          }
+
+          function finish() {
+            const t = peek();
+            if (t.type === "eof") return;
+            if (t.type === ")") throw new Error("括号不匹配（多了右括号）");
+            throw new Error(`表达式结尾有多余内容「${t.type === "num" ? t.value : t.type}」`);
+          }
+
+          return { parseExpr, finish };
+        }
+
+        /** 计算入口：成功返回数值，失败抛出带中文 message 的 Error（自动忽略尾部多余运算符） */
+        function evaluate(src) {
+          const s = cleanFormula(src);
+          if (!s) throw new Error("请输入公式");
+          const tokens = tokenize(s);
+          const p = makeParser(tokens);
+          const v = p.parseExpr();
+          p.finish();
+          if (!Number.isFinite(v)) throw new Error("结果超出可表示范围");
+          return v;
+        }
+
+        /** 结果格式化：清理浮点噪声，超大/超小数字用科学计数法 */
+        function formatResult(v) {
+          if (Object.is(v, -0)) v = 0;
+          const abs = Math.abs(v);
+          if (abs >= 1e15 || (abs < 1e-9 && v !== 0)) {
+            return v
+              .toExponential(6)
+              .replace(/\.?0+e/, "e")
+              .replace("e+", "e");
+          }
+          return String(Number(v.toPrecision(14)));
+        }
+
+        /* ================= 面板逻辑 ================= */
+
+        const STORE_KEY = "scratch-calc-history.v1";
+        const MAX_ITEMS = 200;
+        // 纯数字（可带正负号/小数点）不算公式：回车不记录历史
+        const BARE_NUM = /^[+-]?(\d+(\.\d*)?|\.\d+)$/;
+
+        const input = document.getElementById("formula");
+        const inputSheet = document.querySelector(".input-sheet");
+        const scroll = document.getElementById("scroll");
+
+        let history = [];
+        let navIndex = -1; // -1 = 未在浏览历史；≥0 = 正在浏览的第几条
+        try {
+          const raw = localStorage.getItem(STORE_KEY);
+          if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) history = arr.slice(0, MAX_ITEMS);
+          }
+        } catch (e) {
+          history = [];
+        }
+
+        function save() {
+          try {
+            localStorage.setItem(STORE_KEY, JSON.stringify(history));
+          } catch (e) {
+            /* 存储不可用时仅保留在内存 */
+          }
+        }
+
+        /* 每条历史一张卡片：单行「公式 = 结果」；最新置顶；点击回填公式 */
+        function render() {
+          const old = scroll.querySelectorAll(".entry");
+          old.forEach((n) => n.remove());
+          history.forEach(function (item) {
+            const card = document.createElement("div");
+            card.className = "entry sheet";
+
+            const meta = document.createElement("div");
+            meta.className = "meta";
+            meta.textContent = `${item.expr} = ${item.result}`;
+            meta.title = item.expr;
+            meta.addEventListener("click", function () {
+              input.value = item.expr;
+              input.focus();
+              navIndex = -1;
+            });
+
+            card.appendChild(meta);
+            scroll.appendChild(card);
+          });
+        }
+
+        function pushEntry(expr, result) {
+          history.unshift({ expr: expr, result: result, ts: Date.now() });
+          if (history.length > MAX_ITEMS) history.length = MAX_ITEMS;
+          save();
+          render();
+          scroll.scrollTop = 0; // 最新置顶，滚回顶部
+        }
+
+        function flashError() {
+          input.classList.remove("err");
+          void input.offsetWidth; // 重启动画
+          input.classList.add("err");
+          clearTimeout(flashError._t);
+          flashError._t = setTimeout(function () {
+            input.classList.remove("err");
+          }, 400);
+        }
+
+        function flashOk() {
+          inputSheet.classList.remove("ok");
+          void inputSheet.offsetWidth;
+          inputSheet.classList.add("ok");
+          clearTimeout(flashOk._t);
+          flashOk._t = setTimeout(function () {
+            inputSheet.classList.remove("ok");
+          }, 300);
+        }
+
+        /* ↑/↓ 浏览历史：↑ 从最新往更旧，↓ 返回并最终清空 */
+        function navHistory(dir) {
+          if (!history.length) return;
+          navIndex =
+            dir === -1
+              ? Math.min(history.length - 1, navIndex + 1)
+              : Math.max(-1, navIndex - 1);
+          input.value = navIndex === -1 ? "" : history[navIndex].expr;
+          const pos = input.value.length;
+          input.setSelectionRange(pos, pos);
+          input.focus();
+        }
+
+        function calculate() {
+          const src = input.value.trim();
+          if (!src) {
+            input.focus();
+            return;
+          }
+          try {
+            const cleaned = cleanFormula(src); // 历史只记清理后的干净公式
+            if (!cleaned) {
+              flashError();
+              input.focus();
+              return;
+            }
+            const v = evaluate(cleaned);
+            const res = formatResult(v);
+            if (!BARE_NUM.test(cleaned)) {
+              pushEntry(cleaned, res); // 真公式才记录；纯数字/自由数字不记录
+            } else {
+              flashOk();
+            }
+            input.value = res; // 结果保留在输入框，可继续链式计算
+            const pos = input.value.length;
+            input.setSelectionRange(pos, pos);
+            navIndex = -1;
+            input.focus();
+          } catch (e) {
+            flashError(); // 出错：不清空、不记录，轻微抖动提示
+            input.focus();
+          }
+        }
+
+        input.addEventListener("keydown", function (ev) {
+          if (ev.isComposing) return; // 中文输入法选词中的回车不触发计算
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            calculate();
+          } else if (ev.key === "Escape") {
+            ev.preventDefault();
+            input.value = "";
+            navIndex = -1;
+            input.focus();
+          } else if (ev.key === "ArrowUp") {
+            ev.preventDefault();
+            navHistory(-1);
+          } else if (ev.key === "ArrowDown") {
+            ev.preventDefault();
+            navHistory(1);
+          } else if (navIndex !== -1) {
+            navIndex = -1; // 开始编辑即退出历史浏览态
+          }
+        });
+
+        // 多面板/多窗口同步：其他实例写入历史时自动刷新
+        window.addEventListener("storage", function (e) {
+          if (e.key !== STORE_KEY) return;
+          try {
+            const arr = e.newValue ? JSON.parse(e.newValue) : [];
+            history = Array.isArray(arr) ? arr.slice(0, MAX_ITEMS) : [];
+          } catch (err) {
+            return;
+          }
+          render();
+        });
+
+        render();
+      })();
+    </script>
+  </body>
+</html>

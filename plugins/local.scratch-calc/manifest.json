@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "local.scratch-calc",
+  "name": "草稿计算器",
+  "version": "0.0.1",
+  "description": "草稿计算器：回车计算、结果保留输入框可链式续算，历史单行「公式=结果」最新置顶，纯数字不记录；Esc 清空、↑↓ 浏览历史。支持 + - * /、括号、^ 乘方、π/e、隐式乘法，黄白书本风界面。",
+  "author": "Tioit-Wang",
+  "categories": [
+    "productivity",
+    "community"
+  ],
+  "changelog": "Release 0.0.1：首个版本，回车计算、历史栈、纯数字不记录、尾部运算符容错、黄白书本风界面。",
+  "safetyNotes": "纯前端计算器：历史仅保存在本机 localStorage（上限 200 条）；无网络请求、无文件访问、无自动执行代码。",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": "草稿计算器"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "scratchCalc.open",
+        "title": "草稿计算器：打开面板",
+        "keywords": [
+          "草稿计算器",
+          "计算器",
+          "calculator",
+          "草稿",
+          "draft",
+          "公式",
+          "calc"
+        ]
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel"
+  ],
+  "engines": {
+    "piDesktop": ">=0.1.0"
+  },
+  "activationEvents": [
+    "onCommand:scratchCalc.open",
+    "onStartup"
+  ]
+}
