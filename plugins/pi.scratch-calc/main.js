@@ -1,7 +1,7 @@
 /**
  * 草稿计算器 — PI-Desktop plugin entry.
  *
- * 插件 id: local.scratch-calc
+ * 插件 id: pi.scratch-calc
  * 命令 id: scratchCalc.open
  *
  * 面板（renderer/index.html）内自包含完整计算器：

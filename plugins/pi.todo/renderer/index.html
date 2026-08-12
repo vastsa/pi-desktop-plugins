@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小清新待办</title>
+    <style>
+      :root {
+        --bg: #f3f7f3;
+        --card: #ffffff;
+        --ink: #3d4a43;
+        --ink-soft: #97a89d;
+        --ink-faint: #c3d0c7;
+        --accent: #7dbb9a;
+        --accent-deep: #5da382;
+        --accent-soft: #e7f4ec;
+        --danger: #e58b7f;
+        --line: #e9f0ea;
+        --shadow: 0 2px 12px rgba(110, 140, 120, 0.1);
+        --shadow-lift: 0 6px 18px rgba(110, 140, 120, 0.16);
+        --radius: 14px;
+        --q1: #e58b7f; --q1-bg: #fdf0ed;
+        --q2: #7dbb9a; --q2-bg: #eaf5ee;
+        --q3: #e8b45a; --q3-bg: #fbf3e2;
+        --q4: #8fa8c0; --q4-bg: #edf2f8;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        padding: 0;
+        font: 14px/1.6 "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      body::before, body::after {
+        content: "";
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(60px);
+        z-index: 0;
+        pointer-events: none;
+      }
+      body::before { width: 380px; height: 380px; top: -120px; right: -100px; background: rgba(160, 214, 183, 0.45); }
+      body::after { width: 300px; height: 300px; bottom: -100px; left: -80px; background: rgba(253, 226, 195, 0.5); }
+
+      .app {
+        position: relative;
+        z-index: 1;
+        max-width: 980px;
+        margin: 0 auto;
+        height: 100%;
+        padding: 22px 22px 14px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ---------- 头部 ---------- */
+      header { display: flex; align-items: flex-end; justify-content: space-between; padding: 2px 4px 10px; }
+      .title-wrap .date { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.5px; }
+      .title-wrap h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+      .title-wrap h1 .dot { color: var(--accent); }
+      .layout-switch {
+        display: flex; gap: 6px;
+        background: var(--card);
+        border-radius: 999px;
+        padding: 4px;
+        box-shadow: var(--shadow);
+      }
+      .layout-switch button {
+        border: 0; background: transparent;
+        width: 34px; height: 30px; border-radius: 999px;
+        cursor: pointer; color: var(--ink-soft);
+        font-size: 16px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s;
+      }
+      .layout-switch button:hover { background: var(--accent-soft); color: var(--ink); }
+      .layout-switch button.active { background: var(--accent); color: #fff; }
+
+      /* ---------- 添加栏 ---------- */
+      .composer {
+        display: flex; gap: 10px; align-items: center;
+        background: var(--card); border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 6px 6px 6px 16px; margin-bottom: 12px;
+      }
+      #newTodo {
+        flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+        font: inherit; color: var(--ink); padding: 8px 0;
+      }
+      #newTodo::placeholder { color: var(--ink-faint); }
+      .q-picker { display: flex; gap: 7px; align-items: center; padding: 0 4px; }
+      .q-dot {
+        width: 15px; height: 15px; border-radius: 50%; cursor: pointer;
+        border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+      }
+      .q-dot:hover { transform: scale(1.2); }
+      .q-dot.selected { border-color: var(--ink); transform: scale(1.15); }
+      .q1-dot { background: var(--q1); }
+      .q2-dot { background: var(--q2); }
+      .q3-dot { background: var(--q3); }
+      .q4-dot { background: var(--q4); }
+      .add-btn {
+        width: 38px; height: 38px; flex-shrink: 0;
+        border: 0; border-radius: 12px; background: var(--accent); color: #fff;
+        font-size: 22px; line-height: 1; cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+      }
+      .add-btn:hover { background: var(--accent-deep); }
+      .add-btn:active { transform: scale(0.94); }
+
+      /* ---------- 列表布局 ---------- */
+      .filters { display: flex; gap: 8px; padding: 0 4px 12px; }
+      .filter {
+        border: 0; background: transparent; color: var(--ink-soft);
+        font: inherit; font-size: 13px; padding: 5px 14px; border-radius: 999px;
+        cursor: pointer; transition: all 0.15s;
+      }
+      .filter:hover { color: var(--ink); background: var(--accent-soft); }
+      .filter.active { background: var(--accent); color: #fff; }
+
+      .list {
+        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 9px;
+        padding: 2px 4px 10px;
+      }
+      .list::-webkit-scrollbar, .quad-scroll::-webkit-scrollbar { width: 7px; }
+      .list::-webkit-scrollbar-thumb, .quad-scroll::-webkit-scrollbar-thumb { background: #d7e4da; border-radius: 4px; }
+
+      .todo {
+        display: flex; align-items: center; gap: 10px;
+        background: var(--card); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 11px 13px;
+        animation: slideIn 0.18s ease-out;
+        transition: box-shadow 0.15s, transform 0.15s;
+      }
+      .todo:hover { box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+      @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } }
+
+      .check {
+        width: 21px; height: 21px; flex-shrink: 0; cursor: pointer;
+        border: 2px solid #cfe0d4; border-radius: 50%; position: relative;
+        background: #fff; transition: all 0.18s;
+      }
+      .check::after {
+        content: ""; position: absolute; left: 5.5px; top: 2.5px;
+        width: 5px; height: 9px;
+        border: solid #fff; border-width: 0 2px 2px 0;
+        transform: rotate(45deg) scale(0); transition: transform 0.15s;
+      }
+      .todo.done .check { background: var(--accent); border-color: var(--accent); animation: pop 0.25s; }
+      .todo.done .check::after { transform: rotate(45deg) scale(1); }
+      @keyframes pop { 50% { transform: scale(1.18); } }
+
+      .text { flex: 1; min-width: 0; word-break: break-all; }
+      .todo.done .text { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+      .edit-input {
+        flex: 1; min-width: 0; font: inherit; color: var(--ink);
+        border: 0; outline: 1px solid var(--accent); border-radius: 8px;
+        padding: 4px 8px; background: #fbfdfb;
+      }
+
+      /* ---------- 到期时间 ---------- */
+      .due {
+        display: inline-flex; align-items: center; gap: 4px;
+        flex-shrink: 0; cursor: pointer;
+        font-size: 12px; color: var(--ink-soft);
+        background: #f2f6f2; border-radius: 999px;
+        padding: 2px 9px; border: 0;
+        transition: all 0.15s;
+      }
+      .due:hover { background: var(--accent-soft); color: var(--ink); }
+      .due.empty { background: transparent; color: var(--ink-faint); padding: 2px 4px; }
+      .due.empty:hover { background: var(--accent-soft); color: var(--ink); }
+      .due.overdue { color: #fff; background: var(--danger); }
+      .due.overdue:hover { background: #d97a6c; }
+      .due.done-chip { color: var(--ink-faint); background: #f2f6f2; text-decoration: line-through; }
+
+      .due-pop {
+        position: absolute; z-index: 60;
+        background: var(--card); border-radius: 12px;
+        box-shadow: var(--shadow-lift);
+        padding: 10px; min-width: 240px;
+        animation: slideIn 0.12s ease-out;
+      }
+      .due-pop .row { display: flex; gap: 8px; align-items: center; }
+      .due-pop .row + .row { margin-top: 8px; }
+      .due-pop input[type="datetime-local"] {
+        flex: 1; min-width: 0; font: inherit; font-size: 13px;
+        border: 1px solid var(--line); border-radius: 8px;
+        padding: 5px 8px; color: var(--ink); background: #fbfdfb;
+        outline: none;
+      }
+      .due-pop input[type="datetime-local"]:focus { outline: 1px solid var(--accent); }
+      .due-pop .save {
+        border: 0; background: var(--accent); color: #fff;
+        font: inherit; font-size: 13px; padding: 5px 12px;
+        border-radius: 8px; cursor: pointer; flex-shrink: 0;
+      }
+      .due-pop .save:hover { background: var(--accent-deep); }
+      .due-pop .quick { flex-wrap: wrap; }
+      .due-pop .quick button {
+        border: 1px solid var(--line); background: #fbfdfb; color: var(--ink-soft);
+        font: inherit; font-size: 12px; padding: 4px 10px;
+        border-radius: 999px; cursor: pointer; transition: all 0.12s;
+      }
+      .due-pop .quick button:hover { background: var(--accent-soft); color: var(--ink); border-color: transparent; }
+
+      /* ---------- 象限 ---------- */
+      .q-badge {
+        width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+        cursor: pointer; border: 0; padding: 0;
+        transition: transform 0.15s; position: relative;
+      }
+      .q-badge:hover { transform: scale(1.25); }
+
+      .del {
+        border: 0; background: transparent; color: var(--ink-faint);
+        cursor: pointer; font-size: 15px; line-height: 1;
+        padding: 5px 7px; border-radius: 8px; opacity: 0;
+        transition: all 0.15s;
+      }
+      .todo:hover .del { opacity: 1; }
+      .del:hover { color: #fff; background: var(--danger); }
+
+      .q-menu {
+        position: absolute; z-index: 50;
+        background: var(--card); border-radius: 12px;
+        box-shadow: var(--shadow-lift);
+        padding: 6px; min-width: 130px;
+        animation: slideIn 0.12s ease-out;
+      }
+      .q-menu button {
+        display: flex; align-items: center; gap: 8px; width: 100%;
+        border: 0; background: transparent; cursor: pointer;
+        font: inherit; font-size: 13px; color: var(--ink);
+        padding: 6px 10px; border-radius: 8px; text-align: left;
+        transition: background 0.12s;
+      }
+      .q-menu button:hover { background: var(--accent-soft); }
+      .q-menu button .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+      /* ---------- 四象限布局 ---------- */
+      .quad-grid {
+        flex: 1; display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 12px; min-height: 0;
+        padding: 2px 2px 10px;
+      }
+      .quad {
+        display: flex; flex-direction: column; min-height: 0;
+        border-radius: var(--radius); padding: 10px 10px 6px;
+        border: 1px solid transparent;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        overflow: hidden;
+      }
+      .quad.drag-over { border-color: var(--accent); box-shadow: var(--shadow-lift); }
+      .quad-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 8px; flex-shrink: 0; }
+      .quad-head .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+      .quad-head .q-title { font-weight: 700; font-size: 14px; }
+      .quad-head .q-sub { font-size: 12px; color: var(--ink-soft); margin-left: 2px; }
+      .quad-head .q-count {
+        margin-left: auto; font-size: 12px; color: var(--ink-soft);
+        background: rgba(255, 255, 255, 0.75); border-radius: 999px;
+        padding: 1px 9px; flex-shrink: 0;
+      }
+      .quad-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+      .quad-empty { text-align: center; color: var(--ink-faint); font-size: 12px; padding: 18px 0; }
+
+      .todo.matrix {
+        cursor: grab;
+        border-left: 3px solid transparent;
+        padding: 8px 10px; gap: 8px;
+      }
+      .todo.matrix:active { cursor: grabbing; }
+      .todo.matrix .text { font-size: 13px; }
+      .todo.matrix .due { font-size: 11px; }
+
+      /* ---------- 底部 ---------- */
+      footer {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 6px 0; font-size: 12px; color: var(--ink-soft);
+        flex-shrink: 0;
+      }
+      .clear {
+        border: 0; background: transparent; color: var(--ink-faint);
+        font: inherit; font-size: 12px; cursor: pointer;
+        padding: 4px 8px; border-radius: 8px; transition: all 0.15s;
+      }
+      .clear:hover { color: var(--danger); background: #fdeeea; }
+      .clear:disabled { opacity: 0.4; cursor: default; background: transparent; }
+
+      .empty { text-align: center; color: var(--ink-soft); padding: 48px 0 0; }
+      .empty .icon { font-size: 40px; margin-bottom: 8px; }
+      .empty .hint { font-size: 12px; color: var(--ink-faint); }
+
+      /* ---------- 应用内 toast（宿主通知不可用时的降级） ---------- */
+      .toast {
+        position: fixed; z-index: 100;
+        left: 50%; bottom: 26px; transform: translateX(-50%);
+        background: #3d4a43; color: #fff;
+        border-radius: 12px; padding: 10px 18px;
+        font-size: 13px; box-shadow: var(--shadow-lift);
+        max-width: 70vw; animation: toastIn 0.2s ease-out;
+      }
+      @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 8px); } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="title-wrap">
+          <div class="date" id="dateLine"></div>
+          <h1>待办<span class="dot"> ·</span></h1>
+        </div>
+        <div class="layout-switch" id="layoutSwitch">
+          <button id="btnList" title="简单列表" data-layout="list">☰</button>
+          <button id="btnMatrix" title="四象限" data-layout="matrix">▦</button>
+        </div>
+      </header>
+
+      <div class="composer">
+        <input
+          id="newTodo"
+          type="text"
+          placeholder="记一件小事，回车添加…"
+          spellcheck="false"
+          autocomplete="off"
+          autofocus
+        />
+        <div class="q-picker" id="qPicker" title="添加到哪个象限">
+          <span class="q-dot q1-dot" data-q="1" title="重要 · 紧急"></span>
+          <span class="q-dot q2-dot" data-q="2" title="重要 · 不紧急"></span>
+          <span class="q-dot q3-dot" data-q="3" title="紧急 · 不重要"></span>
+          <span class="q-dot q4-dot" data-q="4" title="不重要 · 不紧急"></span>
+        </div>
+        <button class="add-btn" id="addBtn" title="添加">+</button>
+      </div>
+
+      <div class="filters" id="filters" style="display:none">
+        <button class="filter active" data-filter="all">全部</button>
+        <button class="filter" data-filter="active">进行中</button>
+        <button class="filter" data-filter="done">已完成</button>
+      </div>
+
+      <div class="list" id="list" style="display:none"></div>
+      <div class="quad-grid" id="quadGrid" style="display:none"></div>
+
+      <footer>
+        <span id="counter"></span>
+        <button class="clear" id="clearDone">清空已完成</button>
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var STORE_KEY = "pdtodo.v1";
+        var LAYOUT_KEY = "pdtodo.layout.v1";
+        var DEFAULT_Q_KEY = "pdtodo.defaultQ.v1";
+
+        var QUADS = {
+          1: { title: "重要 · 紧急", sub: "立刻做", color: "#e58b7f", bg: "#fdf0ed" },
+          2: { title: "重要 · 不紧急", sub: "计划做", color: "#7dbb9a", bg: "#eaf5ee" },
+          3: { title: "紧急 · 不重要", sub: "委托做", color: "#e8b45a", bg: "#fbf3e2" },
+          4: { title: "不重要 · 不紧急", sub: "减少做", color: "#8fa8c0", bg: "#edf2f8" },
+        };
+        var QUAD_ORDER = [1, 2, 3, 4];
+
+        // setTimeout 最大值（约 24.8 天），超过就分档等待
+        var MAX_TIMEOUT_MS = 2147483647;
+
+        var todos = [];
+        var layout = "list";
+        var filter = "all";
+        var defaultQ = 2;
+        var editingId = null;
+        var reminderTimer = null;
+
+        function load(key, fallback) {
+          try {
+            var v = localStorage.getItem(key);
+            return v === null ? fallback : v;
+          } catch (e) { return fallback; }
+        }
+        function store(key, value) {
+          try { localStorage.setItem(key, value); } catch (e) { /* 仅内存 */ }
+        }
+
+        try {
+          var arr = JSON.parse(load(STORE_KEY, "[]"));
+          if (Array.isArray(arr)) todos = arr;
+        } catch (e) { todos = []; }
+        layout = load(LAYOUT_KEY, "list") === "matrix" ? "matrix" : "list";
+        var dq = parseInt(load(DEFAULT_Q_KEY, "2"), 10);
+        if (QUADS[dq]) defaultQ = dq;
+
+        /* ---------- 与插件进程共享数据 ----------
+         * 权威数据源 = 插件数据目录 settings.json（agent 工具 todo_manage 读写）。
+         * 面板经 plugin.getSettings 拉取；本地修改经宿主限定通道
+         * （skill.* → onPanelInvoke 的 "todo.sync"）写回插件进程。
+         * localStorage 仅作面板本地缓存与离线兜底。 */
+        var UPDATED_KEY = "pdtodo.updatedAt.v1";
+        var SYNC_CHANNEL = "skill.setEnabled"; // 宿主限定：面板→插件进程唯一通道
+        var syncInFlight = false;
+
+        function syncToHost() {
+          if (!window.pluginBridge || !window.pluginBridge.invoke) return;
+          if (syncInFlight) return;
+          syncInFlight = true;
+          window.pluginBridge
+            .invoke(SYNC_CHANNEL, { id: "todo.sync", enabled: true, todos: todos })
+            .catch(function () {})
+            .then(function () { syncInFlight = false; });
+        }
+
+        function pullFromHost() {
+          if (!window.pluginBridge || !window.pluginBridge.invoke) return;
+          window.pluginBridge
+            .invoke("plugin.getSettings")
+            .then(function (settings) {
+              if (!settings || !Array.isArray(settings.todos)) return;
+              var remoteAt = Number(settings.todosUpdatedAt) || 0;
+              var localAt = parseInt(load(UPDATED_KEY, "0"), 10) || 0;
+              if (remoteAt > localAt) {
+                // AI/其他面板改过 → 以远端为准
+                todos = settings.todos;
+                store(STORE_KEY, JSON.stringify(todos));
+                store(UPDATED_KEY, String(remoteAt));
+                render();
+                scheduleReminder();
+              } else if (remoteAt === 0 && localAt > 0) {
+                // 本地有数据而远端还没有 → 首次迁移到共享数据源
+                syncToHost();
+              }
+            })
+            .catch(function () {});
+        }
+
+        /* ---------- 基础 ---------- */
+        function save() {
+          var now = Date.now();
+          store(STORE_KEY, JSON.stringify(todos));
+          store(UPDATED_KEY, String(now));
+          syncToHost(); // 数据变更即同步到插件进程，事件驱动、无轮询
+          scheduleReminder(); // 数据变更即重排提醒，事件驱动、无轮询
+        }
+        function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+        function dateLine() {
+          var d = new Date();
+          var wd = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
+          document.getElementById("dateLine").textContent =
+            d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日 · 星期" + wd;
+        }
+
+        function add() {
+          var value = document.getElementById("newTodo").value.trim();
+          if (!value) { document.getElementById("newTodo").focus(); return; }
+          todos.unshift({
+            id: uid(), text: value, done: false,
+            q: defaultQ, createdAt: Date.now(), doneAt: 0,
+            due: null, reminded: false,
+          });
+          document.getElementById("newTodo").value = "";
+          save(); render();
+          document.getElementById("newTodo").focus();
+        }
+
+        function toggle(id) {
+          var t = todos.find(function (x) { return x.id === id; });
+          if (!t) return;
+          t.done = !t.done;
+          t.doneAt = t.done ? Date.now() : 0;
+          save(); render();
+        }
+
+        function remove(id) {
+          todos = todos.filter(function (x) { return x.id !== id; });
+          save(); render();
+        }
+
+        function setQuad(id, q) {
+          var t = todos.find(function (x) { return x.id === id; });
+          if (!t || !QUADS[q]) return;
+          t.q = q;
+          save(); render();
+        }
+
+        function setDue(id, dueMs) {
+          var t = todos.find(function (x) { return x.id === id; });
+          if (!t) return;
+          var hadDue = !!t.due;
+          t.due = dueMs;
+          t.reminded = false; // 改期后重新参与提醒
+          if (dueMs && !hadDue) {
+            // 从无到期变为有到期：首次探测系统通知权限
+            requestNotificationPermission();
+          }
+          save(); render();
+        }
+
+        function clearDone() {
+          todos = todos.filter(function (t) { return !t.done; });
+          save(); render();
+        }
+
+        /* ---------- 高效提醒调度（单一定时器，按最近到期时间触发） ---------- */
+        function scheduleReminder() {
+          if (reminderTimer) { clearTimeout(reminderTimer); reminderTimer = null; }
+          var next = null;
+          for (var i = 0; i < todos.length; i++) {
+            var t = todos[i];
+            if (t.done || t.reminded || !t.due) continue;
+            if (next === null || t.due < next) next = t.due;
+          }
+          if (next === null) return; // 没有待提醒任务：完全空闲，零开销
+          var delay = Math.max(0, Math.min(next - Date.now(), MAX_TIMEOUT_MS));
+          reminderTimer = setTimeout(function () {
+            reminderTimer = null;
+            fireReminders();
+            scheduleReminder(); // 触发后重排下一个到期任务
+          }, delay + 50);
+        }
+
+        function fireReminders() {
+          var now = Date.now();
+          var due = todos.filter(function (t) {
+            return !t.done && !t.reminded && t.due && t.due <= now;
+          });
+          if (!due.length) return;
+          due.forEach(function (t) { t.reminded = true; });
+          save();
+          render();
+          var names = due.slice(0, 3).map(function (t) { return t.text; }).join("、");
+          var body = due.length > 3
+            ? names + " 等 " + due.length + " 项到期了"
+            : names + " 到期了";
+          notifyHost("待办提醒", body);
+          inAppToast("⏰ " + body);
+        }
+
+        function notifyHost(title, body) {
+          var bridge = window.pluginBridge;
+          try {
+            if (bridge && bridge.invoke) {
+              // 优先：原生系统通知（宿主 showNativeNotification，notify 权限）
+              bridge.invoke("ui.showNativeNotification", { title: title, body: body })
+                .then(function (res) {
+                  if (!res || !res.shown) {
+                    // 降级 1：宿主应用内 toast（ui.notify，向后兼容）
+                    bridge.invoke("ui.notify", { title: title, body: body }).catch(function () {});
+                  }
+                })
+                .catch(function () {
+                  bridge.invoke("ui.notify", { title: title, body: body }).catch(function () {});
+                });
+              return;
+            }
+          } catch (e) { /* 忽略 */ }
+          // 降级 2：无桥接（浏览器预览等）→ 应用内 toast
+          inAppToast("⏰ " + body);
+        }
+
+        /* 原生通知权限：启动查询；用户首次设置到期时间时探测授权 */
+        var nativePerm = "unknown";
+        function getNotificationPermission() {
+          try {
+            if (window.pluginBridge && window.pluginBridge.invoke) {
+              window.pluginBridge.invoke("ui.getNotificationPermission")
+                .then(function (p) { if (p) nativePerm = p; })
+                .catch(function () {});
+            }
+          } catch (e) { /* 忽略 */ }
+        }
+        function requestNotificationPermission() {
+          if (nativePerm === "granted") return;
+          try {
+            if (window.pluginBridge && window.pluginBridge.invoke) {
+              window.pluginBridge.invoke("ui.requestNotificationPermission")
+                .then(function (p) { if (p) nativePerm = p; })
+                .catch(function () {});
+            }
+          } catch (e) { /* 忽略 */ }
+        }
+
+        var toastTimer = null;
+        function inAppToast(msg) {
+          var old = document.querySelector(".toast");
+          if (old) old.remove();
+          if (toastTimer) clearTimeout(toastTimer);
+          var el = document.createElement("div");
+          el.className = "toast";
+          el.textContent = msg;
+          document.body.appendChild(el);
+          toastTimer = setTimeout(function () {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          }, 4000);
+        }
+
+        /* ---------- 到期时间显示 ---------- */
+        function fmtDue(due) {
+          if (!due) return "";
+          var d = new Date(due);
+          var now = new Date();
+          var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          var that = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          var diffDays = Math.round((that - today) / 86400000);
+          function p(n) { return (n < 10 ? "0" : "") + n; }
+          var hm = p(d.getHours()) + ":" + p(d.getMinutes());
+          if (diffDays === 0) return "今天 " + hm;
+          if (diffDays === 1) return "明天 " + hm;
+          if (diffDays === -1) return "昨天 " + hm;
+          return (d.getMonth() + 1) + "月" + d.getDate() + "日";
+        }
+
+        function toLocalInput(ms) {
+          var d = new Date(ms);
+          function p(n) { return (n < 10 ? "0" : "") + n; }
+          return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+            "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+        }
+
+        /* ---------- 渲染 ---------- */
+        function render() {
+          var isMatrix = layout === "matrix";
+          document.getElementById("list").style.display = isMatrix ? "none" : "";
+          document.getElementById("filters").style.display = isMatrix ? "none" : "";
+          document.getElementById("quadGrid").style.display = isMatrix ? "" : "none";
+          document.getElementById("btnList").classList.toggle("active", !isMatrix);
+          document.getElementById("btnMatrix").classList.toggle("active", isMatrix);
+
+          if (isMatrix) renderMatrix();
+          else renderList();
+
+          var activeCount = todos.filter(function (t) { return !t.done; }).length;
+          document.getElementById("counter").textContent =
+            "剩余 " + activeCount + " 项 · 共 " + todos.length + " 项";
+          document.getElementById("clearDone").disabled = todos.every(function (t) { return !t.done; });
+        }
+
+        function renderList() {
+          var list = document.getElementById("list");
+          list.textContent = "";
+
+          var items = todos.slice().sort(function (a, b) {
+            if (a.done !== b.done) return a.done ? 1 : -1;
+            var ka = a.done ? a.doneAt : a.createdAt;
+            var kb = b.done ? b.doneAt : b.createdAt;
+            return kb - ka;
+          });
+          if (filter === "active") items = items.filter(function (t) { return !t.done; });
+          if (filter === "done") items = items.filter(function (t) { return t.done; });
+
+          if (!items.length) {
+            var empty = document.createElement("div");
+            empty.className = "empty";
+            if (filter === "done") {
+              empty.innerHTML = '<div class="icon">🌿</div><div>还没有完成的任务</div>';
+            } else {
+              empty.innerHTML = '<div class="icon">✨</div><div>清单空空如也</div>' +
+                '<div class="hint">在上方输入框记下第一件小事</div>';
+            }
+            list.appendChild(empty);
+          }
+
+          items.forEach(function (t) { list.appendChild(row(t, false)); });
+        }
+
+        function row(t, matrix) {
+          var el = document.createElement("div");
+          el.className = "todo" + (t.done ? " done" : "") + (matrix ? " matrix" : "");
+          el.dataset.id = t.id;
+          if (matrix) {
+            el.draggable = true;
+            el.style.borderLeftColor = QUADS[t.q].color;
+            el.addEventListener("dragstart", function (ev) {
+              ev.dataTransfer.setData("text/plain", t.id);
+              ev.dataTransfer.effectAllowed = "move";
+            });
+          }
+
+          var check = document.createElement("div");
+          check.className = "check";
+          check.title = t.done ? "标记为未完成" : "标记为完成";
+          check.addEventListener("click", function () { toggle(t.id); });
+
+          var text = document.createElement("div");
+          text.className = "text";
+          text.textContent = t.text;
+          text.title = "双击编辑";
+          text.addEventListener("dblclick", function () { startEdit(el, t, text); });
+
+          el.appendChild(check);
+          el.appendChild(text);
+
+          // 到期时间
+          var dueBtn = document.createElement("button");
+          var overdue = !t.done && t.due && t.due < Date.now();
+          dueBtn.className = "due" + (t.due ? (overdue ? " overdue" : "") : " empty") + (t.done ? " done-chip" : "");
+          dueBtn.textContent = t.due ? fmtDue(t.due) : "🕘";
+          dueBtn.title = t.due ? "点击修改到期时间" : "设置到期时间";
+          dueBtn.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+            openDuePop(dueBtn, t.id);
+          });
+          el.appendChild(dueBtn);
+
+          if (!matrix) {
+            var badge = document.createElement("button");
+            badge.className = "q-badge";
+            badge.style.background = QUADS[t.q].color;
+            badge.title = "点击切换象限";
+            badge.addEventListener("click", function (ev) {
+              ev.stopPropagation();
+              openQMenu(badge, t.id);
+            });
+            el.appendChild(badge);
+          }
+
+          var del = document.createElement("button");
+          del.className = "del";
+          del.title = "删除";
+          del.textContent = "✕";
+          del.addEventListener("click", function () { remove(t.id); });
+          el.appendChild(del);
+
+          return el;
+        }
+
+        function renderMatrix() {
+          var grid = document.getElementById("quadGrid");
+          grid.textContent = "";
+          QUAD_ORDER.forEach(function (q) {
+            var qd = QUADS[q];
+            var cell = document.createElement("div");
+            cell.className = "quad";
+            cell.style.background = qd.bg;
+            cell.dataset.q = q;
+
+            var head = document.createElement("div");
+            head.className = "quad-head";
+            var dot = document.createElement("span");
+            dot.className = "dot";
+            dot.style.background = qd.color;
+            var title = document.createElement("span");
+            title.className = "q-title";
+            title.textContent = qd.title;
+            var sub = document.createElement("span");
+            sub.className = "q-sub";
+            sub.textContent = qd.sub;
+            var count = document.createElement("span");
+            count.className = "q-count";
+            head.appendChild(dot);
+            head.appendChild(title);
+            head.appendChild(sub);
+            head.appendChild(count);
+            cell.appendChild(head);
+
+            var scroll = document.createElement("div");
+            scroll.className = "quad-scroll";
+
+            var items = todos.filter(function (t) { return t.q === q; }).slice().sort(function (a, b) {
+              if (a.done !== b.done) return a.done ? 1 : -1;
+              return b.createdAt - a.createdAt;
+            });
+            count.textContent = items.length + " 项";
+            if (!items.length) {
+              var empty = document.createElement("div");
+              empty.className = "quad-empty";
+              empty.textContent = "暂无";
+              scroll.appendChild(empty);
+            }
+            items.forEach(function (t) { scroll.appendChild(row(t, true)); });
+
+            cell.appendChild(scroll);
+
+            cell.addEventListener("dragover", function (ev) {
+              ev.preventDefault();
+              ev.dataTransfer.dropEffect = "move";
+              cell.classList.add("drag-over");
+            });
+            cell.addEventListener("dragleave", function () { cell.classList.remove("drag-over"); });
+            cell.addEventListener("drop", function (ev) {
+              ev.preventDefault();
+              cell.classList.remove("drag-over");
+              var id = ev.dataTransfer.getData("text/plain");
+              if (id) setQuad(id, q);
+            });
+
+            grid.appendChild(cell);
+          });
+        }
+
+        /* ---------- 编辑 ---------- */
+        function startEdit(el, t, textNode) {
+          if (editingId === t.id) return;
+          var inp = document.createElement("input");
+          inp.className = "edit-input";
+          inp.value = t.text;
+          inp.spellcheck = false;
+          el.replaceChild(inp, textNode);
+          inp.focus();
+          var pos = inp.value.length;
+          inp.setSelectionRange(pos, pos);
+          editingId = t.id;
+
+          var done = false;
+          function commit() {
+            if (done) return;
+            done = true;
+            editingId = null;
+            var v = inp.value.trim();
+            if (v) { t.text = v; save(); }
+            render();
+          }
+          inp.addEventListener("keydown", function (ev) {
+            if (ev.isComposing) return;
+            if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+            else if (ev.key === "Escape") { ev.preventDefault(); done = true; editingId = null; render(); }
+          });
+          inp.addEventListener("blur", commit);
+        }
+
+        /* ---------- 到期时间弹出层 ---------- */
+        var duePop = null;
+        function openDuePop(anchor, id) {
+          closeDuePop();
+          var t = todos.find(function (x) { return x.id === id; });
+          if (!t) return;
+
+          duePop = document.createElement("div");
+          duePop.className = "due-pop";
+
+          var row = document.createElement("div");
+          row.className = "row";
+          var input = document.createElement("input");
+          input.type = "datetime-local";
+          input.value = t.due ? toLocalInput(t.due) : "";
+          var saveBtn = document.createElement("button");
+          saveBtn.className = "save";
+          saveBtn.textContent = "确定";
+          saveBtn.addEventListener("click", function () {
+            if (input.value) {
+              setDue(id, new Date(input.value).getTime());
+            }
+            closeDuePop();
+          });
+          row.appendChild(input);
+          row.appendChild(saveBtn);
+          duePop.appendChild(row);
+
+          var quick = document.createElement("div");
+          quick.className = "row quick";
+          function quickBtn(label, due) {
+            var b = document.createElement("button");
+            b.textContent = label;
+            b.addEventListener("click", function () {
+              setDue(id, due);
+              closeDuePop();
+            });
+            return b;
+          }
+          var today18 = new Date(); today18.setHours(18, 0, 0, 0);
+          var tomorrow9 = new Date(); tomorrow9.setDate(tomorrow9.getDate() + 1); tomorrow9.setHours(9, 0, 0, 0);
+          quick.appendChild(quickBtn("今天 18:00", today18.getTime()));
+          quick.appendChild(quickBtn("明天 09:00", tomorrow9.getTime()));
+          if (t.due) {
+            var clearBtn = document.createElement("button");
+            clearBtn.textContent = "清除期限";
+            clearBtn.addEventListener("click", function () {
+              setDue(id, null);
+              closeDuePop();
+            });
+            quick.appendChild(clearBtn);
+          }
+          duePop.appendChild(quick);
+
+          document.body.appendChild(duePop);
+          var r = anchor.getBoundingClientRect();
+          var pw = duePop.offsetWidth, ph = duePop.offsetHeight;
+          var left = Math.min(r.right - pw, window.innerWidth - pw - 8);
+          var top = r.bottom + 6;
+          if (top + ph > window.innerHeight - 8) top = r.top - ph - 6;
+          duePop.style.left = Math.max(8, left) + "px";
+          duePop.style.top = Math.max(8, top) + "px";
+          input.focus();
+        }
+        function closeDuePop() {
+          if (duePop) { duePop.remove(); duePop = null; }
+        }
+
+        /* ---------- 象限切换小菜单 ---------- */
+        var qMenu = null;
+        function openQMenu(anchor, id) {
+          closeQMenu();
+          qMenu = document.createElement("div");
+          qMenu.className = "q-menu";
+          QUAD_ORDER.forEach(function (q) {
+            var qd = QUADS[q];
+            var btn = document.createElement("button");
+            var dot = document.createElement("span");
+            dot.className = "dot";
+            dot.style.background = qd.color;
+            btn.appendChild(dot);
+            btn.appendChild(document.createTextNode(qd.title + " · " + qd.sub));
+            btn.addEventListener("click", function (ev) {
+              ev.stopPropagation();
+              setQuad(id, q);
+              closeQMenu();
+            });
+            qMenu.appendChild(btn);
+          });
+          document.body.appendChild(qMenu);
+          var r = anchor.getBoundingClientRect();
+          var mw = qMenu.offsetWidth, mh = qMenu.offsetHeight;
+          var left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+          var top = r.bottom + 6;
+          if (top + mh > window.innerHeight - 8) top = r.top - mh - 6;
+          qMenu.style.left = Math.max(8, left) + "px";
+          qMenu.style.top = Math.max(8, top) + "px";
+        }
+        function closeQMenu() {
+          if (qMenu) { qMenu.remove(); qMenu = null; }
+        }
+        document.addEventListener("click", function (ev) {
+          if (duePop && !duePop.contains(ev.target)) closeDuePop();
+          if (qMenu && !qMenu.contains(ev.target)) closeQMenu();
+        });
+
+        /* ---------- 事件绑定 ---------- */
+        document.getElementById("addBtn").addEventListener("click", add);
+        document.getElementById("newTodo").addEventListener("keydown", function (ev) {
+          if (ev.isComposing) return;
+          if (ev.key === "Enter") { ev.preventDefault(); add(); }
+        });
+
+        document.getElementById("qPicker").addEventListener("click", function (ev) {
+          var dot = ev.target.closest(".q-dot");
+          if (!dot) return;
+          defaultQ = parseInt(dot.dataset.q, 10);
+          store(DEFAULT_Q_KEY, String(defaultQ));
+          updatePicker();
+        });
+        function updatePicker() {
+          var dots = document.querySelectorAll("#qPicker .q-dot");
+          dots.forEach(function (d) {
+            d.classList.toggle("selected", parseInt(d.dataset.q, 10) === defaultQ);
+          });
+        }
+
+        document.getElementById("layoutSwitch").addEventListener("click", function (ev) {
+          var btn = ev.target.closest("button[data-layout]");
+          if (!btn) return;
+          layout = btn.dataset.layout;
+          store(LAYOUT_KEY, layout);
+          render();
+        });
+
+        document.getElementById("filters").addEventListener("click", function (ev) {
+          var btn = ev.target.closest(".filter");
+          if (!btn) return;
+          filter = btn.dataset.filter;
+          var btns = document.querySelectorAll(".filter");
+          btns.forEach(function (b) { b.classList.toggle("active", b === btn); });
+          render();
+        });
+
+        document.getElementById("clearDone").addEventListener("click", clearDone);
+
+        /* 多面板/多窗口同步 */
+        window.addEventListener("storage", function (e) {
+          if (e.key !== STORE_KEY) return;
+          try { todos = e.newValue ? JSON.parse(e.newValue) : []; } catch (err) { return; }
+          render();
+          scheduleReminder();
+        });
+
+        dateLine();
+        updatePicker();
+        render();
+        getNotificationPermission(); // 启动查询原生通知权限（不打扰）
+        scheduleReminder(); // 启动即检查：过期未提醒的任务立即补发
+        pullFromHost(); // 启动拉取共享数据（AI 修改立即可见）
+        window.addEventListener("focus", pullFromHost); // 窗口聚焦时同步 AI 修改
+      })();
+    </script>
+  </body>
+</html>
