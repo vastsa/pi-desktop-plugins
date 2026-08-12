@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.todo",
+  "name": "小清新待办",
+  "version": "0.4.0",
+  "description": "PI-Desktop 官方小清新待办面板：四象限与简单列表双布局，任务可设到期时间、原生系统到期提醒，添加、完成、删除、编辑、筛选、本地持久化。",
+  "author": "PI-Desktop",
+  "categories": [
+    "productivity",
+    "official"
+  ],
+  "changelog": "Release 0.1.0：首个版本，简单列表待办。Release 0.2.0：新增四象限矩阵布局（拖拽移动象限）、双布局切换并记住、窗口 1000×700。Release 0.3.0：任务可设置到期时间（今天/明天/自定义/清除）、到期提醒（低占用单定时器调度，按最近到期时间触发）、过期任务标红、提醒去重持久化。Release 0.3.1：到期提醒升级为原生系统通知（ui.showNativeNotification，宿主 ADR 0074），未授权/失败自动降级应用内 toast；首次设置到期时探测通知权限。Release 0.4.0：插件 id 变更为 pi.todo（遵循官方 pi. 前缀命名，与 pi.token-insights 一致），命令 todo.open，分类 official。",
+  "safetyNotes": "纯前端待办面板：数据仅保存在本机 localStorage；到期提醒通过宿主原生系统通知（notify 权限）发出，未授权时降级应用内提示；无网络请求、无文件访问、无自动执行代码。",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": "小清新待办",
+    "width": 1000,
+    "height": 700
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "todo.open",
+        "title": "小清新待办：打开面板",
+        "keywords": [
+          "todo",
+          "待办",
+          "清单",
+          "任务",
+          "官方"
+        ],
+        "category": "Productivity"
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "notify"
+  ],
+  "engines": {
+    "piDesktop": ">=0.1.0"
+  },
+  "activationEvents": [
+    "onCommand:todo.open",
+    "onStartup"
+  ]
+}
