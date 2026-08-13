@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-08-13T06:52:57Z",
+  "updatedAt": "2026-08-13T06:56:47Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -22,12 +22,12 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-08-13T06:52:57Z",
+          "publishedAt": "2026-08-13T06:56:47Z",
           "changelog": "Release 0.2.0",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "7c6b2b45e43481b62cdf565a02465bfd712919288fd14effaac190c7be0d7716",
+          "shasum": "75c775b717bcd440b2c6ce9029e3f1b392e956b3eef770c5d958892a2fb04e28",
           "url": "packages/demo.hello-0.2.0.piplug",
-          "sizeBytes": 3267,
+          "sizeBytes": 3276,
           "permissions": [
             "ui.panel",
             "agent.tool.register",
@@ -53,12 +53,12 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-08-13T06:52:57Z",
+          "publishedAt": "2026-08-13T06:56:47Z",
           "changelog": "Release 0.1.0",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "fe234301add106de9d0aef56302ec8d85bf39a6e6bbd28ca40c071c094ea15aa",
+          "shasum": "9a26d40f710660c97910ff5ca1ab6782df12e392c925c3b7142f262325179733",
           "url": "packages/demo.workspace-notes-0.1.0.piplug",
-          "sizeBytes": 5165,
+          "sizeBytes": 5174,
           "permissions": [
             "ui.panel",
             "fs.read.workspace",
@@ -92,12 +92,12 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-08-13T06:52:57Z",
+          "publishedAt": "2026-08-13T06:56:47Z",
           "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "31a5302330f281c8e933c3d3b4cb807f8b4fe8a8949fbc152dfbcd76f5a1ab68",
+          "shasum": "4a835ae2436c09cb5a581c3a53f1bc2f808588858604be0dff38f93048d70a9b",
           "url": "packages/demo.workspace-summary-0.1.0.piplug",
-          "sizeBytes": 12629,
+          "sizeBytes": 12653,
           "permissions": [
             "ui.panel",
             "fs.read.workspace",
@@ -126,12 +126,12 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-08-13T06:52:57Z",
+          "publishedAt": "2026-08-13T06:56:47Z",
           "changelog": "Release 0.2.0\uff1a\u91cd\u6784\u4e3a\u591a\u8349\u7a3f\u7a3f\u7eb8\uff08\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff09\u2014\u2014\u5de6\u4fa7\u5f53\u524d\u8349\u7a3f\uff1a\u8f93\u5165\u884c\u5b9e\u65f6\u8ba1\u7b97 + \u672c\u7a3f\u5386\u53f2 + \u6bcf\u884c\u53ef\u7f16\u8f91\u5907\u6ce8 + \u6e05\u7a7a/\u590d\u5236\u4e3a\u56fe\u7247\uff1b\u53f3\u4fa7\u8349\u7a3f\u5217\u8868\uff1a\u65f6\u95f4\u547d\u540d\u65b0\u5efa\u3001\u70b9\u51fb\u5207\u6362\u3001\u7ba1\u7406\u6a21\u5f0f\u9010\u6761\u5220\u9664\u3002\u65e7\u7248\u5386\u53f2\u81ea\u52a8\u8fc1\u79fb\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "948123366ef2f78ac47ed02766b41419aec005b21740106ca8ad3016ada25612",
+          "shasum": "a7c56a27dd1262e674898f7f96194c6e6d5e063d6e32c9a97000cf09ce74a755",
           "url": "packages/pi.scratch-calc-0.2.0.piplug",
-          "sizeBytes": 419914,
+          "sizeBytes": 419943,
           "permissions": [
             "ui.panel"
           ]
@@ -156,12 +156,8 @@
       "versions": [
         {
           "version": "0.5.1",
-          "publishedAt": "2026-08-13T06:52:57Z",
-          "changelog": "Release 0.1.0\uff1a\u9996\u4e2a\u7248\u672c\uff0c\u7b80\u5355\u5217\u8868\u5f85\u529e\u3002Release 0.2.0\uff1a\u65b0\u589e\u56db\u8c61\u9650\u77e9\u9635\u5e03\u5c40\uff08\u62d6\u62fd\u79fb\u52a8\u8c61\u9650\uff09\u3001\u53cc\u5e03\u5c40\u5207\u6362\u5e76\u8bb0\u4f4f\u3001\u7a97\u53e3 1000\u00d7700\u3002Release 0.3.0\uff1a\u4efb\u52a1\u53ef\u8bbe\u7f6e\u5230\u671f\u65f6\u95f4\u3001\u5230\u671f\u63d0\u9192\uff08\u4f4e\u5360\u7528\u5355\u5b9a\u65f6\u5668\u8c03\u5ea6\uff09\u3002Release 0.3.1\uff1a\u5230\u671f\u63d0\u9192\u5347\u7ea7\u4e3a\u539f\u751f\u7cfb\u7edf\u901a\u77e5\uff08ui.showNativeNotification\uff0c\u5bbf\u4e3b ADR 0074\uff09\u3002Release 0.4.0\uff1a\u63d2\u4ef6 id \u5b9a\u7a3f\u4e3a pi.todo\uff08\u5b98\u65b9 pi. \u524d\u7f00\uff09\u3002Release 0.5.0\uff1a\u6ce8\u518c agent \u5de5\u5177 todo_manage\uff08AI \u53ef\u7ba1\u7406\u5f85\u529e\uff1a\u67e5\u8be2/\u6dfb\u52a0/\u5927\u6bb5\u62c6\u5206/\u6a21\u7cca\u5b8c\u6210/\u5ef6\u671f/\u6e05\u7a7a\u8fc7\u671f/\u5220\u9664\uff09\uff1b\u6570\u636e\u8fc1\u79fb\u81f3\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff0c\u9762\u677f\u4e0e AI \u5171\u4eab\u540c\u4e00\u4efd\u6570\u636e\uff0c\u53cc\u5411\u540c\u6b65\u3002Release 0.5.1\uff1a\u8865\u4e01\u53d1\u5e03\uff0c\u65e0\u529f\u80fd\u53d8\u66f4\uff08\u540c\u6b65\u6e90\u7801\u4ed3\u5e93\u4e0e\u5e02\u573a\u7248\u672c\u53f7\uff09\u3002",
-          "minPiDesktop": ">=0.1.0",
-          "shasum": "7c0b05f5095b6c62c3acd64904efccee8d75a7d24a7e21bbbbd5069d11981160",
-          "url": "packages/pi.todo-0.5.1.piplug",
-          "sizeBytes": 59999,
+          "publishedAt": "2026-08-13T06:56:47Z",
+
           "permissions": [
             "ui.panel",
             "notify",
@@ -188,12 +184,12 @@
       "versions": [
         {
           "version": "0.4.2",
-          "publishedAt": "2026-08-13T06:52:57Z",
+          "publishedAt": "2026-08-13T06:56:47Z",
           "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
           "minPiDesktop": ">=0.2.9",
-          "shasum": "2e298db811f59d92ff9f355be67236e2601945d811411cc341a3e0bf1c1ff426",
+          "shasum": "6065471b48b8ab2e28c990f6bb832ec09e2f5a25d0c6d5fb51750114b3a3f2f8",
           "url": "packages/pi.token-insights-0.4.2.piplug",
-          "sizeBytes": 156955,
+          "sizeBytes": 155530,
           "permissions": [
             "ui.panel",
             "agent.tool.register"

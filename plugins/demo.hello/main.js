@@ -5,7 +5,7 @@ async function onLoad() {
     title: "Hello: Open Panel",
     keywords: ["hello", "demo"],
     run: async () => {
-      await pi.ui.openPanel({ title: "Hello Plugin" });
+      await pi.ui.openPanel();
       await pi.ui.showToast(settings.greeting || "Hello from marketplace");
     },
   });

@@ -103,7 +103,7 @@ async function onLoad() {
     keywords: ["summary", "workspace", "inventory", "template"],
     category: "Productivity",
     run: async () => {
-      await pi.ui.openPanel({ title: "Workspace Summary" });
+      await pi.ui.openPanel();
     },
   });
 

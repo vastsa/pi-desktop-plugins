@@ -242,7 +242,7 @@ async function onLoad() {
     title: "小清新待办：打开面板",
     keywords: ["todo", "待办", "清单", "任务", "官方"],
     run: async () => {
-      await pi.ui.openPanel({ title: "小清新待办" });
+      await pi.ui.openPanel();
     },
   });
 
