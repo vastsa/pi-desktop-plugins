@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "local.scratch-calc",
+  "id": "pi.scratch-calc",
   "name": "草稿计算器",
   "version": "0.0.1",
   "description": "草稿计算器：回车计算、结果保留输入框可链式续算，历史单行「公式=结果」最新置顶，纯数字不记录；Esc 清空、↑↓ 浏览历史。支持 + - * /、括号、^ 乘方、π/e、隐式乘法，黄白书本风界面。",

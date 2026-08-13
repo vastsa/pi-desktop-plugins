@@ -36,7 +36,7 @@ PI-Desktop 插件：一个极简的草稿计算器面板，黄白书本暖色调
 ```bash
 pnpm pi-plugin check .
 pnpm pi-plugin pack .
-# 写入 dist/local.scratch-calc-0.0.1.piplug
+# 写入 dist/pi.scratch-calc-0.0.1.piplug
 ```
 
 ## 实现说明

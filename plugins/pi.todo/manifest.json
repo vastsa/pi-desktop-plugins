@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.todo",
+  "name": "小清新待办",
+  "version": "0.5.0",
+  "description": "PI-Desktop 官方待办：四象限与简单列表双布局，可设到期时间与原生系统提醒；注册 todo_manage agent 工具，AI 可直接查询/添加/拆分/完成/延期/清空。",
+  "author": "PI-Desktop",
+  "categories": [
+    "productivity",
+    "official"
+  ],
+  "changelog": "Release 0.1.0：首个版本，简单列表待办。Release 0.2.0：新增四象限矩阵布局（拖拽移动象限）、双布局切换并记住、窗口 1000×700。Release 0.3.0：任务可设置到期时间、到期提醒（低占用单定时器调度）。Release 0.3.1：到期提醒升级为原生系统通知（ui.showNativeNotification，宿主 ADR 0074）。Release 0.4.0：插件 id 定稿为 pi.todo（官方 pi. 前缀）。Release 0.5.0：注册 agent 工具 todo_manage（AI 可管理待办：查询/添加/大段拆分/模糊完成/延期/清空过期/删除）；数据迁移至插件数据目录 settings.json，面板与 AI 共享同一份数据，双向同步。",
+  "safetyNotes": "待办数据仅保存在本机插件数据目录（settings.json，localStorage 缓存同步）；到期提醒通过宿主原生系统通知（notify 权限）发出；agent 工具 todo_manage 只读写本插件自身数据；无网络请求、无其他文件访问、无自动执行代码。",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": "小清新待办",
+    "width": 1000,
+    "height": 700
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "todo.open",
+        "title": "小清新待办：打开面板",
+        "keywords": [
+          "todo",
+          "待办",
+          "清单",
+          "任务",
+          "官方"
+        ],
+        "category": "Productivity"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "todo_manage",
+        "description": "管理 PI-Desktop 待办（pi.todo 插件）的任务列表。支持：list 查询任务（filter: all/active/done/overdue）；add 添加一条（text，可选 q 象限 1-4、due 到期时间 ISO）；split 将一大段文本按行/句号/逗号拆分为多条任务；complete 按模糊文本匹配并标记完成（匹配不精确，含空白/标点容错）；uncomplete 撤销完成；delete 按模糊文本删除；clear_done 清空所有已完成；clear_overdue 清空所有过期未完成任务；extend 按模糊文本匹配任务并将到期时间改为 due（ISO）。操作基于同一份本地数据（插件数据目录 settings.json），与待办面板实时共享。",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "list",
+                "add",
+                "split",
+                "complete",
+                "uncomplete",
+                "delete",
+                "clear_done",
+                "clear_overdue",
+                "extend"
+              ],
+              "description": "要执行的操作"
+            },
+            "text": {
+              "type": "string",
+              "description": "add/split 的任务内容；complete/uncomplete/delete/extend 的模糊匹配文本"
+            },
+            "due": {
+              "type": "string",
+              "description": "到期时间 ISO 字符串（如 2026-08-15T18:00:00），add/extend 使用"
+            },
+            "q": {
+              "type": "integer",
+              "enum": [1, 2, 3, 4],
+              "description": "象限：1 重要紧急 / 2 重要不紧急 / 3 紧急不重要 / 4 不重要不紧急（默认 2）"
+            },
+            "filter": {
+              "type": "string",
+              "enum": ["all", "active", "done", "overdue"],
+              "description": "list 的过滤条件（默认 all）"
+            }
+          },
+          "required": ["action"]
+        }
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "notify",
+    "agent.tool.register"
+  ],
+  "engines": {
+    "piDesktop": ">=0.1.0"
+  },
+  "activationEvents": [
+    "onCommand:todo.open",
+    "onStartup"
+  ]
+}
