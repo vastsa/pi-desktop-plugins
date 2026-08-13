@@ -5,16 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>草稿计算器</title>
     <style>
+      /* ============ 干净利落的直角风格 ============ */
       :root {
-        --paper: #f6f0e3;
-        --card: #fffdf6;
-        --card-border: #e7dbc0;
-        --line: #e0d3b4;
-        --ink: #453d2e;
-        --ink-soft: #a29478;
-        --accent: #c07a1e;
-        --shadow: 0 1px 4px rgba(140, 115, 60, 0.12);
+        --bg: #fafaf9;
+        --card: #ffffff;
+        --line: #e6e6e2;
+        --line-strong: #d5d5d0;
+        --ink: #27363d;
+        --ink-strong: #000000;
+        --muted: #8a8a86;
+        --muted-soft: #b8b8b3;
+        --row-hover: #f2f2ef;
+        --row-active: #efefeb;
+        --accent: #ff9f0b;
+        --danger: #d95050;
+        --btn-text: #ffffff;
+        --toast-bg: #27363d;
+        --toast-text: #ffffff;
+        --expr-size: 20px;
+        --hist-expr-size: 15px;
       }
+      @media (prefers-color-scheme: dark) {
+        :root:not(.dark) {
+          --bg: #303133;
+          --card: #3a3c3f;
+          --line: #46484c;
+          --line-strong: #57595d;
+          --ink: #eeeeee;
+          --ink-strong: #ffffff;
+          --muted: #9a9a9a;
+          --muted-soft: #6f7175;
+          --row-hover: #404246;
+          --row-active: #44464a;
+          --accent: #ff9f0b;
+          --danger: #ef6a6a;
+          --btn-text: #303133;
+          --toast-bg: #e8e8e6;
+          --toast-text: #303133;
+        }
+      }
+      /* 手动切换的黑夜模式（优先级高于系统偏好） */
+      :root.light {
+        --bg: #fafaf9;
+        --card: #ffffff;
+        --line: #e6e6e2;
+        --line-strong: #d5d5d0;
+        --ink: #27363d;
+        --ink-strong: #000000;
+        --muted: #8a8a86;
+        --muted-soft: #b8b8b3;
+        --row-hover: #f2f2ef;
+        --row-active: #efefeb;
+        --accent: #ff9f0b;
+        --danger: #d95050;
+        --btn-text: #ffffff;
+        --toast-bg: #27363d;
+        --toast-text: #ffffff;
+      }
+      :root.dark {
+        --bg: #303133;
+        --card: #3a3c3f;
+        --line: #46484c;
+        --line-strong: #57595d;
+        --ink: #eeeeee;
+        --ink-strong: #ffffff;
+        --muted: #9a9a9a;
+        --muted-soft: #6f7175;
+        --row-hover: #404246;
+        --row-active: #44464a;
+        --accent: #ff9f0b;
+        --danger: #ef6a6a;
+        --btn-text: #303133;
+        --toast-bg: #e8e8e6;
+        --toast-text: #303133;
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -24,123 +89,567 @@
       }
       body {
         margin: 0;
-        padding: 24px;
-        font: 15px/1.5 Georgia, "Palatino Linotype", "Book Antiqua", "Noto Serif SC",
-          "Songti SC", serif;
+        padding: 20px 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
         font-variant-numeric: tabular-nums;
-        background: var(--paper);
+        background: var(--bg);
         color: var(--ink);
       }
+
+      /* ============ 左右布局 ============ */
       .app {
-        max-width: 760px;
-        margin: 0 auto;
+        max-width: 1120px;
         height: 100%;
+        margin: 0 auto;
+        display: flex;
+        gap: 26px;
+      }
+      .calc-panel {
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
+        gap: 12px;
+      }
+      .drafts-panel {
+        flex: none;
+        width: 230px;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--line);
+        padding-left: 18px;
+      }
+      @media (max-width: 560px) {
+        body {
+          padding: 14px;
+        }
+        .app {
+          flex-direction: column;
+          gap: 14px;
+        }
+        .drafts-panel {
+          width: auto;
+          flex: 1;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+          padding-left: 0;
+          padding-top: 12px;
+        }
       }
 
-      /* 统一卡片尺寸：输入卡片 = 单条结果卡片（单行） */
-      .sheet {
+      /* ============ 计算卡片（直角） ============ */
+      .card {
         background: var(--card);
-        border: 1px solid var(--card-border);
-        border-radius: 14px;
-        box-shadow: var(--shadow);
-        padding: 12px 18px;
-        height: 72px;
-        display: flex;
-        align-items: center;
-        overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .input-card {
+        border-color: var(--line-strong);
+        transition: border-color 0.15s;
         flex-shrink: 0;
       }
-
-      .input-sheet {
-        margin-bottom: 2px;
+      .input-card:focus-within {
+        border-color: var(--ink);
       }
-      #formula {
-        width: 100%;
-        background: transparent;
-        border: 0;
-        outline: none;
-        color: var(--ink);
-        font: 24px/1.3 Georgia, "Palatino Linotype", "Book Antiqua", "Noto Serif SC",
-          "Songti SC", serif;
-        font-variant-numeric: tabular-nums;
-        text-align: right;
-      }
-      #formula.err {
+      .input-card.err {
         animation: shake 0.3s;
+        border-color: var(--danger);
       }
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-4px); }
         75% { transform: translateX(4px); }
       }
-      .input-sheet.ok {
-        animation: okflash 0.3s;
+      .input-card.ok {
+        animation: okflash 0.35s;
       }
       @keyframes okflash {
         0% { border-color: var(--accent); }
-        100% { border-color: var(--card-border); }
+        100% { border-color: var(--ink); }
       }
 
-      .divider {
-        border-top: 1px solid var(--line);
-        margin: 8px 0 14px;
-        flex-shrink: 0;
+      .expr {
+        display: block;
+        width: 100%;
+        border: 0;
+        outline: none;
+        resize: none;
+        overflow: hidden;
+        background: transparent;
+        color: var(--ink);
+        font-family: inherit;
+        font-variant-numeric: tabular-nums;
+        font-size: var(--expr-size);
+        line-height: 1.6;
+        letter-spacing: 0.5px;
+        padding: 14px 16px 4px;
+      }
+      .expr::placeholder {
+        color: var(--muted-soft);
+        font-size: 15px;
+        letter-spacing: 1px;
+        user-select: none;
       }
 
-      /* 可滚动历史区 */
-      .scroll {
+      /* 第二行：备注（可输入、可换行）+ 结果靠右 */
+      .row2 {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 2px 16px 12px;
+      }
+      /* 备注占位提示：默认隐藏，鼠标移到卡片上才显示；有备注时也不显示 */
+      .remark-hint {
+        position: absolute;
+        left: 16px;
+        top: 3px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--muted-soft);
+        cursor: text;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.12s;
+      }
+      .card:hover .remark-hint {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .card:focus-within .remark-hint,
+      .locked .remark-hint {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .remark-hint.hide {
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+      .remark {
         flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: none;
+        resize: none;
+        overflow: hidden;
+        background: transparent;
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.6;
+        padding: 0;
+        cursor: text;
+      }
+      .remark::placeholder {
+        color: var(--muted-soft);
+      }
+      .result {
+        flex: none;
+        max-width: 50%;
+        text-align: right;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.6;
+        color: var(--ink-strong);
+        cursor: pointer;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .result.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .result::before {
+        content: "=";
+        margin-right: 6px;
+        font-weight: 400;
+        color: var(--muted);
+      }
+      .result.err {
+        color: var(--danger);
+        font-size: 13px;
+        font-weight: 400;
+        max-width: 55%;
+      }
+      .result.err::before {
+        content: "⚠";
+      }
+
+      /* ============ 分隔线 ============ */
+      .draft-sep {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+        color: var(--muted-soft);
+        font-size: 12px;
+        letter-spacing: 1px;
+      }
+      .draft-sep::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+
+      /* ============ 本稿历史 ============ */
+      .draft-history {
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        padding-right: 2px;
+        gap: 8px;
+        padding: 2px 2px 6px;
       }
-      .scroll::-webkit-scrollbar {
+      .draft-history::-webkit-scrollbar,
+      .draft-list::-webkit-scrollbar {
         width: 8px;
       }
-      .scroll::-webkit-scrollbar-track {
+      .draft-history::-webkit-scrollbar-track,
+      .draft-list::-webkit-scrollbar-track {
         background: transparent;
       }
-      .scroll::-webkit-scrollbar-thumb {
-        background: #dccfa9;
-        border-radius: 4px;
+      .draft-history::-webkit-scrollbar-thumb,
+      .draft-list::-webkit-scrollbar-thumb {
+        background: var(--muted-soft);
       }
 
-      .entry {
+      .hist-card .expr-view {
+        padding: 10px 16px 2px;
+        font-size: var(--hist-expr-size);
+        line-height: 1.6;
+        color: var(--ink);
         cursor: pointer;
+        word-break: break-word;
       }
-      .entry .meta {
-        width: 100%;
-        font: 16px/1.4 Georgia, "Palatino Linotype", "Book Antiqua", "Noto Serif SC",
-          "Songti SC", serif;
+      .hist-card .expr-view:hover {
+        color: var(--ink-strong);
+      }
+      .hist-card .remark {
+        padding-top: 3px;
+      }
+      .hist-card .result {
+        padding-top: 3px;
+        font-size: 14px;
+      }
+      .draft-empty {
+        color: var(--muted-soft);
+        font-size: 12px;
+        padding: 4px 2px;
+      }
+
+      /* ============ 底部按钮（居中、无边框款式） ============ */
+      .panel-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        flex-shrink: 0;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 0.12s, background 0.12s, opacity 0.12s;
+      }
+      .btn .lucide {
+        width: 16px;
+        height: 16px;
+        flex: none;
+      }
+      .btn.icon {
+        flex: none;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        font-size: 16px;
+      }
+      .btn:hover:not(:disabled) {
+        background: var(--row-hover);
+        color: var(--ink);
+      }
+      .btn.primary {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .btn.primary:hover:not(:disabled) {
+        color: var(--accent);
+        background: transparent;
+      }
+      .btn.ghost:hover:not(:disabled) {
+        color: var(--danger);
+        background: transparent;
+      }
+      .btn.ghost.confirming {
+        color: var(--danger);
+      }
+      .btn.active {
+        color: var(--ink);
+        background: var(--row-hover);
+      }
+      .btn.lock-on {
+        color: var(--accent);
+        background: transparent;
+      }
+      .btn.icon {
+        flex: none;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        font-size: 16px;
+        text-align: center;
+      }
+      .draft-x .lucide {
+        width: 13px;
+        height: 13px;
+      }
+      .preview-close .lucide {
+        width: 22px;
+        height: 22px;
+      }
+      .btn:disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      /* ============ 右侧：草稿列表 ============ */
+      .drafts-head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-shrink: 0;
+      }
+      .drafts-head h1 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+      }
+      .count {
+        font-size: 12px;
+        color: var(--muted-soft);
+      }
+      .draft-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 2px 2px 8px;
+      }
+      .draft-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 10px;
+        border: 1px solid transparent;
+        border-left: 2px solid transparent;
+        cursor: pointer;
+        user-select: none;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .draft-item:hover {
+        background: var(--row-hover);
+      }
+      .draft-item.active {
+        background: var(--row-active);
+        color: var(--ink);
+        border-left-color: var(--ink);
+      }
+      .draft-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-variant-numeric: tabular-nums;
-        color: var(--ink-soft);
+      }
+      .draft-count {
+        flex: none;
+        font-size: 11px;
+        color: var(--muted-soft);
+      }
+      .draft-x {
+        flex: none;
+        border: 0;
+        background: transparent;
+        color: var(--muted-soft);
+        font-size: 15px;
+        line-height: 1;
+        padding: 3px 7px;
+        cursor: pointer;
+        opacity: 0;
+      }
+      .draft-item:hover .draft-x,
+      .drafts-panel.manage .draft-x {
+        opacity: 1;
+      }
+      .draft-x:hover {
+        color: var(--danger);
+      }
+      .draft-lock {
+        display: inline-flex;
+        flex: none;
+        color: var(--accent);
+      }
+      .draft-lock .lucide {
+        width: 12px;
+        height: 12px;
+      }
+      @media (hover: none) {
+        .draft-x {
+          opacity: 1;
+        }
+      }
+      .drafts-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+      .drafts-actions .btn:not(.icon) {
+        flex: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        text-align: right;
       }
-      .entry:hover .meta {
-        color: var(--ink);
+
+      /* ============ 提示气泡 ============ */
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 26px;
+        transform: translateX(-50%) translateY(10px);
+        background: var(--toast-bg);
+        color: var(--toast-text);
+        font-size: 13px;
+        padding: 9px 18px;
+        border-radius: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s, transform 0.2s;
+        z-index: 20;
+        max-width: 80vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* ============ 图片预览（复制失败降级） ============ */
+      .preview-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 20, 20, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 30;
+      }
+      .preview-overlay.show {
+        display: flex;
+      }
+      .preview-overlay img {
+        max-width: 90vw;
+        max-height: 88vh;
+        background: #fff;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+      }
+      .preview-close {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 6px 10px;
       }
     </style>
   </head>
   <body>
     <div class="app">
-      <!-- 输入卡片：尺寸与单条结果卡片一致；回车计算，Esc 清空，↑↓ 浏览历史 -->
-      <div class="sheet input-sheet">
-        <input id="formula" spellcheck="false" autocomplete="off" autofocus />
-      </div>
+      <!-- 左：计算区域 = 当前草稿（输入行 + 本稿历史） -->
+      <main class="calc-panel">
+        <div class="card input-card" id="inputCard">
+          <textarea
+            id="inputExpr"
+            class="expr"
+            rows="1"
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="输入算式，如 100+10% 、 2π(3+1)；回车确认"
+          ></textarea>
+          <div class="row2">
+            <textarea
+              id="inputRemark"
+              class="remark"
+              rows="1"
+              spellcheck="false"
+            ></textarea>
+            <span class="remark-hint" id="inputRemarkHint">点击添加备注</span>
+            <div class="result" id="liveResult" title="点击复制结果"></div>
+          </div>
+        </div>
 
-      <div class="divider"></div>
+        <div class="draft-sep"><span>本次草稿</span></div>
+        <div class="draft-history" id="draftHistory"></div>
 
-      <!-- 可滚动历史：最新置顶 -->
-      <div class="scroll" id="scroll"></div>
+        <div class="panel-actions">
+          <button id="btnClear" class="btn ghost" type="button"><i data-lucide="trash-2"></i> 清空</button>
+          <button id="btnLock" class="btn" type="button"><i data-lucide="lock"></i> 锁定</button>
+          <button id="btnImg" class="btn" type="button"><i data-lucide="image"></i> 复制为图片</button>
+          <button id="btnTheme" class="btn" type="button" title="切换黑夜/白天"><i data-lucide="moon"></i> 夜间</button>
+        </div>
+      </main>
+
+      <!-- 右：历史区域 = 草稿列表 -->
+      <aside class="drafts-panel" id="draftsPanel">
+        <header class="drafts-head">
+          <h1>历史记录</h1>
+          <span class="count" id="draftCount"></span>
+        </header>
+        <div class="draft-list" id="draftList"></div>
+        <div class="drafts-actions">
+          <button id="btnNew" class="btn primary" type="button"><i data-lucide="plus"></i> 新建草稿</button>
+          <button id="btnManage" class="btn icon" type="button" title="管理草稿"><i data-lucide="settings"></i></button>
+        </div>
+      </aside>
     </div>
 
+    <div class="toast" id="toast"></div>
+
+    <div class="preview-overlay" id="previewOverlay">
+      <button class="preview-close" id="previewClose" type="button" title="关闭"><i data-lucide="x"></i></button>
+      <img id="previewImg" alt="草稿图片预览" />
+    </div>
+
+    <!-- Lucide 图标库（与 PI-Desktop 主程序同款） -->
+    <script src="./lucide.min.js"></script>
     <script>
       (function () {
         "use strict";
@@ -155,6 +664,7 @@
             .replace(/[×✕✖＊]/g, "*")
             .replace(/[÷／]/g, "/")
             .replace(/＋/g, "+")
+            .replace(/％/g, "%")
             .replace(/（/g, "(")
             .replace(/）/g, ")")
             .replace(/\*\*/g, "^")
@@ -202,7 +712,7 @@
               i += 1;
               continue;
             }
-            if ("+-*/^()".includes(c)) {
+            if ("+-*/^()%".includes(c)) {
               tokens.push({ type: c });
               i++;
               continue;
@@ -224,11 +734,20 @@
 
           function parseAddSub() {
             let left = parseMulDiv();
+            // 百分比（Windows 语义，对当前累计值取百分比）：50% = 0.5、100+10% = 110、100-10% = 90
+            if (peek().type === "%") {
+              next();
+              left = left / 100;
+            }
             for (;;) {
               const t = peek();
               if (t.type === "+" || t.type === "-") {
                 next();
-                const right = parseMulDiv();
+                let right = parseMulDiv();
+                if (peek().type === "%") {
+                  next();
+                  right = (left * right) / 100;
+                }
                 left = t.type === "+" ? left + right : left - right;
               } else {
                 return left;
@@ -240,7 +759,24 @@
             let left = parseUnary();
             for (;;) {
               const t = peek();
-              if (t.type === "*" || t.type === "/") {
+              if (t.type === "%") {
+                // 仅当 % 后面还接着乘除链（× ÷ 或隐式乘法操作数）时在此处理（200×5% = 10）；
+                // 否则 % 属于加减层的「对累计值取百分比」，留给 parseAddSub
+                const nt = tokens[pos + 1];
+                if (
+                  nt &&
+                  (nt.type === "*" ||
+                    nt.type === "/" ||
+                    nt.type === "num" ||
+                    nt.type === "const" ||
+                    nt.type === "(")
+                ) {
+                  next();
+                  left = left / 100;
+                } else {
+                  return left;
+                }
+              } else if (t.type === "*" || t.type === "/") {
                 next();
                 const right = parseUnary();
                 if (t.type === "/" && right === 0) throw new Error("除数不能为 0");
@@ -331,164 +867,885 @@
 
         /* ================= 面板逻辑 ================= */
 
-        const STORE_KEY = "scratch-calc-history.v1";
-        const MAX_ITEMS = 200;
-        // 纯数字（可带正负号/小数点）不算公式：回车不记录历史
+        const STORE_KEY = "scratch-calc-drafts.v2";
+        const LEGACY_KEY = "scratch-calc-history.v1";
+        const MAX_LINES = 200; // 每份草稿的行数上限
+        const MAX_DRAFTS = 100; // 草稿总数上限
+        // 纯数字（可带正负号/小数点）不算公式：回车不记录
         const BARE_NUM = /^[+-]?(\d+(\.\d*)?|\.\d+)$/;
 
-        const input = document.getElementById("formula");
-        const inputSheet = document.querySelector(".input-sheet");
-        const scroll = document.getElementById("scroll");
+        const inputCard = document.getElementById("inputCard");
+        const inputExpr = document.getElementById("inputExpr");
+        const inputRemark = document.getElementById("inputRemark");
+        const inputRemarkHint = document.getElementById("inputRemarkHint");
+        const liveResult = document.getElementById("liveResult");
+        const historyBox = document.getElementById("draftHistory");
+        const btnClear = document.getElementById("btnClear");
+        const btnLock = document.getElementById("btnLock");
+        const btnImg = document.getElementById("btnImg");
+        const btnTheme = document.getElementById("btnTheme");
+        const draftsPanel = document.getElementById("draftsPanel");
+        const draftList = document.getElementById("draftList");
+        const draftCount = document.getElementById("draftCount");
+        const btnNew = document.getElementById("btnNew");
+        const btnManage = document.getElementById("btnManage");
+        const toastEl = document.getElementById("toast");
+        const previewOverlay = document.getElementById("previewOverlay");
+        const previewImg = document.getElementById("previewImg");
+        const previewClose = document.getElementById("previewClose");
 
-        let history = [];
-        let navIndex = -1; // -1 = 未在浏览历史；≥0 = 正在浏览的第几条
-        try {
-          const raw = localStorage.getItem(STORE_KEY);
-          if (raw) {
-            const arr = JSON.parse(raw);
-            if (Array.isArray(arr)) history = arr.slice(0, MAX_ITEMS);
+        let drafts = []; // 新→旧
+        let activeId = null;
+        let manageMode = false;
+        let lastResult = null;
+
+        /* ---------- DOM 小工具 ---------- */
+        function el(tag, cls, text) {
+          const n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          return n;
+        }
+
+        function autoResize(ta, max) {
+          ta.style.height = "auto";
+          const cap = max || 200;
+          const h = Math.min(ta.scrollHeight, cap);
+          ta.style.height = h + "px";
+          ta.style.overflowY = ta.scrollHeight > cap ? "auto" : "hidden";
+        }
+
+        function toast(msg) {
+          toastEl.textContent = msg;
+          toastEl.classList.add("show");
+          clearTimeout(toast._t);
+          toast._t = setTimeout(function () {
+            toastEl.classList.remove("show");
+          }, 1800);
+        }
+
+        function legacyCopy(text) {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand("copy");
+          } catch (e2) {
+            /* 复制失败静默 */
           }
-        } catch (e) {
-          history = [];
+          document.body.removeChild(ta);
+        }
+
+        function copyText(text) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () {
+              legacyCopy(text);
+            });
+          } else {
+            legacyCopy(text);
+          }
+        }
+
+        function copyWithToast(text, label) {
+          copyText(text);
+          toast(`已复制${label || "结果"}：${text}`);
+        }
+
+        function flashError() {
+          inputCard.classList.remove("err");
+          void inputCard.offsetWidth; // 重启动画
+          inputCard.classList.add("err");
+          clearTimeout(flashError._t);
+          flashError._t = setTimeout(function () {
+            inputCard.classList.remove("err");
+          }, 400);
+        }
+
+        function flashOk() {
+          inputCard.classList.remove("ok");
+          void inputCard.offsetWidth;
+          inputCard.classList.add("ok");
+          clearTimeout(flashOk._t);
+          flashOk._t = setTimeout(function () {
+            inputCard.classList.remove("ok");
+          }, 350);
+        }
+
+        /* ---------- Lucide 图标注入（动态创建的 data-lucide 元素需重新注入） ---------- */
+        function safeIcons() {
+          if (typeof lucide !== "undefined" && lucide.createIcons) {
+            lucide.createIcons();
+          }
+        }
+
+        /* ---------- 主题：黑夜 / 白天（手动切换，默认跟随系统） ---------- */
+        const THEME_KEY = "scratch-calc-theme.v1";
+        let theme = null; // "light" | "dark"
+
+        function systemDark() {
+          return !!(
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          );
+        }
+
+        function applyTheme() {
+          const root = document.documentElement;
+          if (!root) return;
+          root.classList.toggle("dark", theme === "dark");
+          root.classList.toggle("light", theme === "light");
+          btnTheme.innerHTML =
+            theme === "dark"
+              ? '<i data-lucide="sun"></i> 白天'
+              : '<i data-lucide="moon"></i> 夜间';
+          safeIcons();
+        }
+
+        function initTheme() {
+          let saved = null;
+          try {
+            saved = localStorage.getItem(THEME_KEY);
+          } catch (e) {
+            /* 忽略 */
+          }
+          theme =
+            saved === "light" || saved === "dark"
+              ? saved
+              : systemDark()
+                ? "dark"
+                : "light";
+          applyTheme();
+          if (window.matchMedia) {
+            window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (ev) {
+              // 用户手动选择过主题后，不再跟随系统切换
+              try {
+                if (localStorage.getItem(THEME_KEY)) return;
+              } catch (e) {
+                return;
+              }
+              theme = ev.matches ? "dark" : "light";
+              applyTheme();
+            });
+          }
+        }
+
+        function toggleTheme() {
+          theme = theme === "dark" ? "light" : "dark";
+          try {
+            localStorage.setItem(THEME_KEY, theme);
+          } catch (e) {
+            /* 忽略 */
+          }
+          applyTheme();
+          toast(theme === "dark" ? "已切换为黑夜模式" : "已切换为白天模式");
+        }
+
+        /* ---------- 备注占位提示：默认隐藏，hover 卡片显示 ---------- */
+        function makeHint(row2, ta) {
+          const h = document.createElement("span");
+          h.className = "remark-hint";
+          h.textContent = "点击添加备注";
+          h.addEventListener("click", function () {
+            ta.focus();
+          });
+          row2.appendChild(h);
+          return h;
+        }
+
+        function syncHint(row2, ta) {
+          const hasText = ta.value.trim() !== "";
+          let h = row2.querySelector(".remark-hint");
+          if (hasText) {
+            if (h) h.classList.add("hide");
+          } else {
+            if (h) {
+              h.classList.remove("hide");
+            } else {
+              makeHint(row2, ta);
+            }
+          }
+        }
+
+        /* ---------- 锁定 / 解锁（只锁定当前草稿，状态随草稿保存） ---------- */
+        function currentLocked() {
+          const d = currentDraft();
+          return !!(d && d.locked);
+        }
+
+        function applyLock() {
+          const locked = currentLocked();
+          inputExpr.readOnly = locked;
+          inputRemark.readOnly = locked;
+          btnClear.disabled = locked;
+          btnLock.classList.toggle("lock-on", locked);
+          btnLock.innerHTML = locked
+            ? '<i data-lucide="lock-open"></i> 解锁'
+            : '<i data-lucide="lock"></i> 锁定';
+          inputCard.classList.toggle("locked", locked);
+          historyBox.classList.toggle("locked", locked);
+          // 本稿历史备注只读（其他草稿不受影响）
+          historyBox.querySelectorAll(".remark").forEach(function (ta) {
+            ta.readOnly = locked;
+          });
+          safeIcons();
+        }
+
+        btnLock.addEventListener("click", function () {
+          const d = currentDraft();
+          if (!d) return;
+          d.locked = !d.locked;
+          save();
+          applyLock();
+          renderDrafts(); // 刷新列表中的锁定标记
+          toast(
+            d.locked
+              ? `草稿「${d.name}」已锁定：仅当前记录只读，可解锁`
+              : `草稿「${d.name}」已解锁`
+          );
+        });
+
+        /* ---------- 草稿数据 ---------- */
+
+        function timeName(d) {
+          const p = (n) => String(n).padStart(2, "0");
+          return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+        }
+
+        function makeDraft() {
+          return {
+            id: "d" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+            name: timeName(new Date()), // 时间命名，不可修改
+            createdAt: Date.now(),
+            locked: false, // 锁定状态跟随草稿本身
+            lines: [], // 本稿历史：index 0 = 最新
+          };
         }
 
         function save() {
           try {
-            localStorage.setItem(STORE_KEY, JSON.stringify(history));
+            localStorage.setItem(
+              STORE_KEY,
+              JSON.stringify({ activeId: activeId, drafts: drafts })
+            );
           } catch (e) {
             /* 存储不可用时仅保留在内存 */
           }
         }
 
-        /* 每条历史一张卡片：单行「公式 = 结果」；最新置顶；点击回填公式 */
-        function render() {
-          const old = scroll.querySelectorAll(".entry");
-          old.forEach((n) => n.remove());
-          history.forEach(function (item) {
-            const card = document.createElement("div");
-            card.className = "entry sheet";
-
-            const meta = document.createElement("div");
-            meta.className = "meta";
-            meta.textContent = `${item.expr} = ${item.result}`;
-            meta.title = item.expr;
-            meta.addEventListener("click", function () {
-              input.value = item.expr;
-              input.focus();
-              navIndex = -1;
-            });
-
-            card.appendChild(meta);
-            scroll.appendChild(card);
-          });
+        function load() {
+          let activeInData = null;
+          try {
+            const raw = localStorage.getItem(STORE_KEY);
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (data && Array.isArray(data.drafts)) {
+                drafts = data.drafts
+                  .filter((d) => d && d.id && Array.isArray(d.lines))
+                  .slice(0, MAX_DRAFTS)
+                  .map(function (d) {
+                    // 旧版草稿名只有 HH:MM:SS，用 createdAt 补全为完整年月日时分秒
+                    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(d.name || "")) {
+                      d.name = timeName(d.createdAt ? new Date(d.createdAt) : new Date());
+                    }
+                    return d;
+                  });
+                activeInData = data.activeId;
+              }
+            }
+          } catch (e) {
+            drafts = [];
+          }
+          if (!drafts.length) {
+            // 迁移旧版单草稿历史（scratch-calc-history.v1）
+            let migrated = [];
+            try {
+              const raw = localStorage.getItem(LEGACY_KEY);
+              if (raw) {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                  migrated = arr
+                    .slice(0, MAX_LINES)
+                    .map((it) => ({
+                      expr: String(it.expr || ""),
+                      result: String(it.result || ""),
+                      remark: "",
+                      ts: it.ts || Date.now(),
+                    }))
+                    .filter((it) => it.expr);
+                }
+              }
+            } catch (e) {
+              /* 忽略旧数据 */
+            }
+            const d = makeDraft();
+            d.lines = migrated;
+            drafts.push(d);
+            activeId = d.id;
+            save();
+            return;
+          }
+          if (!drafts.some((d) => d.id === activeInData)) {
+            activeId = drafts[0].id;
+          } else {
+            activeId = activeInData;
+          }
         }
 
-        function pushEntry(expr, result) {
-          history.unshift({ expr: expr, result: result, ts: Date.now() });
-          if (history.length > MAX_ITEMS) history.length = MAX_ITEMS;
-          save();
-          render();
-          scroll.scrollTop = 0; // 最新置顶，滚回顶部
+        function currentDraft() {
+          return drafts.find((d) => d.id === activeId) || drafts[0] || null;
         }
 
-        function flashError() {
-          input.classList.remove("err");
-          void input.offsetWidth; // 重启动画
-          input.classList.add("err");
-          clearTimeout(flashError._t);
-          flashError._t = setTimeout(function () {
-            input.classList.remove("err");
-          }, 400);
-        }
-
-        function flashOk() {
-          inputSheet.classList.remove("ok");
-          void inputSheet.offsetWidth;
-          inputSheet.classList.add("ok");
-          clearTimeout(flashOk._t);
-          flashOk._t = setTimeout(function () {
-            inputSheet.classList.remove("ok");
-          }, 300);
-        }
-
-        /* ↑/↓ 浏览历史：↑ 从最新往更旧，↓ 返回并最终清空 */
-        function navHistory(dir) {
-          if (!history.length) return;
-          navIndex =
-            dir === -1
-              ? Math.min(history.length - 1, navIndex + 1)
-              : Math.max(-1, navIndex - 1);
-          input.value = navIndex === -1 ? "" : history[navIndex].expr;
-          const pos = input.value.length;
-          input.setSelectionRange(pos, pos);
-          input.focus();
-        }
-
-        function calculate() {
-          const src = input.value.trim();
+        /* ---------- 实时预览 ---------- */
+        function updatePreview() {
+          const src = inputExpr.value.trim();
           if (!src) {
-            input.focus();
+            liveResult.textContent = "";
+            liveResult.classList.remove("show", "err");
+            lastResult = null;
             return;
           }
           try {
-            const cleaned = cleanFormula(src); // 历史只记清理后的干净公式
-            if (!cleaned) {
-              flashError();
-              input.focus();
-              return;
-            }
-            const v = evaluate(cleaned);
-            const res = formatResult(v);
-            if (!BARE_NUM.test(cleaned)) {
-              pushEntry(cleaned, res); // 真公式才记录；纯数字/自由数字不记录
-            } else {
-              flashOk();
-            }
-            input.value = res; // 结果保留在输入框，可继续链式计算
-            const pos = input.value.length;
-            input.setSelectionRange(pos, pos);
-            navIndex = -1;
-            input.focus();
+            const v = evaluate(src);
+            lastResult = formatResult(v);
+            liveResult.textContent = lastResult;
+            liveResult.classList.add("show");
+            liveResult.classList.remove("err");
           } catch (e) {
-            flashError(); // 出错：不清空、不记录，轻微抖动提示
-            input.focus();
+            liveResult.textContent = e.message;
+            liveResult.classList.add("show", "err");
           }
         }
 
-        input.addEventListener("keydown", function (ev) {
+        /* ---------- 提交当前行 ---------- */
+        function commit() {
+          if (currentLocked()) return false; // 锁定的草稿不可提交
+          const src = inputExpr.value.trim();
+          if (!src) {
+            inputExpr.focus();
+            return false;
+          }
+          const d = currentDraft();
+          if (!d) return false;
+          try {
+            const cleaned = cleanFormula(src);
+            const v = evaluate(cleaned);
+            const res = formatResult(v);
+            if (BARE_NUM.test(cleaned)) {
+              flashOk(); // 纯数字/自由数字不记录
+            } else {
+              d.lines.unshift({
+                expr: cleaned,
+                result: res,
+                remark: inputRemark.value.trim(),
+                ts: Date.now(),
+              });
+              if (d.lines.length > MAX_LINES) d.lines.length = MAX_LINES;
+              inputRemark.value = "";
+              autoResize(inputRemark, 120);
+              save();
+              renderHistory();
+            }
+            inputExpr.value = res; // 新行自动带入上一步结果，可链式续算
+            lastResult = res;
+            const pos = inputExpr.value.length;
+            inputExpr.setSelectionRange(pos, pos);
+            inputExpr.focus();
+            updatePreview();
+            return true;
+          } catch (e) {
+            flashError(); // 出错：不清空、不记录
+            inputExpr.focus();
+            return false;
+          }
+        }
+
+        /* 切换草稿/新建前，把输入区有效内容提交进当前草稿，然后清空输入区 */
+        function flushInput() {
+          if (inputExpr.value.trim()) commit();
+          inputExpr.value = "";
+          inputRemark.value = "";
+          autoResize(inputExpr, 240);
+          autoResize(inputRemark, 120);
+          updatePreview();
+        }
+
+        /* ---------- 本稿历史渲染 ---------- */
+        function renderHistory() {
+          historyBox.innerHTML = "";
+          const d = currentDraft();
+          if (!d) return;
+          if (!d.lines.length) {
+            historyBox.appendChild(
+              el("div", "draft-empty", "还没有记录：输入算式后按回车，会出现在这里")
+            );
+            return;
+          }
+          d.lines.forEach(function (item, i) {
+            const card = el("div", "card hist-card");
+
+            const exprView = el("div", "expr-view", item.expr);
+            exprView.title = "点击回填到输入区继续修改";
+            exprView.addEventListener("click", function () {
+              if (currentLocked()) return; // 锁定后禁止回填编辑
+              inputExpr.value = item.expr;
+              const pos = inputExpr.value.length;
+              inputExpr.setSelectionRange(pos, pos);
+              inputExpr.focus();
+              updatePreview();
+            });
+
+            const row2 = el("div", "row2");
+
+            // 备注：默认空且不显示占位；hover 卡片才显示「点击添加备注」；点击即编辑，失焦保存
+            const ta = document.createElement("textarea");
+            ta.className = "remark";
+            ta.rows = 1;
+            ta.spellcheck = false;
+            ta.value = item.remark || "";
+            ta.readOnly = currentLocked();
+            ta.addEventListener("input", function () {
+              autoResize(ta, 120);
+            });
+            ta.addEventListener("keydown", function (ev) {
+              if (ev.key === "Escape") {
+                ta.value = ta.dataset.orig || "";
+                ta.blur();
+              }
+            });
+            ta.addEventListener("focus", function () {
+              ta.dataset.orig = ta.value;
+            });
+            ta.addEventListener("blur", function () {
+              if (!document.contains(ta)) return; // 重建中被移除，不保存
+              const d2 = currentDraft();
+              if (d2 && d2.lines[i] && d2.lines[i].expr === item.expr) {
+                const v = ta.value.trim();
+                d2.lines[i].remark = v;
+                if (ta.value !== v) ta.value = v;
+                save();
+              }
+              syncHint(row2, ta);
+            });
+
+            const resEl = el("div", "result show", item.result);
+            resEl.title = "点击复制结果";
+            resEl.addEventListener("click", function () {
+              copyWithToast(item.result, "结果");
+            });
+
+            row2.append(ta, resEl);
+            card.append(exprView, row2);
+            historyBox.appendChild(card);
+            autoResize(ta, 120);
+            if (!item.remark) makeHint(row2, ta); // 无备注时提供 hover 占位提示
+          });
+          historyBox.scrollTop = 0; // 最新置顶
+          safeIcons();
+        }
+
+        /* ---------- 右侧草稿列表渲染 ---------- */
+        function renderDrafts() {
+          draftList.innerHTML = "";
+          drafts.forEach(function (d) {
+            const item = el("div", "draft-item" + (d.id === activeId ? " active" : ""));
+            const nameEl = el("span", "draft-name", d.name);
+            nameEl.title = `草稿「${d.name}」· ${d.lines.length} 行`;
+            const cnt = el("span", "draft-count", String(d.lines.length));
+            const x = document.createElement("button");
+            x.type = "button";
+            x.className = "draft-x";
+            x.innerHTML = '<i data-lucide="x"></i>';
+            x.title = "删除该草稿";
+            x.addEventListener("click", function (ev) {
+              ev.stopPropagation();
+              deleteDraft(d.id);
+            });
+            if (d.locked) {
+              // 已锁定的草稿显示小锁标记（锁定只作用于当前记录）
+              const lockSpan = document.createElement("span");
+              lockSpan.className = "draft-lock";
+              lockSpan.title = "已锁定";
+              lockSpan.innerHTML = '<i data-lucide="lock"></i>';
+              item.append(nameEl, lockSpan, cnt, x);
+            } else {
+              item.append(nameEl, cnt, x);
+            }
+            item.addEventListener("click", function () {
+              switchDraft(d.id); // 切换草稿不受锁定限制（锁定只锁当前记录）
+            });
+            draftList.appendChild(item);
+          });
+          draftCount.textContent = drafts.length ? `${drafts.length} 份` : "";
+          draftsPanel.classList.toggle("manage", manageMode);
+          btnManage.classList.toggle("active", manageMode);
+          safeIcons();
+        }
+
+        function renderAll() {
+          renderDrafts();
+          renderHistory();
+        }
+
+        /* ---------- 草稿增删与切换 ---------- */
+        function switchDraft(id) {
+          if (id === activeId) return;
+          flushInput(); // 把当前输入提交进原草稿（有效则入历史）
+          activeId = id;
+          save();
+          renderAll();
+          applyLock(); // 锁定状态跟随当前草稿
+          inputExpr.focus();
+        }
+
+        function createDraft() {
+          if (drafts.length >= MAX_DRAFTS) {
+            toast(`草稿最多 ${MAX_DRAFTS} 份`);
+            return;
+          }
+          flushInput();
+          const d = makeDraft();
+          drafts.unshift(d);
+          activeId = d.id;
+          save();
+          renderAll();
+          applyLock();
+          toast(`已新建草稿「${d.name}」`);
+          inputExpr.focus();
+        }
+
+        function deleteDraft(id) {
+          const idx = drafts.findIndex((d) => d.id === id);
+          if (idx < 0) return;
+          const name = drafts[idx].name;
+          const wasActive = activeId === id;
+          if (wasActive) flushInput(); // 先把输入提交进即将删除的草稿（避免落到别的草稿）
+          drafts.splice(idx, 1);
+          if (wasActive) {
+            if (!drafts.length) drafts.push(makeDraft());
+            activeId = drafts[0].id;
+            renderAll();
+            applyLock();
+          } else {
+            renderDrafts();
+          }
+          save();
+          toast(`已删除草稿「${name}」`);
+        }
+
+        function clearDraft() {
+          const d = currentDraft();
+          if (!d) return;
+          d.lines = [];
+          inputExpr.value = "";
+          inputRemark.value = "";
+          autoResize(inputExpr, 240);
+          autoResize(inputRemark, 120);
+          lastResult = null;
+          updatePreview();
+          save();
+          renderHistory();
+          renderDrafts();
+          toast(`草稿「${d.name}」已清空`);
+        }
+
+        /* ---------- 复制为图片 ---------- */
+        const IMG_FONT =
+          'system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+        function wrapText(ctx, text, maxWidth) {
+          const lines = [];
+          let line = "";
+          for (const ch of text) {
+            const test = line + ch;
+            if (line && ctx.measureText(test).width > maxWidth) {
+              lines.push(line);
+              line = ch;
+            } else {
+              line = test;
+            }
+          }
+          if (line) lines.push(line);
+          return lines.length ? lines : [""];
+        }
+
+        function drawDraftToCanvas() {
+          const d = currentDraft();
+          if (!d) return null;
+          // 收集要绘制的卡片：输入行（未提交）+ 本稿历史（新→旧）
+          const cards = [];
+          const inputText = inputExpr.value.trim();
+          const inputRemarkText = inputRemark.value.trim();
+          if (inputText || inputRemarkText) {
+            cards.push({
+              expr: inputText,
+              remark: inputRemarkText,
+              result:
+                lastResult && !liveResult.classList.contains("err") ? lastResult : null,
+              input: true,
+            });
+          }
+          d.lines.forEach(function (l) {
+            cards.push({ expr: l.expr, remark: l.remark || "", result: l.result, input: false });
+          });
+          if (!cards.length) {
+            toast("当前草稿为空，没有可导出的内容");
+            return null;
+          }
+
+          const W = 760;
+          const padX = 18;
+          const padT = 12;
+          const padB = 12;
+          const gap = 10;
+          const topPad = 14;
+          const bottomPad = 14;
+          const dpr = window.devicePixelRatio || 1;
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          // 先量出每张卡片高度
+          const cardHs = [];
+          let totalH = topPad + bottomPad;
+          cards.forEach(function (c) {
+            const exprSize = c.input ? 20 : 15;
+            const exprLH = Math.round(exprSize * 1.6);
+            const remSize = 13;
+            const remLH = Math.round(remSize * 1.6);
+            const resSize = c.input ? 20 : 14;
+            ctx.font = `400 ${exprSize}px ${IMG_FONT}`;
+            const exprLines = wrapText(ctx, c.expr || "", W - padX * 2);
+            const resText = c.result == null ? "" : "= " + c.result;
+            ctx.font = `600 ${resSize}px ${IMG_FONT}`;
+            const resW = resText ? ctx.measureText(resText).width + 10 : 0;
+            ctx.font = `400 ${remSize}px ${IMG_FONT}`;
+            const remLines = wrapText(ctx, c.remark, W - padX * 2 - resW - 12);
+            const remH = Math.max(remLines.length, 1) * remLH;
+            const cardH = padT + exprLines.length * exprLH + 6 + remH + padB;
+            cardHs.push({
+              cardH: cardH,
+              exprSize: exprSize,
+              exprLH: exprLH,
+              exprLines: exprLines,
+              remSize: remSize,
+              remLH: remLH,
+              remLines: remLines,
+              resSize: resSize,
+              resText: resText,
+              resW: resW,
+            });
+            totalH += cardH + gap;
+          });
+          totalH -= gap;
+
+          canvas.width = Math.round(W * dpr);
+          canvas.height = Math.round(totalH * dpr);
+          ctx.scale(dpr, dpr);
+          ctx.textBaseline = "top";
+
+          // 背景
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, W, totalH);
+
+          let y = topPad;
+          cards.forEach(function (c, i) {
+            const m = cardHs[i];
+            const cardH = m.cardH;
+            // 卡片底 + 边框（直角）
+            ctx.fillStyle = "#f7f7f5";
+            ctx.fillRect(0, y, W, cardH);
+            ctx.strokeStyle = "#e8e8e4";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0.5, y + 0.5, W - 1, cardH - 1);
+
+            // 公式（靠左，可换行）
+            ctx.fillStyle = "#27363d";
+            ctx.font = `400 ${m.exprSize}px ${IMG_FONT}`;
+            m.exprLines.forEach(function (ln, k) {
+              ctx.fillText(ln, padX, y + padT + k * m.exprLH);
+            });
+
+            // 行2：备注（靠左，可换行）+ 结果（靠右）
+            const row2Y = y + padT + m.exprLines.length * m.exprLH + 6;
+            ctx.fillStyle = "#8a8a86";
+            ctx.font = `400 ${m.remSize}px ${IMG_FONT}`;
+            m.remLines.forEach(function (ln, k) {
+              ctx.fillText(ln, padX, row2Y + k * m.remLH);
+            });
+
+            if (m.resText) {
+              ctx.font = `600 ${m.resSize}px ${IMG_FONT}`;
+              const eqW = ctx.measureText("= ").width;
+              const numX = W - padX - m.resW + eqW;
+              ctx.fillStyle = "#9a9a9a";
+              ctx.font = `400 ${m.resSize}px ${IMG_FONT}`;
+              ctx.fillText("= ", numX - eqW, row2Y + 2);
+              ctx.fillStyle = "#000000";
+              ctx.font = `600 ${m.resSize}px ${IMG_FONT}`;
+              ctx.fillText(m.resText.slice(2), numX, row2Y + 2);
+            }
+            y += cardH + gap;
+          });
+
+          return canvas;
+        }
+
+        function copyAsImage() {
+          const canvas = drawDraftToCanvas();
+          if (!canvas) return;
+          canvas.toBlob(function (blob) {
+            if (!blob) {
+              toast("图片生成失败");
+              return;
+            }
+            const finish = function (ok) {
+              if (ok) toast("已复制为图片");
+            };
+            if (typeof ClipboardItem === "function" && navigator.clipboard) {
+              navigator.clipboard
+                .write([new ClipboardItem({ "image/png": blob })])
+                .then(
+                  function () {
+                    finish(true);
+                  },
+                  function () {
+                    showPreview(blob);
+                  }
+                );
+            } else {
+              showPreview(blob);
+            }
+          }, "image/png");
+        }
+
+        function showPreview(blob) {
+          previewImg.src = URL.createObjectURL(blob);
+          previewOverlay.classList.add("show");
+          toast("已生成图片预览（当前环境不支持直接复制图片）");
+        }
+
+        previewClose.addEventListener("click", function () {
+          previewOverlay.classList.remove("show");
+          previewImg.src = "";
+        });
+        previewOverlay.addEventListener("click", function (ev) {
+          if (ev.target === previewOverlay) {
+            previewOverlay.classList.remove("show");
+            previewImg.src = "";
+          }
+        });
+
+        /* ---------- 输入卡片事件 ---------- */
+        inputExpr.addEventListener("input", function () {
+          autoResize(inputExpr, 240);
+          updatePreview();
+        });
+        inputExpr.addEventListener("keydown", function (ev) {
+          if (currentLocked()) return; // 锁定后禁止编辑/计算
           if (ev.isComposing) return; // 中文输入法选词中的回车不触发计算
           if (ev.key === "Enter") {
             ev.preventDefault();
-            calculate();
+            commit();
           } else if (ev.key === "Escape") {
             ev.preventDefault();
-            input.value = "";
-            navIndex = -1;
-            input.focus();
-          } else if (ev.key === "ArrowUp") {
-            ev.preventDefault();
-            navHistory(-1);
-          } else if (ev.key === "ArrowDown") {
-            ev.preventDefault();
-            navHistory(1);
-          } else if (navIndex !== -1) {
-            navIndex = -1; // 开始编辑即退出历史浏览态
+            inputExpr.value = "";
+            inputRemark.value = "";
+            autoResize(inputExpr, 240);
+            autoResize(inputRemark, 120);
+            syncHint(inputRemark.parentElement, inputRemark);
+            updatePreview();
+            inputExpr.focus();
           }
         });
 
-        // 多面板/多窗口同步：其他实例写入历史时自动刷新
+        inputRemark.addEventListener("input", function () {
+          autoResize(inputRemark, 120);
+          syncHint(inputRemark.parentElement, inputRemark);
+        });
+        inputRemark.addEventListener("keydown", function (ev) {
+          if (currentLocked()) return;
+          if (ev.key === "Escape") {
+            ev.preventDefault();
+            inputRemark.value = "";
+            autoResize(inputRemark, 120);
+            syncHint(inputRemark.parentElement, inputRemark);
+          }
+        });
+
+        liveResult.addEventListener("click", function () {
+          if (liveResult.classList.contains("err")) return;
+          if (lastResult) copyWithToast(lastResult, "结果");
+        });
+
+        /* ---------- 按钮事件 ---------- */
+        btnClear.addEventListener("click", function () {
+          const d = currentDraft();
+          if (!d || (!d.lines.length && !inputExpr.value.trim())) {
+            toast("本次草稿已经是空的");
+            return;
+          }
+          if (btnClear.classList.contains("confirming")) {
+            clearDraft();
+            btnClear.classList.remove("confirming");
+            btnClear.innerHTML = '<i data-lucide="trash-2"></i> 清空';
+            safeIcons();
+            return;
+          }
+          btnClear.classList.add("confirming");
+          btnClear.innerHTML = '<i data-lucide="trash-2"></i> 确认清空？';
+          safeIcons();
+          clearTimeout(btnClear._t);
+          btnClear._t = setTimeout(function () {
+            btnClear.classList.remove("confirming");
+            btnClear.innerHTML = '<i data-lucide="trash-2"></i> 清空';
+            safeIcons();
+          }, 3000);
+        });
+
+        btnImg.addEventListener("click", copyAsImage);
+        btnNew.addEventListener("click", createDraft);
+        btnTheme.addEventListener("click", toggleTheme);
+        btnManage.addEventListener("click", function () {
+          manageMode = !manageMode;
+          renderDrafts();
+        });
+
+        /* ---------- 多窗口同步 ---------- */
         window.addEventListener("storage", function (e) {
           if (e.key !== STORE_KEY) return;
           try {
-            const arr = e.newValue ? JSON.parse(e.newValue) : [];
-            history = Array.isArray(arr) ? arr.slice(0, MAX_ITEMS) : [];
+            const data = e.newValue ? JSON.parse(e.newValue) : null;
+            drafts = data && Array.isArray(data.drafts) ? data.drafts : [];
+            if (!drafts.length) drafts.push(makeDraft());
+            if (!data || !drafts.some((d) => d.id === data.activeId)) {
+              activeId = drafts[0].id;
+            } else {
+              activeId = data.activeId;
+            }
           } catch (err) {
             return;
           }
-          render();
+          renderAll();
         });
 
-        render();
+        /* ---------- 启动 ---------- */
+        load();
+        if (!drafts.length) {
+          const d = makeDraft();
+          drafts.push(d);
+          activeId = d.id;
+        }
+        renderAll();
+        autoResize(inputExpr, 240);
+        autoResize(inputRemark, 120);
+        initTheme();
+        syncHint(inputRemark.parentElement, inputRemark);
+        applyLock();
+        safeIcons();
+        inputExpr.focus();
       })();
     </script>
   </body>

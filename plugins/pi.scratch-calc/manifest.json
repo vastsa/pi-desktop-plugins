@@ -2,19 +2,22 @@
   "schemaVersion": 1,
   "id": "pi.scratch-calc",
   "name": "草稿计算器",
-  "version": "0.0.1",
-  "description": "草稿计算器：回车计算、结果保留输入框可链式续算，历史单行「公式=结果」最新置顶，纯数字不记录；Esc 清空、↑↓ 浏览历史。支持 + - * /、括号、^ 乘方、π/e、隐式乘法，黄白书本风界面。",
+  "version": "0.2.0",
+  "description": "草稿计算器：草稿纸式多行演算。左侧为当前草稿——输入行实时计算、回车确认入本稿历史，每行可加备注、结果一键复制；底部清空、复制为图片。右侧为草稿列表——时间命名新建、点击切换、管理模式下可删除。支持百分比 %、乘方 ^、π/e、隐式乘法，深色模式，全部数据本地保存。",
   "author": "Tioit-Wang",
   "categories": [
     "productivity",
     "community"
   ],
-  "changelog": "Release 0.0.1：首个版本，回车计算、历史栈、纯数字不记录、尾部运算符容错、黄白书本风界面。",
+  "changelog": "Release 0.2.0：重构为多草稿稿纸（干净利落的直角风格）——左侧当前草稿：输入行实时计算 + 本稿历史 + 每行可编辑备注 + 清空/复制为图片；右侧草稿列表：时间命名新建、点击切换、管理模式逐条删除。旧版历史自动迁移。",
   "safetyNotes": "纯前端计算器：历史仅保存在本机 localStorage（上限 200 条）；无网络请求、无文件访问、无自动执行代码。",
   "main": "main.js",
   "ui": {
     "panel": "renderer/index.html",
-    "title": "草稿计算器"
+    "title": "草稿计算器",
+    "width": 700,
+    "height": 500,
+    "resizable": false
   },
   "contributes": {
     "commands": [
