@@ -46,7 +46,7 @@ PI-Desktop **官方插件**（id: `pi.todo`，遵循官方 `pi.` 前缀命名）
 ```bash
 pnpm pi-plugin check .
 pnpm pi-plugin pack .
-# 产出 dist/pi.todo-0.5.0.piplug
+# 产出 dist/pi.todo-0.5.1.piplug
 ```
 
 ## 技术说明
