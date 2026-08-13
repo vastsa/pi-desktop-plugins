@@ -423,7 +423,7 @@ async function onLoad() {
       await publishAppearance(root).catch(() => undefined);
       // Open now, scan behind it: the panel renders the previous cube and
       // switches to the fresh one as soon as it lands.
-      await pi.ui.openPanel({ title: "Token Insights" });
+      await pi.ui.openPanel();
       void refreshFacts("command").catch((error) =>
         pi.ui.showToast(`Token Insights scan failed: ${error.message}`, "warn"),
       );

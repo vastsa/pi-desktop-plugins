@@ -14,7 +14,10 @@
   "main": "main.js",
   "ui": {
     "panel": "renderer/index.html",
-    "title": "草稿计算器",
+    "title": {
+      "en": "Scratch Calculator",
+      "zh-CN": "草稿计算器"
+    },
     "width": 700,
     "height": 500,
     "resizable": false

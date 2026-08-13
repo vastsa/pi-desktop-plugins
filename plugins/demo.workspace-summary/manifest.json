@@ -13,7 +13,10 @@
     "panel": "renderer/index.html",
     "width": 520,
     "height": 560,
-    "title": "Workspace Summary"
+    "title": {
+      "en": "Workspace Summary",
+      "zh-CN": "工作区摘要"
+    }
   },
   "contributes": {
     "commands": [

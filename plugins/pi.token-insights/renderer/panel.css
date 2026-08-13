@@ -177,26 +177,9 @@ svg {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 0 var(--titlebar-lead, 12px);
+  padding: 0 12px;
   border-bottom: 1px solid var(--ds-border-subtle);
   background: var(--ds-bg-secondary);
-}
-
-/*
-  The host draws (or does not draw) the OS window controls. When the window is
-  frameless on macOS the traffic lights sit at the top left, so that strip is
-  reserved and stays draggable; when the host keeps a native frame there is
-  nothing to avoid.
-*/
-html[data-chrome="frameless"][data-platform="mac"] .titlebar {
-  --titlebar-lead: 84px;
-}
-
-.titlebar-drag {
-  position: absolute;
-  inset: 0;
-  -webkit-app-region: drag;
-  app-region: drag;
 }
 
 .titlebar-title {
@@ -213,8 +196,6 @@ html[data-chrome="frameless"][data-platform="mac"] .titlebar {
   display: flex;
   align-items: center;
   gap: 6px;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
 }
 
 .icon-button {

@@ -5,7 +5,7 @@ async function onLoad() {
     title: "Notes: Open Panel",
     keywords: ["notes", "workspace"],
     run: async () => {
-      await pi.ui.openPanel({ title: "Workspace Notes" });
+      await pi.ui.openPanel();
     },
   });
   await pi.agent.registerTool({

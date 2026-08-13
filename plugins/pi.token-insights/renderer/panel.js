@@ -153,7 +153,7 @@ const STRINGS = {
     retry: "Try again",
   },
   zh: {
-    title: "Token Insights",
+    title: "Token 用量分析",
     appearance: "外观",
     theme: "主题",
     language: "语言",
@@ -466,22 +466,6 @@ function applyAppearance(reveal) {
  */
 function revealContent() {
   document.documentElement.dataset.booting = "false";
-}
-
-/* ------------------------------------------------------- window chrome ---- */
-
-/**
- * The host may or may not honour `ui.frame: false`. A frameless window has no
- * native title strip, which on macOS is exactly where the traffic lights are —
- * so the lead padding is reserved only in that case, detected at runtime.
- */
-function detectChrome() {
-  const platform = /mac/i.test(navigator.platform || navigator.userAgent) ? "mac" : /win/i.test(navigator.platform || "") ? "win" : "other";
-  const outer = Number(window.outerHeight) || 0;
-  const inner = Number(window.innerHeight) || 0;
-  const chromeHeight = outer - inner;
-  document.documentElement.dataset.platform = platform;
-  document.documentElement.dataset.chrome = outer > 0 && chromeHeight <= 2 ? "frameless" : "framed";
 }
 
 /* ----------------------------------------------------------------- filters */
@@ -1424,7 +1408,6 @@ function bindEvents() {
     if (event.key === "Escape") closePopovers();
   });
 
-  window.addEventListener("resize", () => detectChrome());
   // Coming back to the window should feel instant; leaving it only slows the
   // cadence down, so a visible-but-unfocused panel never freezes.
   window.addEventListener("focus", () => void poll(false));
@@ -1440,7 +1423,6 @@ async function init() {
   state.reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   state.override = readStore(OVERRIDE_KEY, { theme: "auto", locale: "auto" });
   state.filter = loadFilter();
-  detectChrome();
   // A cached palette is trustworthy enough to show immediately; without one the
   // page stays cloaked until the first settings read (or the failsafe) lands.
   const hasCachedAppearance = Boolean(boot.cached) || state.override.theme !== "auto";

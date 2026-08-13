@@ -6,7 +6,7 @@
   "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
   "author": "PI-Desktop",
   "main": "main.js",
-  "ui": {"panel": "renderer/index.html", "width": 480, "height": 420, "title": "Workspace Notes"},
+  "ui": {"panel": "renderer/index.html", "width": 480, "height": 420, "title": {"en": "Workspace Notes", "zh-CN": "工作区笔记"}},
   "contributes": {
     "commands": [{"id": "notes.open", "title": "Notes: Open Panel", "keywords": ["notes", "workspace"], "category": "Productivity"}],
     "agentTools": [{"name": "save_note", "description": "Append a note to NOTES.md in the workspace", "risk": "high", "schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}]

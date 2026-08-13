@@ -14,7 +14,10 @@
   "main": "main.js",
   "ui": {
     "panel": "renderer/index.html",
-    "title": "小清新待办",
+    "title": {
+      "en": "Todo List",
+      "zh-CN": "小清新待办"
+    },
     "width": 1000,
     "height": 700
   },

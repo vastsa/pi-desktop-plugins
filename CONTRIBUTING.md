@@ -69,6 +69,30 @@ plugins/<id>/
 - `ui.panel`: isolated panel html entry
 - `contributes.commands` / `contributes.agentTools` / `contributes.settings`
 
+### Panel title and host chrome compatibility
+
+Panel titles must provide both English and Simplified Chinese so PI-Desktop can
+follow the active application language:
+
+```json
+{
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "My Plugin",
+      "zh-CN": "我的插件"
+    }
+  }
+}
+```
+
+Do not hard-code a replacement title when opening the panel from a command. Use
+`pi.ui.openPanel()` without a `title` option so the host can resolve the
+localized manifest title. PI-Desktop owns the panel titlebar and adapts its
+background and foreground to the page appearance; plugin content should start
+below that host-owned chrome and should not implement a second draggable window
+titlebar.
+
 ## Local verification in PI-Desktop
 
 Before opening a PR:

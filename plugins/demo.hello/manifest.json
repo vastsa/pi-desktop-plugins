@@ -6,7 +6,7 @@
   "description": "Official sample plugin with panel, command, and echo tool.",
   "author": "PI-Desktop",
   "main": "main.js",
-  "ui": {"panel": "renderer/index.html", "width": 420, "height": 320, "title": "Hello Plugin"},
+  "ui": {"panel": "renderer/index.html", "width": 420, "height": 320, "title": {"en": "Hello Plugin", "zh-CN": "你好插件"}},
   "contributes": {
     "commands": [{"id": "hello.open", "title": "Hello: Open Panel", "keywords": ["hello", "demo"], "category": "Demo"}],
     "agentTools": [{"name": "echo_text", "description": "Echo text back to the agent", "risk": "low", "schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}],

@@ -16,8 +16,10 @@
     "panel": "renderer/index.html",
     "width": 1120,
     "height": 800,
-    "title": "Token Insights",
-    "frame": false
+    "title": {
+      "en": "Token Insights",
+      "zh-CN": "Token 用量分析"
+    }
   },
   "contributes": {
     "commands": [

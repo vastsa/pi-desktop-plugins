@@ -15,7 +15,7 @@ async function onLoad() {
     title: "草稿计算器：打开面板",
     keywords: ["草稿计算器", "计算器", "calculator", "草稿", "draft", "公式", "calc"],
     run: async () => {
-      await pi.ui.openPanel({ title: "草稿计算器" });
+      await pi.ui.openPanel();
     },
   });
 }
