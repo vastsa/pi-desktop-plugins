@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>超级域名侠</title>
+    <script>
+      /* 渲染前恢复主题偏好（默认跟随系统），避免闪屏 */
+      (function () {
+        var t = "system";
+        try {
+          var s = JSON.parse(localStorage.getItem("sdm.settings") || "{}");
+          if (s.theme) t = s.theme;
+        } catch (e) {
+          /* 保持默认 */
+        }
+        if (t === "system") {
+          t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
+    <script src="./assets/index.js" defer></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
