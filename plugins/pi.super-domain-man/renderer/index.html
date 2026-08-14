@@ -21,6 +21,36 @@
       })();
     </script>
     <script src="./assets/index.js" defer></script>
+    <script>
+      /* 数据同步桥：将面板 localStorage 数据同步到主进程，供 AI 工具 domain_manage 使用 */
+      (function () {
+        var SYNC_MS = 15000;
+        function getMonitors() {
+          try { var r = localStorage.getItem("sdm.monitor"); return r ? JSON.parse(r) : []; }
+          catch (e) { return []; }
+        }
+        function getAccountMeta() {
+          try {
+            var raw = localStorage.getItem("sdm.accounts");
+            if (!raw) return [];
+            var arr = JSON.parse(raw);
+            if (!Array.isArray(arr)) return [];
+            return arr.map(function (a) {
+              return { id: a.id, cloud: a.cloud, tag: a.tag || "", domains: a.domains || [] };
+            });
+          } catch (e) { return []; }
+        }
+        function sync() {
+          try {
+            if (typeof pi !== "undefined" && pi.invoke) {
+              pi.invoke("domain.sync", { monitors: getMonitors(), accounts: getAccountMeta() });
+            }
+          } catch (e) { /* 静默失败 */ }
+        }
+        setInterval(sync, SYNC_MS);
+        setTimeout(sync, 3000);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

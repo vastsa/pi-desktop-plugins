@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.super-domain-man",
   "name": "超级域名侠",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "本地优先的多平台域名解析记录管理与 SSL 证书监控/申请工具：支持阿里云 / 腾讯云 / Cloudflare / AWS Route53 / 火山引擎 / 华为云，凭据本地加密存储",
   "author": "Tioit-Wang",
   "categories": [
@@ -28,6 +28,12 @@
         "title": "超级域名侠：打开面板",
         "keywords": ["域名", "DNS", "SSL", "解析", "证书", "超级域名侠", "域名侠", "证书监控", "ACME"]
       }
+    ],
+    "agentTools": [
+      {
+        "name": "domain_manage",
+        "description": "管理域名解析记录和 SSL 证书监控"
+      }
     ]
   },
   "permissions": [
@@ -36,7 +42,8 @@
     "clipboard.read",
     "clipboard.write",
     "shell.openExternal",
-    "notify"
+    "notify",
+    "agent.tool.register"
   ],
   "engines": {
     "piDesktop": ">=0.1.0"
