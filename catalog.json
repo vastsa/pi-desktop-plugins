@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-08-13T09:15:27Z",
+  "updatedAt": "2026-08-14T10:53:09Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -22,7 +22,7 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "Release 0.2.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "75c775b717bcd440b2c6ce9029e3f1b392e956b3eef770c5d958892a2fb04e28",
@@ -53,7 +53,7 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "Release 0.1.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "9a26d40f710660c97910ff5ca1ab6782df12e392c925c3b7142f262325179733",
@@ -92,7 +92,7 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
           "minPiDesktop": ">=0.2.0",
           "shasum": "4a835ae2436c09cb5a581c3a53f1bc2f808588858604be0dff38f93048d70a9b",
@@ -126,7 +126,7 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "Release 0.2.0\uff1a\u91cd\u6784\u4e3a\u591a\u8349\u7a3f\u7a3f\u7eb8\uff08\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff09\u2014\u2014\u5de6\u4fa7\u5f53\u524d\u8349\u7a3f\uff1a\u8f93\u5165\u884c\u5b9e\u65f6\u8ba1\u7b97 + \u672c\u7a3f\u5386\u53f2 + \u6bcf\u884c\u53ef\u7f16\u8f91\u5907\u6ce8 + \u6e05\u7a7a/\u590d\u5236\u4e3a\u56fe\u7247\uff1b\u53f3\u4fa7\u8349\u7a3f\u5217\u8868\uff1a\u65f6\u95f4\u547d\u540d\u65b0\u5efa\u3001\u70b9\u51fb\u5207\u6362\u3001\u7ba1\u7406\u6a21\u5f0f\u9010\u6761\u5220\u9664\u3002\u65e7\u7248\u5386\u53f2\u81ea\u52a8\u8fc1\u79fb\u3002",
           "minPiDesktop": ">=0.1.0",
           "shasum": "a7c56a27dd1262e674898f7f96194c6e6d5e063d6e32c9a97000cf09ce74a755",
@@ -155,20 +155,21 @@
       "safetyNotes": "\u8d26\u53f7\u51ed\u636e\u7ecf PBKDF2(150000) + AES-GCM \u52a0\u5bc6\u540e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\uff08\u9762\u677f localStorage\uff09\uff0c\u4e3b\u5bc6\u7801\u53ea\u5b58\u5185\u5b58\uff1b\u7f51\u7edc\u8bf7\u6c42\u4ec5\u53d1\u5f80\u6240\u9009\u4e91\u5382\u5546 API\u3001crt.sh \u8bc1\u4e66\u900f\u660e\u65e5\u5fd7\u4e0e\u7528\u6237\u81ea\u884c\u914d\u7f6e\u7684\u901a\u77e5 Webhook\uff1b\u53ef\u8bfb\u5199\u526a\u8d34\u677f\u3001\u6253\u5f00\u5916\u90e8\u94fe\u63a5\u3002",
       "versions": [
         {
-          "version": "0.2.0",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "version": "0.3.0",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "v0.2.0\uff1a\u91cd\u6784\u4e3a\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff08\u9ed1\u767d\u7070 + \u6a59\u8272\u5f3a\u8c03\u3001\u65e0\u5706\u89d2\u65e0\u6295\u5f71\u30011px \u7ec6\u7ebf\u5206\u9694\uff09\uff1b\u9ed8\u8ba4\u8ddf\u968f\u7cfb\u7edf\u6df1\u6d45\u6a21\u5f0f\uff0c\u4fa7\u8fb9\u680f\u53ef\u4e00\u952e\u5207\u6362\uff1b\u8fdb\u5165\u89e3\u6790\u8bb0\u5f55\u81ea\u52a8\u62c9\u53d6\u6570\u636e\uff1b\u5b50\u9875\u9762\u5bfc\u822a\u4fdd\u6301\u7236\u83dc\u5355\u9009\u4e2d\u6001\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "75ec2a784654e9d521c13e3e23f78289a37e1c3258ee59dc2de227cd7e0d8523",
-          "url": "packages/pi.super-domain-man-0.2.0.piplug",
-          "sizeBytes": 261514,
+          "shasum": "d5175a589d921658d2b46e93d3b33e136038c86bb5386a9a602e97b992988976",
+          "url": "packages/pi.super-domain-man-0.3.0.piplug",
+          "sizeBytes": 273052,
           "permissions": [
             "ui.panel",
             "net.fetch",
             "clipboard.read",
             "clipboard.write",
             "shell.openExternal",
-            "notify"
+            "notify",
+            "agent.tool.register"
           ]
         }
       ]
@@ -191,7 +192,7 @@
       "versions": [
         {
           "version": "0.5.1",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "Release 0.1.0\uff1a\u9996\u4e2a\u7248\u672c\uff0c\u7b80\u5355\u5217\u8868\u5f85\u529e\u3002Release 0.2.0\uff1a\u65b0\u589e\u56db\u8c61\u9650\u77e9\u9635\u5e03\u5c40\uff08\u62d6\u62fd\u79fb\u52a8\u8c61\u9650\uff09\u3001\u53cc\u5e03\u5c40\u5207\u6362\u5e76\u8bb0\u4f4f\u3001\u7a97\u53e3 1000\u00d7700\u3002Release 0.3.0\uff1a\u4efb\u52a1\u53ef\u8bbe\u7f6e\u5230\u671f\u65f6\u95f4\u3001\u5230\u671f\u63d0\u9192\uff08\u4f4e\u5360\u7528\u5355\u5b9a\u65f6\u5668\u8c03\u5ea6\uff09\u3002Release 0.3.1\uff1a\u5230\u671f\u63d0\u9192\u5347\u7ea7\u4e3a\u539f\u751f\u7cfb\u7edf\u901a\u77e5\uff08ui.showNativeNotification\uff0c\u5bbf\u4e3b ADR 0074\uff09\u3002Release 0.4.0\uff1a\u63d2\u4ef6 id \u5b9a\u7a3f\u4e3a pi.todo\uff08\u5b98\u65b9 pi. \u524d\u7f00\uff09\u3002Release 0.5.0\uff1a\u6ce8\u518c agent \u5de5\u5177 todo_manage\uff08AI \u53ef\u7ba1\u7406\u5f85\u529e\uff1a\u67e5\u8be2/\u6dfb\u52a0/\u5927\u6bb5\u62c6\u5206/\u6a21\u7cca\u5b8c\u6210/\u5ef6\u671f/\u6e05\u7a7a\u8fc7\u671f/\u5220\u9664\uff09\uff1b\u6570\u636e\u8fc1\u79fb\u81f3\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff0c\u9762\u677f\u4e0e AI \u5171\u4eab\u540c\u4e00\u4efd\u6570\u636e\uff0c\u53cc\u5411\u540c\u6b65\u3002Release 0.5.1\uff1a\u8865\u4e01\u53d1\u5e03\uff0c\u65e0\u529f\u80fd\u53d8\u66f4\uff08\u540c\u6b65\u6e90\u7801\u4ed3\u5e93\u4e0e\u5e02\u573a\u7248\u672c\u53f7\uff09\u3002",
           "minPiDesktop": ">=0.1.0",
           "shasum": "7c0b05f5095b6c62c3acd64904efccee8d75a7d24a7e21bbbbd5069d11981160",
@@ -223,7 +224,7 @@
       "versions": [
         {
           "version": "0.4.2",
-          "publishedAt": "2026-08-13T09:15:27Z",
+          "publishedAt": "2026-08-14T10:53:09Z",
           "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
           "minPiDesktop": ">=0.2.9",
           "shasum": "6065471b48b8ab2e28c990f6bb832ec09e2f5a25d0c6d5fb51750114b3a3f2f8",
