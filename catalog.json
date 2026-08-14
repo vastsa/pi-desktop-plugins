@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-08-14T10:53:09Z",
+  "updatedAt": "2026-08-14T11:07:25Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -22,7 +22,7 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "Release 0.2.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "75c775b717bcd440b2c6ce9029e3f1b392e956b3eef770c5d958892a2fb04e28",
@@ -53,7 +53,7 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "Release 0.1.0",
           "minPiDesktop": ">=0.2.0",
           "shasum": "9a26d40f710660c97910ff5ca1ab6782df12e392c925c3b7142f262325179733",
@@ -92,7 +92,7 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
           "minPiDesktop": ">=0.2.0",
           "shasum": "4a835ae2436c09cb5a581c3a53f1bc2f808588858604be0dff38f93048d70a9b",
@@ -104,6 +104,37 @@
             "clipboard.write",
             "notify",
             "agent.tool.register"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pi.markdown",
+      "name": "Pi Markdown \u7b14\u8bb0",
+      "description": "\u672c\u5730 Markdown \u7b14\u8bb0\uff1a\u771f\u00b7\u6240\u89c1\u5373\u6240\u5f97\u7f16\u8f91\uff08\u8f93\u5165 # / - [ ] / > / ``` / $\u2026$ \u5373\u51fa\u6837\u5f0f\uff0cTypora \u98ce\u683c\uff0cMilkdown Crepe\uff09\u3001\u7c73\u767d/\u9ed1\u591c\u53cc\u4e3b\u9898\u5207\u6362\u30015 \u7ea7\u76ee\u5f55\u4e0e H1-H5 \u5927\u7eb2\u3001297 \u79cd\u8bed\u8a00\u4ee3\u7801\u9ad8\u4eae\u3001Todo \u4efb\u52a1\u5217\u8868\u3001KaTeX \u516c\u5f0f\u3001\u5168\u5c40\u641c\u7d22\uff08\u6807\u9898/\u5185\u5bb9\uff09\u3001\u5bfc\u51fa Markdown/HTML/\u56fe\u50cf\uff1b\u6587\u4ef6\u5939\u4e0e\u7b14\u8bb0\u62d6\u62fd\u6392\u5e8f\u3001\u53f3\u952e\u64cd\u4f5c\u83dc\u5355\uff1b\u6570\u636e\u4fdd\u5b58\u5728\u63d2\u4ef6\u6570\u636e\u76ee\u5f55\u3002",
+      "author": "Tioit-Wang",
+      "categories": [
+        "productivity",
+        "community"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.markdown",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Pi Markdown \u7b14\u8bb0\uff08pi.markdown\uff09\n\n\u672c\u5730 Markdown \u7b14\u8bb0\u5e94\u7528\uff08PI-Desktop \u63d2\u4ef6\uff0cid: `pi.markdown`\uff09\uff0c\u57fa\u4e8e **Milkdown Crepe** \u7684\u771f\u00b7\u6240\u89c1\u5373\u6240\u5f97 Markdown \u7f16\u8f91\u5668\u3002\n\n## \u529f\u80fd\n\n- **\u6240\u89c1\u5373\u6240\u5f97\u7f16\u8f91**\uff1a\u8f93\u5165 `# ` \u5373\u51fa\u6807\u9898\u3001`- [ ]` \u5373\u51fa\u4efb\u52a1\u3001`> ` \u5373\u51fa\u5f15\u7528\u3001```` ``` ```` \u5373\u51fa\u4ee3\u7801\u5757\u3001`$\u2026$` / `$$\u2026$$` \u5373\u51fa\u516c\u5f0f\uff08Typora \u98ce\u683c\uff09\uff1b`/` \u659c\u6760\u83dc\u5355\u63d2\u5165\u5757\uff0c\u5757\u5de6\u4fa7\u62d6\u62fd\u624b\u67c4\u79fb\u52a8/\u6362\u578b\uff1b\u81ea\u52a8\u4fdd\u5b58\uff08800ms \u9632\u6296\u5199\u76d8\uff09\n- **\u516c\u5f0f**\uff1aKaTeX \u884c\u5185 `$...$` \u4e0e\u5757\u7ea7 `$$...$$`\uff0c\u7f16\u8f91\u533a\u76f4\u63a5\u663e\u793a\u6e32\u67d3\u7ed3\u679c\uff1bHTML/PNG \u5bfc\u51fa\u540c\u6837\u6e32\u67d3\n- **\u4ee3\u7801**\uff1a297 \u79cd\u8bed\u8a00 Prism \u9ad8\u4eae\uff08refractor \u5168\u91cf\uff0c\u968f\u5305\u79bb\u7ebf\uff09\uff1b\u4ee3\u7801\u5757\u9884\u89c8\u5373\u6240\u5f97\uff0c\u53ef\u4e00\u952e\u5207\u6362\u5230\u7f16\u8f91\n- **\u53cc\u4e3b\u9898**\uff1a\u7c73\u767d\uff08\u9ed8\u8ba4\uff09/ \u9ed1\u591c\uff0c\u72b6\u6001\u680f\u4e00\u952e\u5207\u6362\uff0c\u504f\u597d\u6301\u4e45\u5316\n- **5 \u7ea7\u76ee\u5f55\u4e0e\u5927\u7eb2**\uff1a\u5de6\u4fa7\u53ef\u5d4c\u5957\u6587\u4ef6\u5939\u6811\uff08\u5c42\u7ea7\u4e0d\u9650\uff09+ \u5f53\u524d\u7b14\u8bb0 H1\u2013H5 \u5927\u7eb2\uff0c\u6eda\u52a8\u8054\u52a8\u9ad8\u4eae\n- **\u641c\u7d22\u4e0e\u5bfc\u51fa**\uff1a\u5168\u5c40\u641c\u7d22\uff08\u6807\u9898+\u5185\u5bb9\uff09\uff1b\u5bfc\u51fa Markdown / \u81ea\u5305\u542b HTML / PNG \u56fe\u50cf\n- **\u4fa7\u8fb9\u680f\u7ba1\u7406**\uff1a\u6587\u4ef6\u5939/\u7b14\u8bb0\u62d6\u62fd\u6392\u5e8f\uff08\u7981\u6b62\u62d6\u5165\u81ea\u8eab\u540e\u4ee3\uff09\uff0c\u53f3\u952e\u65b0\u5efa/\u91cd\u547d\u540d/\u5220\u9664/\u5bfc\u51fa\n\n## \u4f7f\u7528\n\n1. PI-Desktop \u2192 Plugins \u2192 Marketplace \u2192 \u5b89\u88c5 `pi.markdown`\n2. \u547d\u4ee4\u9762\u677f\u8fd0\u884c **Pi Markdown\uff1a\u6253\u5f00\u7b14\u8bb0**\uff08\u7a97\u53e3 1280\u00d7800\uff09\n3. \u9996\u6b21\u542f\u52a8\u81ea\u52a8\u521b\u5efa\u300c\u6b22\u8fce\u4f7f\u7528 Pi Markdown\u300d\u793a\u4f8b\u7b14\u8bb0\n\n## \u6570\u636e\u4e0e\u6743\u9650\n\n- \u6570\u636e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 `~/.pi-desktop/plugins/data/pi.markdown/settings.json`\uff08`tree` \u4e3a\u7b14\u8bb0\u6811\uff0c`theme` \u4e3a\u4e3b\u9898\u504f\u597d\uff0c\u56fe\u7247\u4ee5 data URL \u5185\u5d4c\u4e8e\u6b63\u6587\uff09\n- \u6743\u9650\uff1a`ui.panel`\uff08\u9762\u677f\u5165\u53e3\uff09\u3001`agent.prompt.inject`\uff08\u6280\u80fd\u7d22\u5f15\uff09\n- \u65e0\u7f51\u7edc\u8bf7\u6c42\u3001\u65e0\u5de5\u4f5c\u533a\u6587\u4ef6\u8bfb\u5199\uff0c\u5b8c\u5168\u79bb\u7ebf\u53ef\u7528\n",
+      "safetyNotes": "\u5168\u90e8\u6570\u636e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff08\u56fe\u7247\u4ee5 data URL \u5185\u5d4c\u4e8e\u7b14\u8bb0\u6b63\u6587\uff09\uff1b\u65e0\u7f51\u7edc\u8bf7\u6c42\u3001\u65e0\u5de5\u4f5c\u533a\u6587\u4ef6\u8bfb\u5199\uff1b\u6e32\u67d3\u7aef\u4ee3\u7801\u9ad8\u4eae/\u516c\u5f0f/\u7f16\u8f91\u5668\u5e93\uff08Milkdown/Prism/KaTeX\uff09\u5168\u90e8\u968f\u63d2\u4ef6\u6253\u5305\uff0c\u79bb\u7ebf\u53ef\u7528\u3002",
+      "versions": [
+        {
+          "version": "0.3.1",
+          "publishedAt": "2026-08-14T11:07:25Z",
+          "changelog": "Release 0.3.1\uff1a\u4fee\u590d LaTeX \u516c\u5f0f\u4f9d\u8d56 CodeMirror \u5bfc\u81f4\u7f16\u8f91\u5668\u65e0\u6cd5\u521d\u59cb\u5316\u7684\u95ee\u9898\uff1b\u4fee\u590d HTML/PNG \u5bfc\u51fa\u4e2d\u5757\u7ea7\u516c\u5f0f\u4e0e\u4ee3\u7801\u9ad8\u4eae\u7f3a\u5931\u7684\u95ee\u9898\uff08\u6539\u4e3a Markdown \u6e90\u7801\u7ecf\u7f16\u8f91\u5668 parser/serializer \u6e32\u67d3\uff09\uff1b\u65b0\u589e\u7c73\u767d\uff08\u9ed8\u8ba4\uff09/\u9ed1\u591c\u53cc\u4e3b\u9898\u4e0e\u72b6\u6001\u680f\u5207\u6362\u5f00\u5173\uff0c\u4e3b\u9898\u504f\u597d\u968f settings.json \u6301\u4e45\u5316\uff1b\u4ee3\u7801\u5757\u9884\u89c8\u5373\u6240\u5f97\uff08LaTeX \u76f4\u63a5\u663e\u793a KaTeX \u516c\u5f0f\u3001\u666e\u901a\u4ee3\u7801\u5757\u663e\u793a\u9ad8\u4eae\uff09\u3002Release 0.3.0\uff1a\u7f16\u8f91\u5668\u7531 Toast UI WYSIWYG\uff08\u5bcc\u6587\u672c+\u8865\u4e01\uff09\u66f4\u6362\u4e3a Milkdown Crepe\u2014\u2014\u771f\u6b63\u7684\u6240\u89c1\u5373\u6240\u5f97 Markdown \u7f16\u8f91\uff0c\u8f93\u5165\u8bed\u6cd5\u5373\u51fa\u6837\u5f0f\uff08\u542b\u4e2d\u6587\u8f93\u5165\u6cd5\uff09\u3001\u659c\u6760\u83dc\u5355/\u5757\u62d6\u62fd\u624b\u67c4\u3001\u56fe\u7247 data URL \u5185\u5d4c\u3001297 \u79cd\u8bed\u8a00 Prism \u9ad8\u4eae\u3002Release 0.2.0\uff1a\u5b8c\u6574 Markdown \u7b14\u8bb0\u5e94\u7528\uff08React + TypeScript + Tailwind \u91cd\u5199\u9762\u677f\uff09\u3002Release 0.1.0\uff1a\u6a21\u677f\u521d\u59cb\u7248\u672c\u3002",
+          "minPiDesktop": ">=0.1.0",
+          "shasum": "fe2f880f1496b46bde087f6cb5b97a98a8e84652560b599b2abbe59f506a2807",
+          "url": "packages/pi.markdown-0.3.1.piplug",
+          "sizeBytes": 10788834,
+          "permissions": [
+            "ui.panel",
+            "agent.prompt.inject"
           ]
         }
       ]
@@ -126,7 +157,7 @@
       "versions": [
         {
           "version": "0.2.0",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "Release 0.2.0\uff1a\u91cd\u6784\u4e3a\u591a\u8349\u7a3f\u7a3f\u7eb8\uff08\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff09\u2014\u2014\u5de6\u4fa7\u5f53\u524d\u8349\u7a3f\uff1a\u8f93\u5165\u884c\u5b9e\u65f6\u8ba1\u7b97 + \u672c\u7a3f\u5386\u53f2 + \u6bcf\u884c\u53ef\u7f16\u8f91\u5907\u6ce8 + \u6e05\u7a7a/\u590d\u5236\u4e3a\u56fe\u7247\uff1b\u53f3\u4fa7\u8349\u7a3f\u5217\u8868\uff1a\u65f6\u95f4\u547d\u540d\u65b0\u5efa\u3001\u70b9\u51fb\u5207\u6362\u3001\u7ba1\u7406\u6a21\u5f0f\u9010\u6761\u5220\u9664\u3002\u65e7\u7248\u5386\u53f2\u81ea\u52a8\u8fc1\u79fb\u3002",
           "minPiDesktop": ">=0.1.0",
           "shasum": "a7c56a27dd1262e674898f7f96194c6e6d5e063d6e32c9a97000cf09ce74a755",
@@ -156,7 +187,7 @@
       "versions": [
         {
           "version": "0.3.0",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "v0.2.0\uff1a\u91cd\u6784\u4e3a\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff08\u9ed1\u767d\u7070 + \u6a59\u8272\u5f3a\u8c03\u3001\u65e0\u5706\u89d2\u65e0\u6295\u5f71\u30011px \u7ec6\u7ebf\u5206\u9694\uff09\uff1b\u9ed8\u8ba4\u8ddf\u968f\u7cfb\u7edf\u6df1\u6d45\u6a21\u5f0f\uff0c\u4fa7\u8fb9\u680f\u53ef\u4e00\u952e\u5207\u6362\uff1b\u8fdb\u5165\u89e3\u6790\u8bb0\u5f55\u81ea\u52a8\u62c9\u53d6\u6570\u636e\uff1b\u5b50\u9875\u9762\u5bfc\u822a\u4fdd\u6301\u7236\u83dc\u5355\u9009\u4e2d\u6001\u3002",
           "minPiDesktop": ">=0.1.0",
           "shasum": "d5175a589d921658d2b46e93d3b33e136038c86bb5386a9a602e97b992988976",
@@ -192,7 +223,7 @@
       "versions": [
         {
           "version": "0.5.1",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "Release 0.1.0\uff1a\u9996\u4e2a\u7248\u672c\uff0c\u7b80\u5355\u5217\u8868\u5f85\u529e\u3002Release 0.2.0\uff1a\u65b0\u589e\u56db\u8c61\u9650\u77e9\u9635\u5e03\u5c40\uff08\u62d6\u62fd\u79fb\u52a8\u8c61\u9650\uff09\u3001\u53cc\u5e03\u5c40\u5207\u6362\u5e76\u8bb0\u4f4f\u3001\u7a97\u53e3 1000\u00d7700\u3002Release 0.3.0\uff1a\u4efb\u52a1\u53ef\u8bbe\u7f6e\u5230\u671f\u65f6\u95f4\u3001\u5230\u671f\u63d0\u9192\uff08\u4f4e\u5360\u7528\u5355\u5b9a\u65f6\u5668\u8c03\u5ea6\uff09\u3002Release 0.3.1\uff1a\u5230\u671f\u63d0\u9192\u5347\u7ea7\u4e3a\u539f\u751f\u7cfb\u7edf\u901a\u77e5\uff08ui.showNativeNotification\uff0c\u5bbf\u4e3b ADR 0074\uff09\u3002Release 0.4.0\uff1a\u63d2\u4ef6 id \u5b9a\u7a3f\u4e3a pi.todo\uff08\u5b98\u65b9 pi. \u524d\u7f00\uff09\u3002Release 0.5.0\uff1a\u6ce8\u518c agent \u5de5\u5177 todo_manage\uff08AI \u53ef\u7ba1\u7406\u5f85\u529e\uff1a\u67e5\u8be2/\u6dfb\u52a0/\u5927\u6bb5\u62c6\u5206/\u6a21\u7cca\u5b8c\u6210/\u5ef6\u671f/\u6e05\u7a7a\u8fc7\u671f/\u5220\u9664\uff09\uff1b\u6570\u636e\u8fc1\u79fb\u81f3\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff0c\u9762\u677f\u4e0e AI \u5171\u4eab\u540c\u4e00\u4efd\u6570\u636e\uff0c\u53cc\u5411\u540c\u6b65\u3002Release 0.5.1\uff1a\u8865\u4e01\u53d1\u5e03\uff0c\u65e0\u529f\u80fd\u53d8\u66f4\uff08\u540c\u6b65\u6e90\u7801\u4ed3\u5e93\u4e0e\u5e02\u573a\u7248\u672c\u53f7\uff09\u3002",
           "minPiDesktop": ">=0.1.0",
           "shasum": "7c0b05f5095b6c62c3acd64904efccee8d75a7d24a7e21bbbbd5069d11981160",
@@ -224,7 +255,7 @@
       "versions": [
         {
           "version": "0.4.2",
-          "publishedAt": "2026-08-14T10:53:09Z",
+          "publishedAt": "2026-08-14T11:07:25Z",
           "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
           "minPiDesktop": ">=0.2.9",
           "shasum": "6065471b48b8ab2e28c990f6bb832ec09e2f5a25d0c6d5fb51750114b3a3f2f8",
