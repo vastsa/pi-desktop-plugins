@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>小清新待办</title>
+    <!-- 外观预绘：在任何 CSS 生效前从缓存回放 data-theme/data-lang，避免闪屏 -->
+    <script>window.__APPEARANCE_CACHE_KEY = "pdtodo.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
     <style>
       :root {
         --bg: #f3f7f3;
@@ -24,6 +27,38 @@
         --q3: #e8b45a; --q3-bg: #fbf3e2;
         --q4: #8fa8c0; --q4-bg: #edf2f8;
       }
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0f1612;
+        --card: #18221c;
+        --ink: #d9e4dc;
+        --ink-soft: #8ba094;
+        --ink-faint: #5d7065;
+        --accent: #7dbb9a;
+        --accent-deep: #93cdaa;
+        --accent-soft: #20332a;
+        --danger: #e58b7f;
+        --line: #26352c;
+        --shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+        --shadow-lift: 0 6px 18px rgba(0, 0, 0, 0.5);
+        --q1: #e58b7f; --q1-bg: #38261f;
+        --q2: #7dbb9a; --q2-bg: #1d3227;
+        --q3: #e8b45a; --q3-bg: #382f1d;
+        --q4: #8fa8c0; --q4-bg: #1f2b38;
+      }
+      /* 深色下未走变量的硬编码色 */
+      [data-theme="dark"] body::before { background: rgba(80, 130, 100, 0.28); }
+      [data-theme="dark"] body::after { background: rgba(150, 110, 60, 0.22); }
+      [data-theme="dark"] .check { border-color: #3c4d42; background: #141d18; }
+      [data-theme="dark"] .edit-input { background: #121a15; }
+      [data-theme="dark"] .due { background: #223029; }
+      [data-theme="dark"] .due.done-chip { background: #223029; }
+      [data-theme="dark"] .due-pop input[type="datetime-local"] { background: #121a15; }
+      [data-theme="dark"] .due-pop .quick button { background: #121a15; }
+      [data-theme="dark"] .q-count { background: rgba(0, 0, 0, 0.28); }
+      [data-theme="dark"] .clear:hover { background: rgba(229, 139, 127, 0.16); }
+      [data-theme="dark"] .list::-webkit-scrollbar-thumb,
+      [data-theme="dark"] .quad-scroll::-webkit-scrollbar-thumb { background: #33463a; }
       * { box-sizing: border-box; }
       html, body { height: 100%; }
       body {
@@ -357,16 +392,123 @@
       (function () {
         "use strict";
 
+        /* ---------- 国际化（跟随 app 主体语言；默认中文） ---------- */
+        var I18N = {
+          "zh-CN": {
+            appTitle: "小清新待办",
+            title: "待办",
+            placeholder: "记一件小事，回车添加…",
+            pickerTitle: "添加到哪个象限",
+            addTitle: "添加",
+            btnList: "简单列表",
+            btnMatrix: "四象限",
+            filterAll: "全部",
+            filterActive: "进行中",
+            filterDone: "已完成",
+            clearDone: "清空已完成",
+            markDone: "标记为完成",
+            markUndone: "标记为未完成",
+            dblEdit: "双击编辑",
+            setDue: "设置到期时间",
+            editDue: "点击修改到期时间",
+            switchQuad: "点击切换象限",
+            del: "删除",
+            ok: "确定",
+            clearDue: "清除期限",
+            today: "今天",
+            tomorrow: "明天",
+            yesterday: "昨天",
+            emptyDone: "还没有完成的任务",
+            emptyAll: "清单空空如也",
+            emptyHint: "在上方输入框记下第一件小事",
+            none: "暂无",
+            counter: "剩余 {n} 项 · 共 {m} 项",
+            quadCount: "{n} 项",
+            reminderTitle: "待办提醒",
+            reminderMany: "{names} 等 {n} 项到期了",
+            reminderOne: "{names} 到期了",
+            q1t: "重要 · 紧急", q1s: "立刻做",
+            q2t: "重要 · 不紧急", q2s: "计划做",
+            q3t: "紧急 · 不重要", q3s: "委托做",
+            q4t: "不重要 · 不紧急", q4s: "减少做",
+            weekdays: ["日", "一", "二", "三", "四", "五", "六"],
+          },
+          "en": {
+            appTitle: "Tiny Todo",
+            title: "Todo",
+            placeholder: "Type a small task, press Enter to add…",
+            pickerTitle: "Add to which quadrant",
+            addTitle: "Add",
+            btnList: "Simple list",
+            btnMatrix: "Matrix",
+            filterAll: "All",
+            filterActive: "Active",
+            filterDone: "Done",
+            clearDone: "Clear completed",
+            markDone: "Mark as done",
+            markUndone: "Mark as not done",
+            dblEdit: "Double-click to edit",
+            setDue: "Set due time",
+            editDue: "Click to change due time",
+            switchQuad: "Click to change quadrant",
+            del: "Delete",
+            ok: "OK",
+            clearDue: "Clear due",
+            today: "Today",
+            tomorrow: "Tomorrow",
+            yesterday: "Yesterday",
+            emptyDone: "No completed tasks",
+            emptyAll: "Your list is empty",
+            emptyHint: "Type your first task in the box above",
+            none: "None",
+            counter: "{n} left · {m} total",
+            quadCount: "{n} items",
+            reminderTitle: "Todo reminder",
+            reminderMany: "{names} and {n} more due",
+            reminderOne: "{names} due",
+            q1t: "Important · Urgent", q1s: "Do now",
+            q2t: "Important · Not urgent", q2s: "Schedule",
+            q3t: "Urgent · Not important", q3s: "Delegate",
+            q4t: "Not important · Not urgent", q4s: "Reduce",
+            weekdays: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+          },
+        };
+
+        function currentLocale() {
+          if (window.__appearance && window.__appearance.current) {
+            var l = window.__appearance.current().locale;
+            if (l) return I18N[l] ? l : (String(l).toLowerCase().startsWith("zh") ? "zh-CN" : "en");
+          }
+          var lang = document.documentElement.lang || navigator.language || "zh-CN";
+          return String(lang).toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+        }
+        function tr(key) {
+          var t = I18N[currentLocale()] || I18N["zh-CN"];
+          return t[key] || I18N["zh-CN"][key] || key;
+        }
+        function trF(key, vars) {
+          var s = tr(key);
+          Object.keys(vars || {}).forEach(function (k) {
+            s = s.split("{" + k + "}").join(String(vars[k]));
+          });
+          return s;
+        }
+
         var STORE_KEY = "pdtodo.v1";
         var LAYOUT_KEY = "pdtodo.layout.v1";
         var DEFAULT_Q_KEY = "pdtodo.defaultQ.v1";
 
-        var QUADS = {
-          1: { title: "重要 · 紧急", sub: "立刻做", color: "#e58b7f", bg: "#fdf0ed" },
-          2: { title: "重要 · 不紧急", sub: "计划做", color: "#7dbb9a", bg: "#eaf5ee" },
-          3: { title: "紧急 · 不重要", sub: "委托做", color: "#e8b45a", bg: "#fbf3e2" },
-          4: { title: "不重要 · 不紧急", sub: "减少做", color: "#8fa8c0", bg: "#edf2f8" },
-        };
+        function buildQuads() {
+          var t = I18N[currentLocale()] || I18N["zh-CN"];
+          return {
+            1: { title: t.q1t, sub: t.q1s, color: "#e58b7f", bg: "var(--q1-bg)" },
+            2: { title: t.q2t, sub: t.q2s, color: "#7dbb9a", bg: "var(--q2-bg)" },
+            3: { title: t.q3t, sub: t.q3s, color: "#e8b45a", bg: "var(--q3-bg)" },
+            4: { title: t.q4t, sub: t.q4s, color: "#8fa8c0", bg: "var(--q4-bg)" },
+          };
+        }
+        var QUADS = buildQuads();
         var QUAD_ORDER = [1, 2, 3, 4];
 
         // setTimeout 最大值（约 24.8 天），超过就分档等待
@@ -451,9 +593,15 @@
 
         function dateLine() {
           var d = new Date();
-          var wd = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
-          document.getElementById("dateLine").textContent =
-            d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日 · 星期" + wd;
+          var t = I18N[currentLocale()] || I18N["zh-CN"];
+          var line;
+          if (currentLocale() === "zh-CN") {
+            line = d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日 · 星期" + t.weekdays[d.getDay()];
+          } else {
+            var months = t.months || ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            line = t.weekdays[d.getDay()] + ", " + months[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
+          }
+          document.getElementById("dateLine").textContent = line;
         }
 
         function add() {
@@ -536,9 +684,9 @@
           render();
           var names = due.slice(0, 3).map(function (t) { return t.text; }).join("、");
           var body = due.length > 3
-            ? names + " 等 " + due.length + " 项到期了"
-            : names + " 到期了";
-          notifyHost("待办提醒", body);
+            ? trF("reminderMany", { names: names, n: due.length })
+            : trF("reminderOne", { names: names });
+          notifyHost(tr("reminderTitle"), body);
           inAppToast("⏰ " + body);
         }
 
@@ -610,10 +758,13 @@
           var diffDays = Math.round((that - today) / 86400000);
           function p(n) { return (n < 10 ? "0" : "") + n; }
           var hm = p(d.getHours()) + ":" + p(d.getMinutes());
-          if (diffDays === 0) return "今天 " + hm;
-          if (diffDays === 1) return "明天 " + hm;
-          if (diffDays === -1) return "昨天 " + hm;
-          return (d.getMonth() + 1) + "月" + d.getDate() + "日";
+          var t = I18N[currentLocale()] || I18N["zh-CN"];
+          if (diffDays === 0) return tr("today") + " " + hm;
+          if (diffDays === 1) return tr("tomorrow") + " " + hm;
+          if (diffDays === -1) return tr("yesterday") + " " + hm;
+          if (currentLocale() === "zh-CN") return (d.getMonth() + 1) + "月" + d.getDate() + "日";
+          var months = t.months || ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          return (months[d.getMonth()] || "") + " " + d.getDate();
         }
 
         function toLocalInput(ms) {
@@ -637,7 +788,7 @@
 
           var activeCount = todos.filter(function (t) { return !t.done; }).length;
           document.getElementById("counter").textContent =
-            "剩余 " + activeCount + " 项 · 共 " + todos.length + " 项";
+            trF("counter", { n: activeCount, m: todos.length });
           document.getElementById("clearDone").disabled = todos.every(function (t) { return !t.done; });
         }
 
@@ -658,10 +809,10 @@
             var empty = document.createElement("div");
             empty.className = "empty";
             if (filter === "done") {
-              empty.innerHTML = '<div class="icon">🌿</div><div>还没有完成的任务</div>';
+              empty.innerHTML = '<div class="icon">🌿</div><div>' + tr("emptyDone") + "</div>";
             } else {
-              empty.innerHTML = '<div class="icon">✨</div><div>清单空空如也</div>' +
-                '<div class="hint">在上方输入框记下第一件小事</div>';
+              empty.innerHTML = '<div class="icon">✨</div><div>' + tr("emptyAll") + "</div>" +
+                '<div class="hint">' + tr("emptyHint") + "</div>";
             }
             list.appendChild(empty);
           }
@@ -684,13 +835,13 @@
 
           var check = document.createElement("div");
           check.className = "check";
-          check.title = t.done ? "标记为未完成" : "标记为完成";
+          check.title = t.done ? tr("markUndone") : tr("markDone");
           check.addEventListener("click", function () { toggle(t.id); });
 
           var text = document.createElement("div");
           text.className = "text";
           text.textContent = t.text;
-          text.title = "双击编辑";
+          text.title = tr("dblEdit");
           text.addEventListener("dblclick", function () { startEdit(el, t, text); });
 
           el.appendChild(check);
@@ -701,7 +852,7 @@
           var overdue = !t.done && t.due && t.due < Date.now();
           dueBtn.className = "due" + (t.due ? (overdue ? " overdue" : "") : " empty") + (t.done ? " done-chip" : "");
           dueBtn.textContent = t.due ? fmtDue(t.due) : "🕘";
-          dueBtn.title = t.due ? "点击修改到期时间" : "设置到期时间";
+          dueBtn.title = t.due ? tr("editDue") : tr("setDue");
           dueBtn.addEventListener("click", function (ev) {
             ev.stopPropagation();
             openDuePop(dueBtn, t.id);
@@ -712,7 +863,7 @@
             var badge = document.createElement("button");
             badge.className = "q-badge";
             badge.style.background = QUADS[t.q].color;
-            badge.title = "点击切换象限";
+            badge.title = tr("switchQuad");
             badge.addEventListener("click", function (ev) {
               ev.stopPropagation();
               openQMenu(badge, t.id);
@@ -722,7 +873,7 @@
 
           var del = document.createElement("button");
           del.className = "del";
-          del.title = "删除";
+          del.title = tr("del");
           del.textContent = "✕";
           del.addEventListener("click", function () { remove(t.id); });
           el.appendChild(del);
@@ -766,11 +917,11 @@
               if (a.done !== b.done) return a.done ? 1 : -1;
               return b.createdAt - a.createdAt;
             });
-            count.textContent = items.length + " 项";
+            count.textContent = trF("quadCount", { n: items.length });
             if (!items.length) {
               var empty = document.createElement("div");
               empty.className = "quad-empty";
-              empty.textContent = "暂无";
+              empty.textContent = tr("none");
               scroll.appendChild(empty);
             }
             items.forEach(function (t) { scroll.appendChild(row(t, true)); });
@@ -841,7 +992,7 @@
           input.value = t.due ? toLocalInput(t.due) : "";
           var saveBtn = document.createElement("button");
           saveBtn.className = "save";
-          saveBtn.textContent = "确定";
+          saveBtn.textContent = tr("ok");
           saveBtn.addEventListener("click", function () {
             if (input.value) {
               setDue(id, new Date(input.value).getTime());
@@ -865,11 +1016,11 @@
           }
           var today18 = new Date(); today18.setHours(18, 0, 0, 0);
           var tomorrow9 = new Date(); tomorrow9.setDate(tomorrow9.getDate() + 1); tomorrow9.setHours(9, 0, 0, 0);
-          quick.appendChild(quickBtn("今天 18:00", today18.getTime()));
-          quick.appendChild(quickBtn("明天 09:00", tomorrow9.getTime()));
+          quick.appendChild(quickBtn(tr("today") + " 18:00", today18.getTime()));
+          quick.appendChild(quickBtn(tr("tomorrow") + " 09:00", tomorrow9.getTime()));
           if (t.due) {
             var clearBtn = document.createElement("button");
-            clearBtn.textContent = "清除期限";
+            clearBtn.textContent = tr("clearDue");
             clearBtn.addEventListener("click", function () {
               setDue(id, null);
               closeDuePop();
@@ -978,6 +1129,34 @@
           scheduleReminder();
         });
 
+        /* ---------- 语言应用（静态 DOM + 重建 QUADS） ---------- */
+        function applyLocale() {
+          QUADS = buildQuads();
+          var t = I18N[currentLocale()] || I18N["zh-CN"];
+          document.title = t.appTitle;
+          var h1 = document.querySelector(".title-wrap h1");
+          if (h1) h1.innerHTML = t.title + '<span class="dot"> ·</span>';
+          document.getElementById("newTodo").placeholder = t.placeholder;
+          document.getElementById("qPicker").title = t.pickerTitle;
+          document.querySelectorAll("#qPicker .q-dot").forEach(function (d) {
+            var q = parseInt(d.dataset.q, 10);
+            var qd = QUADS[q];
+            if (qd) d.title = qd.title;
+          });
+          document.getElementById("addBtn").title = t.addTitle;
+          document.getElementById("btnList").title = t.btnList;
+          document.getElementById("btnMatrix").title = t.btnMatrix;
+          document.querySelectorAll("#filters .filter").forEach(function (b) {
+            var f = b.dataset.filter;
+            b.textContent = f === "all" ? t.filterAll : f === "active" ? t.filterActive : t.filterDone;
+          });
+          document.getElementById("clearDone").textContent = t.clearDone;
+        }
+
+        // 暴露给外观适配器（app 语言切换时整体刷新）
+        window.__pdtodo = { applyLocale: applyLocale, dateLine: dateLine, render: render };
+
+        applyLocale();
         dateLine();
         updatePicker();
         render();
@@ -985,6 +1164,24 @@
         scheduleReminder(); // 启动即检查：过期未提醒的任务立即补发
         pullFromHost(); // 启动拉取共享数据（AI 修改立即可见）
         window.addEventListener("focus", pullFromHost); // 窗口聚焦时同步 AI 修改
+      })();
+    </script>
+    <!-- 外观运行时：跟随 app 主体的语言与颜色模式，切换时实时刷新 -->
+    <script src="./appearance.js"></script>
+    <script>
+      (function () {
+        var bridge = window.pluginBridge;
+        var appearance = window.__appearance;
+        if (!appearance || !window.__pdtodo) return;
+        window.__pdtodo.applyLocale();
+        window.__pdtodo.dateLine();
+        window.__pdtodo.render();
+        appearance.init(bridge);
+        appearance.onLocaleChange(function () {
+          window.__pdtodo.applyLocale();
+          window.__pdtodo.dateLine();
+          window.__pdtodo.render();
+        });
       })();
     </script>
   </body>

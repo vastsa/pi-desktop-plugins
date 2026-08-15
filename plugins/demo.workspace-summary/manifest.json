@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "demo.workspace-summary",
   "name": "Workspace Summary",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
   "author": "PI-Desktop",
   "main": "main.js",

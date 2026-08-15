@@ -4,22 +4,61 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hello Plugin</title>
+    <script>window.__APPEARANCE_CACHE_KEY = "demo.hello.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
     <style>
-      body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 16px; background: #0b1020; color: #e8eefc; }
-      .card { border: 1px solid #24304d; border-radius: 12px; padding: 16px; background: #121a2f; }
-      button { margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px; background: #4f7cff; color: white; cursor: pointer; }
+      :root {
+        color-scheme: light;
+        --bg: #f4f6fb;
+        --card: #ffffff;
+        --line: #dde3ee;
+        --text: #1c2333;
+        --accent: #4f7cff;
+        --accent-text: #ffffff;
+      }
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --card: #121a2f;
+        --line: #24304d;
+        --text: #e8eefc;
+        --accent: #4f7cff;
+        --accent-text: #ffffff;
+      }
+      body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 16px; background: var(--bg); color: var(--text); }
+      .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--card); }
+      button { margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px; background: var(--accent); color: var(--accent-text); cursor: pointer; }
     </style>
   </head>
   <body>
     <div class="card">
-      <h2>Hello Plugin</h2>
-      <p>Official marketplace panel with host bridge.</p>
+      <h2 id="title">Hello Plugin</h2>
+      <p id="desc">Official marketplace panel with host bridge.</p>
       <button id="ping">Toast Ping</button>
     </div>
+    <script src="./appearance.js"></script>
     <script>
+      const I18N = {
+        "en": { title: "Hello Plugin", desc: "Official marketplace panel with host bridge.", ping: "Toast Ping", toast: "Hello panel bridge" },
+        "zh-CN": { title: "你好插件", desc: "带宿主桥接的官方示例面板。", ping: "Toast 提示", toast: "面板桥接成功" },
+      };
+      function currentLocale() {
+        return window.__appearance.current().locale || document.documentElement.lang || "en";
+      }
+      function applyLocale(locale) {
+        const t = I18N[locale] || I18N["en"];
+        document.getElementById("title").textContent = t.title;
+        document.getElementById("desc").textContent = t.desc;
+        document.getElementById("ping").textContent = t.ping;
+      }
+      window.__appearance.init(window.pluginBridge);
+      window.__appearance.onLocaleChange(applyLocale);
+      applyLocale(currentLocale());
+
       document.getElementById("ping").addEventListener("click", async () => {
         if (window.pluginBridge?.invoke) {
-          await window.pluginBridge.invoke("ui.showToast", { message: "Hello panel bridge" });
+          const t = I18N[currentLocale()] || I18N["en"];
+          await window.pluginBridge.invoke("ui.showToast", { message: t.toast });
         }
       });
     </script>

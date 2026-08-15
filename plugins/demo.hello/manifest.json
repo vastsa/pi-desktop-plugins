@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "demo.hello",
   "name": "Hello",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Official sample plugin with panel, command, and echo tool.",
   "author": "PI-Desktop",
   "main": "main.js",

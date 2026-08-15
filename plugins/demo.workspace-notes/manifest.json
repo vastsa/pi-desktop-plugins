@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "demo.workspace-notes",
   "name": "Workspace Notes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
   "author": "PI-Desktop",
   "main": "main.js",

@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>草稿计算器</title>
+    <script>window.__APPEARANCE_CACHE_KEY = "scratch-calc.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
     <style>
       /* ============ 干净利落的直角风格 ============ */
       :root {
@@ -25,44 +27,9 @@
         --expr-size: 20px;
         --hist-expr-size: 15px;
       }
-      @media (prefers-color-scheme: dark) {
-        :root:not(.dark) {
-          --bg: #303133;
-          --card: #3a3c3f;
-          --line: #46484c;
-          --line-strong: #57595d;
-          --ink: #eeeeee;
-          --ink-strong: #ffffff;
-          --muted: #9a9a9a;
-          --muted-soft: #6f7175;
-          --row-hover: #404246;
-          --row-active: #44464a;
-          --accent: #ff9f0b;
-          --danger: #ef6a6a;
-          --btn-text: #303133;
-          --toast-bg: #e8e8e6;
-          --toast-text: #303133;
-        }
-      }
-      /* 手动切换的黑夜模式（优先级高于系统偏好） */
-      :root.light {
-        --bg: #fafaf9;
-        --card: #ffffff;
-        --line: #e6e6e2;
-        --line-strong: #d5d5d0;
-        --ink: #27363d;
-        --ink-strong: #000000;
-        --muted: #8a8a86;
-        --muted-soft: #b8b8b3;
-        --row-hover: #f2f2ef;
-        --row-active: #efefeb;
-        --accent: #ff9f0b;
-        --danger: #d95050;
-        --btn-text: #ffffff;
-        --toast-bg: #27363d;
-        --toast-text: #ffffff;
-      }
-      :root.dark {
+      /* 深色：由外观适配器设置 [data-theme="dark"]（跟随 app / 系统 / 面板手动切换） */
+      [data-theme="dark"] {
+        color-scheme: dark;
         --bg: #303133;
         --card: #3a3c3f;
         --line: #46484c;
@@ -616,7 +583,7 @@
           </div>
         </div>
 
-        <div class="draft-sep"><span>本次草稿</span></div>
+        <div class="draft-sep"><span id="sepThisDraft">本次草稿</span></div>
         <div class="draft-history" id="draftHistory"></div>
 
         <div class="panel-actions">
@@ -630,7 +597,7 @@
       <!-- 右：历史区域 = 草稿列表 -->
       <aside class="drafts-panel" id="draftsPanel">
         <header class="drafts-head">
-          <h1>历史记录</h1>
+          <h1 id="headHistory">历史记录</h1>
           <span class="count" id="draftCount"></span>
         </header>
         <div class="draft-list" id="draftList"></div>
@@ -650,9 +617,128 @@
 
     <!-- Lucide 图标库（与 PI-Desktop 主程序同款） -->
     <script src="./lucide.min.js"></script>
+    <script src="./appearance.js"></script>
     <script>
       (function () {
         "use strict";
+
+        /* ================= 国际化（可见 chrome 文案；求值错误等保持中文） ================= */
+        const I18N = {
+          "zh-CN": {
+            exprPlaceholder: "输入算式，如 100+10% 、 2π(3+1)；回车确认",
+            remarkHint: "点击添加备注",
+            copyResultTitle: "点击复制结果",
+            thisDraft: "本次草稿",
+            history: "历史记录",
+            manageDrafts: "管理草稿",
+            close: "关闭",
+            previewAlt: "草稿图片预览",
+            clear: "清空",
+            confirmClear: "确认清空？",
+            lock: "锁定",
+            unlock: "解锁",
+            copyImage: "复制为图片",
+            night: "夜间",
+            day: "白天",
+            themeSwitchTitle: "切换黑夜/白天",
+            newDraft: "新建草稿",
+            countUnit: "份",
+            emptyHistory: "还没有记录：输入算式后按回车，会出现在这里",
+            backfillTitle: "点击回填到输入区继续修改",
+            copyResult: "结果",
+            copied: "已复制",
+            deleteDraft: "删除该草稿",
+            lockedTag: "已锁定",
+            themeDarkToast: "已切换为黑夜模式",
+            themeLightToast: "已切换为白天模式",
+            alreadyEmpty: "本次草稿已经是空的",
+            imageFailed: "图片生成失败",
+            imageCopied: "已复制为图片",
+            imagePreview: "已生成图片预览（当前环境不支持直接复制图片）",
+            draftLocked: "已锁定：仅当前记录只读，可解锁",
+            draftUnlocked: "已解锁",
+            deleted: "已删除草稿",
+            created: "已新建草稿",
+            cleared: "已清空",
+            maxDrafts: "草稿最多",
+            emptyDraftExport: "当前草稿为空，没有可导出的内容",
+          },
+          en: {
+            exprPlaceholder: "Type an expression, e.g. 100+10%, 2π(3+1); Enter to confirm",
+            remarkHint: "Click to add a remark",
+            copyResultTitle: "Click to copy result",
+            thisDraft: "This draft",
+            history: "History",
+            manageDrafts: "Manage drafts",
+            close: "Close",
+            previewAlt: "Draft image preview",
+            clear: "Clear",
+            confirmClear: "Confirm clear?",
+            lock: "Lock",
+            unlock: "Unlock",
+            copyImage: "Copy as image",
+            night: "Night",
+            day: "Day",
+            themeSwitchTitle: "Toggle dark/light",
+            newDraft: "New draft",
+            countUnit: "drafts",
+            emptyHistory: "No records yet: type an expression and press Enter to add one",
+            backfillTitle: "Click to fill back into the input",
+            copyResult: "result",
+            copied: "Copied ",
+            deleteDraft: "Delete this draft",
+            lockedTag: "Locked",
+            themeDarkToast: "Switched to dark mode",
+            themeLightToast: "Switched to light mode",
+            alreadyEmpty: "This draft is already empty",
+            imageFailed: "Failed to generate image",
+            imageCopied: "Copied as image",
+            imagePreview: "Image preview generated (direct image copy unsupported here)",
+            draftLocked: "locked: current entries are read-only, can unlock",
+            draftUnlocked: "unlocked",
+            deleted: "Deleted draft",
+            created: "Created draft",
+            cleared: "cleared",
+            maxDrafts: "Up to",
+            emptyDraftExport: "This draft is empty, nothing to export",
+          },
+        };
+        function currentLocale() {
+          const app = window.__appearance ? window.__appearance.current() : null;
+          const loc = (app && app.locale) || document.documentElement.lang || "zh-CN";
+          return loc === "zh-CN" ? "zh-CN" : "en";
+        }
+        function tr(key) {
+          return (I18N[currentLocale()] || I18N["zh-CN"])[key] || key;
+        }
+        const isZh = () => currentLocale() === "zh-CN";
+
+        function refreshStaticButtons() {
+          const clear = tr("clear");
+          btnClear.innerHTML = '<i data-lucide="trash-2"></i> ' + clear;
+          btnImg.innerHTML = '<i data-lucide="image"></i> ' + tr("copyImage");
+          btnNew.innerHTML = '<i data-lucide="plus"></i> ' + tr("newDraft");
+          safeIcons();
+        }
+
+        function applyLocale() {
+          const expr = document.getElementById("inputExpr");
+          expr.placeholder = tr("exprPlaceholder");
+          document.getElementById("inputRemarkHint").textContent = tr("remarkHint");
+          document.getElementById("liveResult").title = tr("copyResultTitle");
+          const sep = document.getElementById("sepThisDraft");
+          if (sep) sep.textContent = tr("thisDraft");
+          const head = document.getElementById("headHistory");
+          if (head) head.textContent = tr("history");
+          document.getElementById("btnManage").title = tr("manageDrafts");
+          document.getElementById("previewClose").title = tr("close");
+          document.getElementById("previewImg").alt = tr("previewAlt");
+          refreshStaticButtons();
+          applyTheme();
+          applyLock();
+          renderDrafts();
+          renderHistory();
+        }
 
         /* ================= 求值引擎 ================= */
 
@@ -951,7 +1037,7 @@
 
         function copyWithToast(text, label) {
           copyText(text);
-          toast(`已复制${label || "结果"}：${text}`);
+          toast(tr("copied") + (label || tr("copyResult")) + (isZh() ? "：" : ": ") + text);
         }
 
         function flashError() {
@@ -981,9 +1067,9 @@
           }
         }
 
-        /* ---------- 主题：黑夜 / 白天（手动切换，默认跟随系统） ---------- */
+        /* ---------- 主题：默认跟随 app（appearance 适配器驱动 data-theme）；手动切换后覆盖 ---------- */
         const THEME_KEY = "scratch-calc-theme.v1";
-        let theme = null; // "light" | "dark"
+        let theme = null; // null = 跟随 app；"light" | "dark" = 用户手动覆盖
 
         function systemDark() {
           return !!(
@@ -992,15 +1078,21 @@
           );
         }
 
+        function currentBase() {
+          if (theme) return theme;
+          const app = window.__appearance ? window.__appearance.current() : null;
+          if (app && app.base) return app.base;
+          // 外观适配器未就绪（旧版宿主且无缓存）：回退系统偏好
+          return systemDark() ? "dark" : "light";
+        }
+
         function applyTheme() {
-          const root = document.documentElement;
-          if (!root) return;
-          root.classList.toggle("dark", theme === "dark");
-          root.classList.toggle("light", theme === "light");
+          const base = currentBase();
           btnTheme.innerHTML =
-            theme === "dark"
-              ? '<i data-lucide="sun"></i> 白天'
-              : '<i data-lucide="moon"></i> 夜间';
+            base === "dark"
+              ? '<i data-lucide="sun"></i> ' + tr("day")
+              : '<i data-lucide="moon"></i> ' + tr("night");
+          btnTheme.title = tr("themeSwitchTitle");
           safeIcons();
         }
 
@@ -1011,43 +1103,40 @@
           } catch (e) {
             /* 忽略 */
           }
-          theme =
-            saved === "light" || saved === "dark"
-              ? saved
-              : systemDark()
-                ? "dark"
-                : "light";
+          theme = saved === "light" || saved === "dark" ? saved : null;
+          if (theme && window.__appearance) {
+            // 面板内手动覆盖：不再跟随 app
+            window.__appearance.setThemeOverride(theme);
+          }
           applyTheme();
-          if (window.matchMedia) {
-            window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (ev) {
-              // 用户手动选择过主题后，不再跟随系统切换
-              try {
-                if (localStorage.getItem(THEME_KEY)) return;
-              } catch (e) {
-                return;
-              }
-              theme = ev.matches ? "dark" : "light";
-              applyTheme();
-            });
+          if (window.__appearance) {
+            // app 切换主题时刷新按钮图标（跟随模式下）
+            window.__appearance.onThemeChange(applyTheme);
           }
         }
 
         function toggleTheme() {
-          theme = theme === "dark" ? "light" : "dark";
+          const base = currentBase();
+          theme = base === "dark" ? "light" : "dark";
           try {
             localStorage.setItem(THEME_KEY, theme);
           } catch (e) {
             /* 忽略 */
           }
+          if (window.__appearance) {
+            window.__appearance.setThemeOverride(theme);
+          } else {
+            document.documentElement.dataset.theme = theme;
+          }
           applyTheme();
-          toast(theme === "dark" ? "已切换为黑夜模式" : "已切换为白天模式");
+          toast(theme === "dark" ? tr("themeDarkToast") : tr("themeLightToast"));
         }
 
         /* ---------- 备注占位提示：默认隐藏，hover 卡片显示 ---------- */
         function makeHint(row2, ta) {
           const h = document.createElement("span");
           h.className = "remark-hint";
-          h.textContent = "点击添加备注";
+          h.textContent = tr("remarkHint");
           h.addEventListener("click", function () {
             ta.focus();
           });
@@ -1082,8 +1171,8 @@
           btnClear.disabled = locked;
           btnLock.classList.toggle("lock-on", locked);
           btnLock.innerHTML = locked
-            ? '<i data-lucide="lock-open"></i> 解锁'
-            : '<i data-lucide="lock"></i> 锁定';
+            ? '<i data-lucide="lock-open"></i> ' + tr("unlock")
+            : '<i data-lucide="lock"></i> ' + tr("lock");
           inputCard.classList.toggle("locked", locked);
           historyBox.classList.toggle("locked", locked);
           // 本稿历史备注只读（其他草稿不受影响）
@@ -1101,9 +1190,8 @@
           applyLock();
           renderDrafts(); // 刷新列表中的锁定标记
           toast(
-            d.locked
-              ? `草稿「${d.name}」已锁定：仅当前记录只读，可解锁`
-              : `草稿「${d.name}」已解锁`
+            (isZh() ? `草稿「${d.name}」` : `Draft "${d.name}" `) +
+              tr(d.locked ? "draftLocked" : "draftUnlocked")
           );
         });
 
@@ -1279,7 +1367,7 @@
           if (!d) return;
           if (!d.lines.length) {
             historyBox.appendChild(
-              el("div", "draft-empty", "还没有记录：输入算式后按回车，会出现在这里")
+              el("div", "draft-empty", tr("emptyHistory"))
             );
             return;
           }
@@ -1287,7 +1375,7 @@
             const card = el("div", "card hist-card");
 
             const exprView = el("div", "expr-view", item.expr);
-            exprView.title = "点击回填到输入区继续修改";
+            exprView.title = tr("backfillTitle");
             exprView.addEventListener("click", function () {
               if (currentLocked()) return; // 锁定后禁止回填编辑
               inputExpr.value = item.expr;
@@ -1331,7 +1419,7 @@
             });
 
             const resEl = el("div", "result show", item.result);
-            resEl.title = "点击复制结果";
+            resEl.title = tr("copyResultTitle");
             resEl.addEventListener("click", function () {
               copyWithToast(item.result, "结果");
             });
@@ -1352,13 +1440,15 @@
           drafts.forEach(function (d) {
             const item = el("div", "draft-item" + (d.id === activeId ? " active" : ""));
             const nameEl = el("span", "draft-name", d.name);
-            nameEl.title = `草稿「${d.name}」· ${d.lines.length} 行`;
+            nameEl.title = isZh()
+              ? `草稿「${d.name}」· ${d.lines.length} 行`
+              : `Draft "${d.name}" · ${d.lines.length} lines`;
             const cnt = el("span", "draft-count", String(d.lines.length));
             const x = document.createElement("button");
             x.type = "button";
             x.className = "draft-x";
             x.innerHTML = '<i data-lucide="x"></i>';
-            x.title = "删除该草稿";
+            x.title = tr("deleteDraft");
             x.addEventListener("click", function (ev) {
               ev.stopPropagation();
               deleteDraft(d.id);
@@ -1367,7 +1457,7 @@
               // 已锁定的草稿显示小锁标记（锁定只作用于当前记录）
               const lockSpan = document.createElement("span");
               lockSpan.className = "draft-lock";
-              lockSpan.title = "已锁定";
+              lockSpan.title = tr("lockedTag");
               lockSpan.innerHTML = '<i data-lucide="lock"></i>';
               item.append(nameEl, lockSpan, cnt, x);
             } else {
@@ -1378,7 +1468,11 @@
             });
             draftList.appendChild(item);
           });
-          draftCount.textContent = drafts.length ? `${drafts.length} 份` : "";
+          draftCount.textContent = drafts.length
+            ? isZh()
+              ? `${drafts.length} 份`
+              : drafts.length + " " + tr("countUnit")
+            : "";
           draftsPanel.classList.toggle("manage", manageMode);
           btnManage.classList.toggle("active", manageMode);
           safeIcons();
@@ -1402,7 +1496,7 @@
 
         function createDraft() {
           if (drafts.length >= MAX_DRAFTS) {
-            toast(`草稿最多 ${MAX_DRAFTS} 份`);
+            toast(tr("maxDrafts") + " " + MAX_DRAFTS + (isZh() ? " 份" : " " + tr("countUnit")));
             return;
           }
           flushInput();
@@ -1412,7 +1506,7 @@
           save();
           renderAll();
           applyLock();
-          toast(`已新建草稿「${d.name}」`);
+          toast(isZh() ? `已新建草稿「${d.name}」` : `${tr("created")} "${d.name}"`);
           inputExpr.focus();
         }
 
@@ -1432,7 +1526,7 @@
             renderDrafts();
           }
           save();
-          toast(`已删除草稿「${name}」`);
+          toast(isZh() ? `已删除草稿「${name}」` : `${tr("deleted")} "${name}"`);
         }
 
         function clearDraft() {
@@ -1448,7 +1542,7 @@
           save();
           renderHistory();
           renderDrafts();
-          toast(`草稿「${d.name}」已清空`);
+          toast(isZh() ? `草稿「${d.name}」已清空` : `Draft "${d.name}" ${tr("cleared")}`);
         }
 
         /* ---------- 复制为图片 ---------- */
@@ -1491,7 +1585,7 @@
             cards.push({ expr: l.expr, remark: l.remark || "", result: l.result, input: false });
           });
           if (!cards.length) {
-            toast("当前草稿为空，没有可导出的内容");
+            toast(tr("emptyDraftExport"));
             return null;
           }
 
@@ -1598,11 +1692,11 @@
           if (!canvas) return;
           canvas.toBlob(function (blob) {
             if (!blob) {
-              toast("图片生成失败");
+              toast(tr("imageFailed"));
               return;
             }
             const finish = function (ok) {
-              if (ok) toast("已复制为图片");
+              if (ok) toast(tr("imageCopied"));
             };
             if (typeof ClipboardItem === "function" && navigator.clipboard) {
               navigator.clipboard
@@ -1624,7 +1718,7 @@
         function showPreview(blob) {
           previewImg.src = URL.createObjectURL(blob);
           previewOverlay.classList.add("show");
-          toast("已生成图片预览（当前环境不支持直接复制图片）");
+          toast(tr("imagePreview"));
         }
 
         previewClose.addEventListener("click", function () {
@@ -1677,30 +1771,30 @@
 
         liveResult.addEventListener("click", function () {
           if (liveResult.classList.contains("err")) return;
-          if (lastResult) copyWithToast(lastResult, "结果");
+          if (lastResult) copyWithToast(lastResult, tr("copyResult"));
         });
 
         /* ---------- 按钮事件 ---------- */
         btnClear.addEventListener("click", function () {
           const d = currentDraft();
           if (!d || (!d.lines.length && !inputExpr.value.trim())) {
-            toast("本次草稿已经是空的");
+            toast(tr("alreadyEmpty"));
             return;
           }
           if (btnClear.classList.contains("confirming")) {
             clearDraft();
             btnClear.classList.remove("confirming");
-            btnClear.innerHTML = '<i data-lucide="trash-2"></i> 清空';
+            btnClear.innerHTML = '<i data-lucide="trash-2"></i> ' + tr("clear");
             safeIcons();
             return;
           }
           btnClear.classList.add("confirming");
-          btnClear.innerHTML = '<i data-lucide="trash-2"></i> 确认清空？';
+          btnClear.innerHTML = '<i data-lucide="trash-2"></i> ' + tr("confirmClear");
           safeIcons();
           clearTimeout(btnClear._t);
           btnClear._t = setTimeout(function () {
             btnClear.classList.remove("confirming");
-            btnClear.innerHTML = '<i data-lucide="trash-2"></i> 清空';
+            btnClear.innerHTML = '<i data-lucide="trash-2"></i> ' + tr("clear");
             safeIcons();
           }, 3000);
         });
@@ -1738,12 +1832,16 @@
           drafts.push(d);
           activeId = d.id;
         }
-        renderAll();
+        // 外观适配器：拉取 app 主题/语言并订阅实时变化（旧版宿主无通道时静默回退到缓存/系统）
+        if (window.__appearance) {
+          window.__appearance.init(window.pluginBridge);
+          window.__appearance.onLocaleChange(applyLocale);
+        }
+        initTheme();
+        applyLocale(); // 含 applyTheme / applyLock / renderDrafts / renderHistory
         autoResize(inputExpr, 240);
         autoResize(inputRemark, 120);
-        initTheme();
         syncHint(inputRemark.parentElement, inputRemark);
-        applyLock();
         safeIcons();
         inputExpr.focus();
       })();

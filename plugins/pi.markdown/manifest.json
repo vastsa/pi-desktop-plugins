@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "pi.markdown",
   "name": "Pi Markdown 笔记",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "本地 Markdown 笔记：真·所见即所得编辑（输入 # / - [ ] / > / ``` / $…$ 即出样式，Typora 风格，Milkdown Crepe）、米白/黑夜双主题切换、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Todo 任务列表、KaTeX 公式、全局搜索（标题/内容）、导出 Markdown/HTML/图像；文件夹与笔记拖拽排序、右键操作菜单；数据保存在插件数据目录。",
   "author": "Tioit-Wang",
   "categories": [
     "productivity",
     "community"
   ],
-  "changelog": "Release 0.3.1：修复 LaTeX 公式依赖 CodeMirror 导致编辑器无法初始化的问题；修复 HTML/PNG 导出中块级公式与代码高亮缺失的问题（改为 Markdown 源码经编辑器 parser/serializer 渲染）；新增米白（默认）/黑夜双主题与状态栏切换开关，主题偏好随 settings.json 持久化；代码块预览即所得（LaTeX 直接显示 KaTeX 公式、普通代码块显示高亮）。Release 0.3.0：编辑器由 Toast UI WYSIWYG（富文本+补丁）更换为 Milkdown Crepe——真正的所见即所得 Markdown 编辑，输入语法即出样式（含中文输入法）、斜杠菜单/块拖拽手柄、图片 data URL 内嵌、297 种语言 Prism 高亮。Release 0.2.0：完整 Markdown 笔记应用（React + TypeScript + Tailwind 重写面板）。Release 0.1.0：模板初始版本。",
+  "changelog": "Release 0.4.0：面板跟随 app 主体的语言与颜色模式——宿主切换亮/暗或语言时，编辑器与界面配色实时更新（CSS 由 :root[data-theme=...] 驱动，配合宿主 app.getAppearance 通道与 appearance:changed 事件）；未手动覆盖主题时 settings.theme 自动同步为宿主 base，面板内的米白/黑夜切换仍可手动覆盖（此后不再被宿主覆盖）；旧版宿主自动降级为面板自带的主题跟随。Release 0.3.1：修复 LaTeX 公式依赖 CodeMirror 导致编辑器无法初始化的问题；修复 HTML/PNG 导出中块级公式与代码高亮缺失的问题（改为 Markdown 源码经编辑器 parser/serializer 渲染）；新增米白（默认）/黑夜双主题与状态栏切换开关，主题偏好随 settings.json 持久化；代码块预览即所得（LaTeX 直接显示 KaTeX 公式、普通代码块显示高亮）。Release 0.3.0：编辑器由 Toast UI WYSIWYG（富文本+补丁）更换为 Milkdown Crepe——真正的所见即所得 Markdown 编辑，输入语法即出样式（含中文输入法）、斜杠菜单/块拖拽手柄、图片 data URL 内嵌、297 种语言 Prism 高亮。Release 0.2.0：完整 Markdown 笔记应用（React + TypeScript + Tailwind 重写面板）。Release 0.1.0：模板初始版本。",
   "safetyNotes": "全部数据仅保存在本机插件数据目录 settings.json（图片以 data URL 内嵌于笔记正文）；无网络请求、无工作区文件读写；渲染端代码高亮/公式/编辑器库（Milkdown/Prism/KaTeX）全部随插件打包，离线可用。",
   "main": "main.js",
   "ui": {

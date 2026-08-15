@@ -4,20 +4,47 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>超级域名侠</title>
+    <script>window.__APPEARANCE_CACHE_KEY = "sdm.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
     <script>
-      /* 渲染前恢复主题偏好（默认跟随系统），避免闪屏 */
+      /* 渲染前恢复主题/语言（避免闪屏）。
+       * 优先级：外观缓存（sdm.appearance.v1，宿主上次外观）→ 面板自带 sdm.settings.theme → 系统偏好。
+       * 编译产物 bundle 挂载时会按 sdm.settings.theme 重设 data-theme，
+       * 故当其为 "system" 时预先把该值同步为解析后的 base，保证两者一致。 */
       (function () {
-        var t = "system";
+        var boot = window.__appearanceBoot;
+        if (!boot) return;
+        var base = null;
+        if (boot.cached && (boot.cached.base === "light" || boot.cached.base === "dark")) {
+          base = boot.cached.base;
+        }
+        var settingsTheme = "system";
         try {
           var s = JSON.parse(localStorage.getItem("sdm.settings") || "{}");
-          if (s.theme) t = s.theme;
+          if (s.theme) settingsTheme = s.theme;
         } catch (e) {
           /* 保持默认 */
         }
-        if (t === "system") {
-          t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        if (!base) {
+          base = settingsTheme === "light" || settingsTheme === "dark"
+            ? settingsTheme
+            : boot.prefersLight() ? "light" : "dark";
         }
-        document.documentElement.setAttribute("data-theme", t);
+        boot.applyAppearance({ base: base, locale: document.documentElement.lang });
+        if (settingsTheme === "system" && base !== "system") {
+          try {
+            var s2 = JSON.parse(localStorage.getItem("sdm.settings") || "{}");
+            s2.theme = base;
+            localStorage.setItem("sdm.settings", JSON.stringify(s2));
+          } catch (e) {
+            /* 忽略 */
+          }
+        }
+        try {
+          localStorage.setItem(boot.cacheKey, JSON.stringify({ base: base, locale: document.documentElement.lang }));
+        } catch (e) {
+          /* 忽略 */
+        }
       })();
     </script>
     <script src="./assets/index.js" defer></script>
@@ -54,5 +81,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <script src="./appearance.js"></script>
+    <script>
+      /* 外观适配器：拉取 app 主体主题/语言并订阅实时变化；旧版宿主无通道时静默回退 */
+      if (window.__appearance) {
+        window.__appearance.init(window.pluginBridge);
+      }
+    </script>
   </body>
 </html>

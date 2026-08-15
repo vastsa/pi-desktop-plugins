@@ -4,11 +4,37 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pi Markdown 笔记</title>
+    <!-- 外观预绘：在任何 CSS 生效前从缓存回放 data-theme/data-lang，避免闪屏 -->
+    <script>window.__APPEARANCE_CACHE_KEY = "pi-markdown.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
     <!-- 静态入口：file:// 协议下普通 <script>/<link> 可正常加载（module 会被 CORS 阻止） -->
     <link rel="stylesheet" href="./assets/app.css" />
   </head>
   <body>
     <div id="root"></div>
     <script src="./assets/app.js"></script>
+    <!-- 外观运行时：跟随宿主（app.getAppearance + appearance:changed）。bundle
+         自身的 CSS 全部由 :root[data-theme=...] 驱动，因此这里实时写入
+         data-theme 即可让整面板（含 CodeMirror/Milkdown）即时换色；bundle 挂载
+         时还会按 settings.theme 写一次 data-theme，二者在 main.js 同步下一致。 -->
+    <script src="./appearance.js"></script>
+    <script>
+      (function () {
+        var bridge = window.pluginBridge;
+        var appearance = window.__appearance;
+        // 让 main.js 把 settings.theme 收敛为宿主 base（未手动覆盖时），
+        // 使 bundle 下次挂载/同步拿到一致的主题。
+        function syncHostTheme() {
+          if (!bridge || typeof bridge.invoke !== "function") return;
+          bridge.invoke("appearance.sync", {}).catch(function () {});
+        }
+        if (appearance) {
+          appearance.onThemeChange(syncHostTheme);
+          appearance.init(bridge);
+        }
+        // 打开面板即同步一次：插件进程 onLoad 的同步可能发生在宿主切换外观之前。
+        syncHostTheme();
+      })();
+    </script>
   </body>
 </html>
