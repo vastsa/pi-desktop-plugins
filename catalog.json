@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-08-14T11:07:25Z",
+  "updatedAt": "2026-08-15T04:08:02Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -186,13 +186,13 @@
       "safetyNotes": "\u8d26\u53f7\u51ed\u636e\u7ecf PBKDF2(150000) + AES-GCM \u52a0\u5bc6\u540e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\uff08\u9762\u677f localStorage\uff09\uff0c\u4e3b\u5bc6\u7801\u53ea\u5b58\u5185\u5b58\uff1b\u7f51\u7edc\u8bf7\u6c42\u4ec5\u53d1\u5f80\u6240\u9009\u4e91\u5382\u5546 API\u3001crt.sh \u8bc1\u4e66\u900f\u660e\u65e5\u5fd7\u4e0e\u7528\u6237\u81ea\u884c\u914d\u7f6e\u7684\u901a\u77e5 Webhook\uff1b\u53ef\u8bfb\u5199\u526a\u8d34\u677f\u3001\u6253\u5f00\u5916\u90e8\u94fe\u63a5\u3002",
       "versions": [
         {
-          "version": "0.3.0",
-          "publishedAt": "2026-08-14T11:07:25Z",
-          "changelog": "v0.2.0\uff1a\u91cd\u6784\u4e3a\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff08\u9ed1\u767d\u7070 + \u6a59\u8272\u5f3a\u8c03\u3001\u65e0\u5706\u89d2\u65e0\u6295\u5f71\u30011px \u7ec6\u7ebf\u5206\u9694\uff09\uff1b\u9ed8\u8ba4\u8ddf\u968f\u7cfb\u7edf\u6df1\u6d45\u6a21\u5f0f\uff0c\u4fa7\u8fb9\u680f\u53ef\u4e00\u952e\u5207\u6362\uff1b\u8fdb\u5165\u89e3\u6790\u8bb0\u5f55\u81ea\u52a8\u62c9\u53d6\u6570\u636e\uff1b\u5b50\u9875\u9762\u5bfc\u822a\u4fdd\u6301\u7236\u83dc\u5355\u9009\u4e2d\u6001\u3002",
+          "version": "0.3.1",
+          "publishedAt": "2026-08-15T04:08:02Z",
+          "changelog": "v0.3.1\uff1a\u58f0\u660e manifest.net.domains \u7f51\u7edc\u767d\u540d\u5355\uff08\u4e91\u5382\u5546 API\u3001crt.sh\u3001\u901a\u77e5 Webhook\u3001ACME CA\uff09\uff0c\u4fee\u590d\u65b0\u7248\u5bbf\u4e3b egress \u7b56\u7565\u4e0b\u6240\u6709\u7f51\u7edc\u8bf7\u6c42\u88ab\u62d2\uff08plugin declares no manifest.net.domains; api.cloudflare.com is unreachable\uff09\u7684\u95ee\u9898\u3002v0.2.0\uff1a\u91cd\u6784\u4e3a\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff08\u9ed1\u767d\u7070 + \u6a59\u8272\u5f3a\u8c03\u3001\u65e0\u5706\u89d2\u65e0\u6295\u5f71\u30011px \u7ec6\u7ebf\u5206\u9694\uff09\uff1b\u9ed8\u8ba4\u8ddf\u968f\u7cfb\u7edf\u6df1\u6d45\u6a21\u5f0f\uff0c\u4fa7\u8fb9\u680f\u53ef\u4e00\u952e\u5207\u6362\uff1b\u8fdb\u5165\u89e3\u6790\u8bb0\u5f55\u81ea\u52a8\u62c9\u53d6\u6570\u636e\uff1b\u5b50\u9875\u9762\u5bfc\u822a\u4fdd\u6301\u7236\u83dc\u5355\u9009\u4e2d\u6001\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "d5175a589d921658d2b46e93d3b33e136038c86bb5386a9a602e97b992988976",
-          "url": "packages/pi.super-domain-man-0.3.0.piplug",
-          "sizeBytes": 273052,
+          "shasum": "e985736381adbc53e587260db108e758d4410de41fa13db357eada0571172001",
+          "url": "packages/pi.super-domain-man-0.3.1.piplug",
+          "sizeBytes": 273136,
           "permissions": [
             "ui.panel",
             "net.fetch",

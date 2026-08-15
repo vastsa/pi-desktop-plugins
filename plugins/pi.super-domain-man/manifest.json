@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "id": "pi.super-domain-man",
   "name": "超级域名侠",
-  "version": "0.3.0",
-  "description": "本地优先的多平台域名解析记录管理与 SSL 证书监控/申请工具：支持阿里云 / 腾讯云 / Cloudflare / AWS Route53 / 火山引擎 / 华为云，凭据本地加密存储",
+  "version": "0.3.1",
+  "description": "本地优先的多平台域名解析记录管理与 SSL 证书监控/申请工具：支持阿里云 / 腾讯云 / Cloudflare / AWS Route53 / 火山引擎 / 华为云，凭据仅本地存储（无密码保护）",
   "author": "Tioit-Wang",
   "categories": [
     "productivity",
     "community"
   ],
-  "changelog": "v0.2.0：重构为干净利落的直角风格（黑白灰 + 橙色强调、无圆角无投影、1px 细线分隔）；默认跟随系统深浅模式，侧边栏可一键切换；进入解析记录自动拉取数据；子页面导航保持父菜单选中态。",
-  "safetyNotes": "账号凭据经 PBKDF2(150000) + AES-GCM 加密后仅保存在本机（面板 localStorage），主密码只存内存；网络请求仅发往所选云厂商 API、crt.sh 证书透明日志与用户自行配置的通知 Webhook；可读写剪贴板、打开外部链接。",
+  "changelog": "v0.3.1：声明 manifest.net.domains 网络白名单（云厂商 API、crt.sh、通知 Webhook、ACME CA），修复新版宿主 egress 策略下所有网络请求被拒（plugin declares no manifest.net.domains; api.cloudflare.com is unreachable）的问题。v0.2.0：重构为干净利落的直角风格（黑白灰 + 橙色强调、无圆角无投影、1px 细线分隔）；默认跟随系统深浅模式，侧边栏可一键切换；进入解析记录自动拉取数据；子页面导航保持父菜单选中态。",
+  "safetyNotes": "账号凭据仅保存在本机（面板 localStorage），无主密码保护；网络请求仅发往所选云厂商 API、crt.sh 证书透明日志与用户自行配置的通知 Webhook；可读写剪贴板、打开外部链接。",
   "main": "main.js",
   "ui": {
     "panel": "renderer/index.html",
@@ -45,6 +45,27 @@
     "notify",
     "agent.tool.register"
   ],
+  "net": {
+    "domains": [
+      "api.cloudflare.com",
+      "alidns.aliyuncs.com",
+      "domain.aliyuncs.com",
+      "dnspod.tencentcloudapi.com",
+      "domain.tencentcloudapi.com",
+      "route53.amazonaws.com",
+      "open.volcengineapi.com",
+      "iam.myhuaweicloud.com",
+      "dns.ap-southeast-1.myhuaweicloud.com",
+      "crt.sh",
+      "open.feishu.cn",
+      "oapi.dingtalk.com",
+      "qyapi.weixin.qq.com",
+      "sctapi.ftqq.com",
+      "acme-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "acme-v02.api.google.com"
+    ]
+  },
   "engines": {
     "piDesktop": ">=0.1.0"
   },

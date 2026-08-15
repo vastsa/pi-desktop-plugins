@@ -11,7 +11,7 @@
  *   面板数据存储于渲染进程 localStorage（sdm.accounts / sdm.monitor / sdm.settings）。
  *   面板通过 onPanelInvoke 的 "domain.sync" 通道将监控目标同步到本进程的
  *   插件数据目录 settings.json，AI 工具直接读取缓存数据。
- *   账号凭据经 PBKDF2 + AES-GCM 加密，仅保存在面板本地，AI 工具不可获取密钥。
+ *   账号凭据仅保存在面板本地（浏览器 localStorage），AI 工具不可获取。
  *
  * 权限说明：
  * - ui.panel：面板入口（manifest.ui.panel）
@@ -139,7 +139,7 @@ async function runDomainAction(args) {
         return {
           ok: true,
           accounts: [],
-          hint: "暂无已同步的账号数据。请在面板中配置云厂商账号并解锁主密码，面板会自动同步账号元信息到 AI 工具。",
+          hint: "暂无已同步的账号数据。请在面板中配置云厂商账号，面板会自动同步账号元信息到 AI 工具。",
         };
       }
       return {
@@ -190,7 +190,7 @@ async function runDomainAction(args) {
       return {
         ok: false,
         error:
-          "DNS 记录的查询与修改需要实时调用云厂商 API（凭据加密存储于面板本地），请在「超级域名侠」面板中操作。可使用 open_panel 命令打开面板。",
+          "DNS 记录的查询与修改需要实时调用云厂商 API（凭据存储于面板本地），请在「超级域名侠」面板中操作。可使用 open_panel 命令打开面板。",
         action: "open_panel",
       };
     }
@@ -307,7 +307,7 @@ async function onLoad() {
       "check_certificates 通过 crt.sh 检查监控域名的证书到期状态；" +
       "search_records 搜索记录（需面板操作）；" +
       "add_record / update_record / delete_record 管理 DNS 记录（需面板操作）。" +
-      "账号凭据加密存储于面板本地，AI 工具仅可查看账号元信息，无法获取密钥。",
+      "账号凭据存储于面板本地，AI 工具仅可查看账号元信息。",
     risk: "medium",
     schema: {
       type: "object",
