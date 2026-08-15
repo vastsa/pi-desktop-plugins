@@ -95,6 +95,14 @@ the folder as a development plugin.
 
 ## Changelog
 
+### 0.1.1
+
+Restyles the panel to mirror the PI-Desktop design system: the purple accent
+and bespoke palette are replaced by the app's neutral monochrome accent and
+`--ds-*` tokens, and git semantics now use the app's success / warning / error
+colors. A contributed app theme re-skins the panel exactly as it re-skins the
+shell. No behavior, tool, command or permission changes.
+
 ### 0.1.0
 
 First release: multi-view panel (Overview / History / Changes / Branches /
