@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.gitlens",
+  "name": "Git Lens",
+  "version": "0.1.0",
+  "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Ships an isolated multi-view panel, agent tools the AI can call, and an AI-callable tool that opens any panel page on demand.",
+  "author": "PI-Desktop",
+  "categories": [
+    "developer-tools",
+    "productivity",
+    "official"
+  ],
+  "changelog": "Release 0.1.0: first release. Adds a multi-view Git panel (Overview / History / Changes / Branches / Blame) that follows the app language and color mode, five palette commands, nine agent tools (git_status, git_log, git_show, git_diff, git_blame, git_branch, git_commit, git_stash, git_open_panel) so the AI can inspect and manage the current project's git repository, and a Git workflow skill that teaches when to use each tool. All git operations run through the system git binary against the resolved repository root of the current workspace; read-only tools are low risk, mutating tools (branch/commit/stash) are medium risk and go through the normal Agent permission policy.",
+  "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials. Commits, branch switches/deletes and stash operations are local git operations that respect repository hooks; the tools cannot push, pull, fetch or force anything beyond explicit branch deletion (git branch -D only when the caller asks for force). The panel is an isolated, context-isolated window that talks to the plugin process through the host bridge only.",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "Git Lens",
+      "zh-CN": "Git 透镜"
+    },
+    "width": 1120,
+    "height": 780
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "gitlens.open",
+        "title": "Git Lens: Open",
+        "keywords": [
+          "git",
+          "lens",
+          "gitlens",
+          "版本",
+          "历史",
+          "分支",
+          "提交"
+        ],
+        "category": "Developer"
+      },
+      {
+        "id": "gitlens.openHistory",
+        "title": "Git Lens: Open History",
+        "keywords": [
+          "git",
+          "history",
+          "log",
+          "提交历史"
+        ],
+        "category": "Developer"
+      },
+      {
+        "id": "gitlens.openChanges",
+        "title": "Git Lens: Open Changes",
+        "keywords": [
+          "git",
+          "diff",
+          "changes",
+          "改动",
+          "差异"
+        ],
+        "category": "Developer"
+      },
+      {
+        "id": "gitlens.openBranches",
+        "title": "Git Lens: Open Branches",
+        "keywords": [
+          "git",
+          "branch",
+          "分支"
+        ],
+        "category": "Developer"
+      },
+      {
+        "id": "gitlens.openBlame",
+        "title": "Git Lens: Open Blame",
+        "keywords": [
+          "git",
+          "blame",
+          "逐行"
+        ],
+        "category": "Developer"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "git_status",
+        "description": "Show the git status of the current project's repository: current branch, upstream, ahead/behind counts, and the working tree grouped into staged, unstaged, untracked and conflict entries (porcelain XY codes, rename pairs included). Read-only.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Optional repository-relative path to limit the status to."
+            }
+          }
+        }
+      },
+      {
+        "name": "git_log",
+        "description": "Show recent commit history of the current project's repository. Supports an optional repo-relative path, free-text grep over subjects, an author filter and a result count. Returns sha, short sha, author, dates, subject, body and ref decorations for each commit. Read-only.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Optional repository-relative path to show history for (file or directory)."
+            },
+            "query": {
+              "type": "string",
+              "description": "Optional free-text matched against commit subjects (case-insensitive grep)."
+            },
+            "author": {
+              "type": "string",
+              "description": "Optional author name/email substring filter (case-insensitive)."
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum number of commits to return (default 20)."
+            }
+          }
+        }
+      },
+      {
+        "name": "git_show",
+        "description": "Show a single commit of the current project's repository: message, author, dates, changed files with add/delete counts, and optionally the full patch. Use a sha, HEAD or any ref expression as ref. Read-only.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "Commit to show. Defaults to HEAD."
+            },
+            "path": {
+              "type": "string",
+              "description": "Optional repository-relative path to limit the shown files."
+            },
+            "patch": {
+              "type": "boolean",
+              "description": "Include the unified diff patch (default false; large patches are truncated)."
+            },
+            "stat": {
+              "type": "boolean",
+              "description": "Include per-file add/delete counts (default true)."
+            }
+          }
+        }
+      },
+      {
+        "name": "git_diff",
+        "description": "Show the diff of the current project's repository: between a base ref and the working tree (default), or between two refs. Returns changed files with add/delete counts and optionally the unified patch. Read-only.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "base": {
+              "type": "string",
+              "description": "Base ref for the diff. Defaults to HEAD."
+            },
+            "target": {
+              "type": "string",
+              "description": "Optional second ref. When omitted the working tree is compared against base."
+            },
+            "path": {
+              "type": "string",
+              "description": "Optional repository-relative path to limit the diff to."
+            },
+            "patch": {
+              "type": "boolean",
+              "description": "Include the unified diff patch (default false; large patches are truncated)."
+            },
+            "stat": {
+              "type": "boolean",
+              "description": "Include per-file add/delete counts (default true)."
+            }
+          }
+        }
+      },
+      {
+        "name": "git_blame",
+        "description": "Blame a file in the current project's repository (GitLens-style line attribution): for every line, the originating commit sha, author, author time and commit subject. Path is required; an optional line range limits the output. Read-only.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Repository-relative path of the file to blame."
+            },
+            "startLine": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Optional first line of the blame range (1-based, inclusive)."
+            },
+            "endLine": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Optional last line of the blame range (1-based, inclusive)."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000,
+              "description": "Maximum number of blamed lines to return (default 2000; set higher for large files)."
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      },
+      {
+        "name": "git_branch",
+        "description": "Manage local branches of the current project's repository. Actions: list (default, includes current branch, upstream and last commit), create (new branch from an optional start point), switch (checkout an existing local branch), delete (safe delete; fails on unmerged branches unless force is set).",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "list",
+                "create",
+                "switch",
+                "delete"
+              ],
+              "description": "Branch operation to perform (default list)."
+            },
+            "name": {
+              "type": "string",
+              "description": "Branch name for create/switch/delete. Must be a safe git ref name."
+            },
+            "startPoint": {
+              "type": "string",
+              "description": "Optional ref the new branch starts from (create only)."
+            },
+            "force": {
+              "type": "boolean",
+              "description": "For delete: force delete even if unmerged. For create: reset an existing branch to the start point."
+            }
+          }
+        }
+      },
+      {
+        "name": "git_commit",
+        "description": "Stage changes and create a commit in the current project's repository. stage can be 'all' (git add -A), 'tracked' (git add -u) or an array of repo-relative paths. Respects repository hooks and never skips verification. Returns the new commit sha and subject.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "Commit message (required)."
+            },
+            "stage": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "tracked"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Repository-relative paths to stage."
+                }
+              ],
+              "description": "What to stage before committing (default 'all')."
+            },
+            "amend": {
+              "type": "boolean",
+              "description": "Amend the last commit instead of creating a new one (default false)."
+            }
+          },
+          "required": [
+            "message"
+          ]
+        }
+      },
+      {
+        "name": "git_stash",
+        "description": "Manage the stash of the current project's repository. Actions: list (default), push (stash the working tree with an optional message; includeUntracked adds -u), pop (restore the newest stash or the one at index), drop (delete the newest stash or the one at index).",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "list",
+                "push",
+                "pop",
+                "drop"
+              ],
+              "description": "Stash operation to perform (default list)."
+            },
+            "message": {
+              "type": "string",
+              "description": "Optional stash message (push only)."
+            },
+            "includeUntracked": {
+              "type": "boolean",
+              "description": "Include untracked files when pushing (default false)."
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Zero-based stash index for pop/drop (default 0)."
+            }
+          }
+        }
+      },
+      {
+        "name": "git_open_panel",
+        "description": "Open the Git Lens panel in PI-Desktop on a specific page (overview, history, diff, branches or blame). Use this when the user asks to see git information in a visual page, wants a dashboard of the repository, or asks to 'open' git history/changes/branches/blame. Optionally preselect a path (blame/diff/history) or a ref.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "string",
+              "enum": [
+                "overview",
+                "history",
+                "diff",
+                "branches",
+                "blame"
+              ],
+              "description": "Panel page to open (default overview)."
+            },
+            "path": {
+              "type": "string",
+              "description": "Optional repository-relative path to preselect on the page."
+            },
+            "ref": {
+              "type": "string",
+              "description": "Optional ref to focus (e.g. a commit sha) where the page supports it."
+            }
+          }
+        }
+      }
+    ],
+    "skills": [
+      "skills/git-workflow.md"
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "agent.tool.register",
+    "agent.prompt.inject"
+  ],
+  "engines": {
+    "piDesktop": ">=0.2.9"
+  },
+  "activationEvents": [
+    "onCommand:gitlens.open",
+    "onStartup"
+  ]
+}

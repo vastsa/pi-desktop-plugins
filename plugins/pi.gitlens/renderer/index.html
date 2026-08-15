@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Git Lens</title>
+    <script>window.__APPEARANCE_CACHE_KEY = "pi.gitlens.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="6" cy="6" r="2.5" />
+            <circle cx="6" cy="18" r="2.5" />
+            <circle cx="18" cy="8" r="2.5" />
+            <path d="M6 8.5v7M6 8.5C9 11 12 10.5 15.5 8" />
+          </svg>
+          <span class="brand-name">Git Lens</span>
+        </div>
+        <nav class="nav" id="nav" aria-label="Git Lens views"></nav>
+        <div class="sidebar-foot">
+          <div class="repo-chip" id="repoChip" title=""></div>
+          <div class="branch-chip" id="branchChip" title=""></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="banner" id="banner" hidden></div>
+        <section class="view" id="view-overview" hidden></section>
+        <section class="view" id="view-history" hidden></section>
+        <section class="view" id="view-diff" hidden></section>
+        <section class="view" id="view-branches" hidden></section>
+        <section class="view" id="view-blame" hidden></section>
+      </main>
+    </div>
+
+    <script src="./appearance.js"></script>
+    <script src="./panel.js"></script>
+  </body>
+</html>
