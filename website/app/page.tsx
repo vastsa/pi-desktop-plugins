@@ -5,14 +5,15 @@ import { PluginCard } from "../components/plugin-card";
 import { PluginIcon } from "../components/icons";
 import { SiteFooter, SiteHeader } from "../components/site-header";
 import { featuredIds, getAvailableLocales, getCatalog } from "../lib/catalog";
-import { categoryCopy, getCopy, localeHref, resolveLocale } from "../lib/i18n";
+import { categoryCopy, getCopy, localeHref } from "../lib/i18n";
+import { getRequestLocale } from "../lib/request-locale";
 
 export const revalidate = 300;
 
 type SearchParams = Promise<{ lang?: string }>;
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
-  const locale = resolveLocale((await searchParams).lang);
+  const locale = await getRequestLocale((await searchParams).lang);
   const copy = getCopy(locale);
   return { title: "PI-Desktop Plugins", description: copy.home.description };
 }
@@ -20,7 +21,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   const catalog = await getCatalog();
   const availableLocales = getAvailableLocales(catalog);
-  const locale = resolveLocale((await searchParams).lang);
+  const locale = await getRequestLocale((await searchParams).lang, availableLocales);
   const copy = getCopy(locale);
   const featured = featuredIds.map((id) => catalog.plugins.find((plugin) => plugin.id === id)).filter(Boolean);
   const categories = ["productivity", "developer-tools", "community", "official", "template"].map((id) => ({

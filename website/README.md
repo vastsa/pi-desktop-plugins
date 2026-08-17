@@ -22,6 +22,10 @@ Catalog responses are revalidated every five minutes. Set `CATALOG_URL` to
 use a different catalog provider during preview or development.
 
 The site defaults to English and uses `?lang=<locale>` for language selection.
+When no explicit language is present, it matches the browser's
+`Accept-Language` header against the locales available in the catalog. A manual
+selection is stored in the `pi-desktop-locale` cookie and takes priority on
+future visits.
 The language picker is discovered from the site dictionaries and every locale
 key present in the catalog, so adding a plugin translation such as `ja` or
 `de-DE` makes that locale available without changing the picker. Internal links

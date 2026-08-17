@@ -8,8 +8,9 @@ import { CopyPackageButton } from "../../../components/copy-package-button";
 import { PluginIcon } from "../../../components/icons";
 import { PermissionBadge } from "../../../components/plugin-card";
 import { SiteFooter, SiteHeader } from "../../../components/site-header";
-import { currentVersion, formatBytes, getAvailableLocales, getCatalog, getPlugin, localizedPlugin, packageUrl, permissionRisk, REPOSITORY_URL } from "../../../lib/catalog";
-import { categoryCopy, formatLocalizedDate, getCopy, localeHref, resolveLocale } from "../../../lib/i18n";
+import { currentVersion, formatBytes, getAvailableLocales, getCatalog, localizedPlugin, packageUrl, permissionRisk, REPOSITORY_URL } from "../../../lib/catalog";
+import { categoryCopy, formatLocalizedDate, getCopy, localeHref } from "../../../lib/i18n";
+import { getRequestLocale } from "../../../lib/request-locale";
 
 export const revalidate = 300;
 
@@ -20,9 +21,10 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ lang?: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const plugin = await getPlugin(id);
+  const catalog = await getCatalog();
+  const plugin = catalog.plugins.find((item) => item.id === id);
   if (!plugin) return { title: "Plugin not found" };
-  const locale = resolveLocale((await searchParams).lang);
+  const locale = await getRequestLocale((await searchParams).lang, getAvailableLocales(catalog));
   const localized = localizedPlugin(plugin, locale);
   return { title: localized.name, description: localized.description };
 }
@@ -33,7 +35,7 @@ export default async function PluginDetailPage({ params, searchParams }: { param
   const availableLocales = getAvailableLocales(catalog);
   const plugin = catalog.plugins.find((item) => item.id === id);
   if (!plugin) notFound();
-  const locale = resolveLocale((await searchParams).lang);
+  const locale = await getRequestLocale((await searchParams).lang, availableLocales);
   const copy = getCopy(locale);
   const localized = localizedPlugin(plugin, locale);
   const version = currentVersion(plugin);

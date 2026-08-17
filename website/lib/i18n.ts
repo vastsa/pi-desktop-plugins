@@ -2,6 +2,9 @@ export const siteLocales = ["en", "zh-CN"] as const;
 export const locales = siteLocales;
 export type Locale = string;
 export const defaultLocale: Locale = "en";
+export const localeCookieName = "pi-desktop-locale";
+
+const localePattern = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 
 export type SiteCopy = {
   nav: { browse: string; build: string; github: string; language: string };
@@ -164,20 +167,71 @@ const simplifiedChinese: SiteCopy = {
 
 export const copy: Record<string, SiteCopy> = { en: english, "zh-CN": simplifiedChinese };
 
-export function resolveLocale(value: unknown): Locale {
-  if (typeof value !== "string") return defaultLocale;
+function parseLocale(value: unknown): Locale | undefined {
+  if (typeof value !== "string") return undefined;
   const candidate = value.trim();
-  return /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(candidate) ? candidate : defaultLocale;
+  return localePattern.test(candidate) ? candidate : undefined;
+}
+
+export function resolveLocale(value: unknown): Locale {
+  return parseLocale(value) ?? defaultLocale;
+}
+
+function matchAvailableLocale(value: string, availableLocales: readonly string[]): Locale | undefined {
+  const normalized = value.toLowerCase();
+  const exact = availableLocales.find((locale) => locale.toLowerCase() === normalized);
+  if (exact) return exact;
+  const base = normalized.split("-")[0];
+  return availableLocales.find((locale) => locale.toLowerCase().split("-")[0] === base);
+}
+
+function browserLocalePreferences(acceptLanguage: string | null | undefined): string[] {
+  if (!acceptLanguage) return [];
+  return acceptLanguage
+    .split(",")
+    .map((entry, index) => {
+      const [range, ...parameters] = entry.trim().split(";");
+      const quality = parameters.find((parameter) => parameter.trim().startsWith("q="));
+      const weight = quality ? Number.parseFloat(quality.trim().slice(2)) : 1;
+      return { range, weight: Number.isFinite(weight) ? weight : 0, index };
+    })
+    .filter(({ range, weight }) => range !== "*" && weight > 0 && localePattern.test(range))
+    .sort((a, b) => b.weight - a.weight || a.index - b.index)
+    .map(({ range }) => range);
+}
+
+export function resolveRequestLocale({
+  requested,
+  persisted,
+  acceptLanguage,
+  availableLocales = siteLocales,
+}: {
+  requested?: unknown;
+  persisted?: unknown;
+  acceptLanguage?: string | null;
+  availableLocales?: readonly string[];
+}): Locale {
+  const explicit = parseLocale(requested);
+  if (explicit) return explicit;
+
+  const stored = parseLocale(persisted);
+  if (stored) return stored;
+
+  for (const preference of browserLocalePreferences(acceptLanguage)) {
+    const matched = matchAvailableLocale(preference, availableLocales);
+    if (matched) return matched;
+  }
+  return defaultLocale;
 }
 
 export function getCopy(locale: Locale): SiteCopy {
   return copy[locale] ?? copy[defaultLocale];
 }
 
-export function localeHref(path: string, locale: Locale): string {
+export function localeHref(path: string, locale: Locale, options: { includeDefault?: boolean } = {}): string {
   const [pathname, query = ""] = path.split("?");
   const search = new URLSearchParams(query);
-  if (locale === defaultLocale) search.delete("lang");
+  if (locale === defaultLocale && !options.includeDefault) search.delete("lang");
   else search.set("lang", locale);
   const nextQuery = search.toString();
   return nextQuery ? `${pathname}?${nextQuery}` : pathname;

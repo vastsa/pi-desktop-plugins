@@ -4,14 +4,15 @@ import { Search } from "lucide-react";
 import { PluginCard } from "../../components/plugin-card";
 import { SiteFooter, SiteHeader } from "../../components/site-header";
 import { getAvailableLocales, getCatalog, localizedPlugin, pluginSearchText, sortPlugins } from "../../lib/catalog";
-import { categoryCopy, formatLocalizedDate, getCopy, localeHref, resolveLocale } from "../../lib/i18n";
+import { categoryCopy, formatLocalizedDate, getCopy, localeHref } from "../../lib/i18n";
+import { getRequestLocale } from "../../lib/request-locale";
 
 export const revalidate = 300;
 
 type SearchParams = Promise<{ q?: string; category?: string; lang?: string }>;
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
-  const locale = resolveLocale((await searchParams).lang);
+  const locale = await getRequestLocale((await searchParams).lang);
   return { title: getCopy(locale).marketplace.title, description: getCopy(locale).marketplace.description };
 }
 
@@ -19,7 +20,7 @@ export default async function PluginsPage({ searchParams }: { searchParams: Sear
   const catalog = await getCatalog();
   const availableLocales = getAvailableLocales(catalog);
   const params = await searchParams;
-  const locale = resolveLocale(params.lang);
+  const locale = await getRequestLocale(params.lang, availableLocales);
   const copy = getCopy(locale);
   const query = params.q?.trim() ?? "";
   const category = params.category ?? "all";
