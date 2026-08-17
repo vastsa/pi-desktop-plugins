@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.bianqian",
+  "name": "便签",
+  "version": "0.1.0",
+  "description": "Markdown 桌面便签：多便签管理、实时预览、任务列表勾选、荧光笔高亮与回收站。Sticky notes with Markdown preview, task lists, text highlights and recycle bin.",
+  "author": "ZY",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "width": 980,
+    "height": 720,
+    "title": { "en": "Sticky Notes", "zh-CN": "便签" }
+  },
+  "contributes": {
+    "skills": ["skills/bianqian.md"],
+    "commands": [
+      {
+        "id": "bianqian.open",
+        "title": "便签：打开面板",
+        "keywords": ["sticky", "note", "便签", "记事", "markdown"],
+        "category": "Productivity"
+      },
+      {
+        "id": "bianqian.new",
+        "title": "便签：新建便签",
+        "keywords": ["sticky", "note", "新建便签", "新建记事"],
+        "category": "Productivity"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "list_notes",
+        "description": "List all sticky notes with title, snippet, color and timestamps; deleted notes are included only when includeDeleted is true.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": { "includeDeleted": { "type": "boolean", "description": "Include soft-deleted notes" } }
+        }
+      },
+      {
+        "name": "get_note",
+        "description": "Read one sticky note's full markdown content by id.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": { "id": { "type": "string", "description": "Note id" } },
+          "required": ["id"]
+        }
+      },
+      {
+        "name": "search_notes",
+        "description": "Search sticky notes by title, snippet or content (case-insensitive substring).",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": { "query": { "type": "string", "description": "Search text" } },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "create_note",
+        "description": "Create a new sticky note with optional markdown content and color. The title is derived from the content's first heading or line.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "content": { "type": "string", "description": "Markdown content (default: empty note)" },
+            "color": { "type": "string", "enum": ["yellow", "pink", "blue", "green", "purple", "gray"], "description": "Note color" }
+          }
+        }
+      },
+      {
+        "name": "update_note",
+        "description": "Update a sticky note's content, color or mode. Content changes re-derive the title automatically.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "content": { "type": "string", "description": "New markdown content" },
+            "color": { "type": "string", "enum": ["yellow", "pink", "blue", "green", "purple", "gray"] },
+            "mode": { "type": "string", "enum": ["preview", "edit"] }
+          },
+          "required": ["id"]
+        }
+      },
+      {
+        "name": "delete_note",
+        "description": "Move a sticky note to the recycle bin (soft delete; restorable via restore_note).",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": { "id": { "type": "string" } },
+          "required": ["id"]
+        }
+      },
+      {
+        "name": "restore_note",
+        "description": "Restore a soft-deleted sticky note from the recycle bin.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": { "id": { "type": "string" } },
+          "required": ["id"]
+        }
+      },
+      {
+        "name": "purge_note",
+        "description": "Permanently delete a sticky note. This cannot be undone.",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "properties": { "id": { "type": "string" } },
+          "required": ["id"]
+        }
+      }
+    ]
+  },
+  "permissions": ["ui.panel", "agent.tool.register", "agent.prompt.inject", "shell.openExternal"],
+  "engines": { "piDesktop": ">=0.7.1" },
+  "categories": ["productivity"],
+  "changelog": "首个版本：多便签管理、Markdown 预览/编辑、任务列表、荧光笔高亮、图片粘贴、回收站。",
+  "safetyNotes": "便签数据仅存于插件自己的 settings 中，不访问工作区或网络；点击便签内的外部链接会打开系统浏览器。",
+  "activationEvents": ["onCommand:bianqian.open", "onCommand:bianqian.new", "onStartup"]
+}
