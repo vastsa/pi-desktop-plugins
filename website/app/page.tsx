@@ -4,7 +4,7 @@ import { ArrowRight, Check, ChevronRight, Code2, LockKeyhole, PackageCheck } fro
 import { PluginCard } from "../components/plugin-card";
 import { PluginIcon } from "../components/icons";
 import { SiteFooter, SiteHeader } from "../components/site-header";
-import { featuredIds, getCatalog } from "../lib/catalog";
+import { featuredIds, getAvailableLocales, getCatalog } from "../lib/catalog";
 import { categoryCopy, getCopy, localeHref, resolveLocale } from "../lib/i18n";
 
 export const revalidate = 300;
@@ -19,6 +19,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   const catalog = await getCatalog();
+  const availableLocales = getAvailableLocales(catalog);
   const locale = resolveLocale((await searchParams).lang);
   const copy = getCopy(locale);
   const featured = featuredIds.map((id) => catalog.plugins.find((plugin) => plugin.id === id)).filter(Boolean);
@@ -29,7 +30,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
   return (
     <>
-      <SiteHeader locale={locale} />
+      <SiteHeader locale={locale} availableLocales={availableLocales} />
       <main lang={locale}>
         <section className="hero">
           <div className="container hero-grid">
@@ -87,7 +88,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
 
         <section className="cta-band"><div className="container cta-band-inner"><div><p className="section-kicker">{copy.home.builderKicker}</p><h2>{copy.home.builderTitle}</h2><p>{copy.home.builderDescription}</p></div><Link href={localeHref("/docs", locale)} className="button primary-button">{copy.home.builderButton} <ArrowRight size={16} /></Link></div></section>
       </main>
-      <SiteFooter locale={locale} />
+      <SiteFooter locale={locale} availableLocales={availableLocales} />
     </>
   );
 }

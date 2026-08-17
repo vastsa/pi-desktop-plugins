@@ -21,10 +21,13 @@ https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json
 Catalog responses are revalidated every five minutes. Set `CATALOG_URL` to
 use a different catalog provider during preview or development.
 
-The site defaults to English and switches to Simplified Chinese with
-`?lang=zh-CN`. Internal links preserve the selected language. Plugin names,
-descriptions and safety notes are read from the manifest `i18n` object and fall
-back to the default manifest fields when a translation is not available.
+The site defaults to English and uses `?lang=<locale>` for language selection.
+The language picker is discovered from the site dictionaries and every locale
+key present in the catalog, so adding a plugin translation such as `ja` or
+`de-DE` makes that locale available without changing the picker. Internal links
+preserve the selected language. Untranslated site copy falls back to English;
+plugin names, descriptions and safety notes fall back in this order: requested
+locale, English, Simplified Chinese, then the default manifest fields.
 
 ## Vercel deployment
 

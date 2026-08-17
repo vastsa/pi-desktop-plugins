@@ -1,5 +1,6 @@
-export const locales = ["en", "zh-CN"] as const;
-export type Locale = (typeof locales)[number];
+export const siteLocales = ["en", "zh-CN"] as const;
+export const locales = siteLocales;
+export type Locale = string;
 export const defaultLocale: Locale = "en";
 
 export type SiteCopy = {
@@ -97,7 +98,7 @@ export type SiteCopy = {
 };
 
 const english: SiteCopy = {
-  nav: { browse: "Browse plugins", build: "Build a plugin", github: "GitHub", language: "中文" },
+  nav: { browse: "Browse plugins", build: "Build a plugin", github: "GitHub", language: "Language" },
   footer: { description: "A calm, local-first extension catalog for PI-Desktop.", marketplace: "Marketplace", contributing: "Contributing", source: "Source code" },
   home: {
     eyebrow: "Official extension catalog",
@@ -150,7 +151,7 @@ const english: SiteCopy = {
 };
 
 const simplifiedChinese: SiteCopy = {
-  nav: { browse: "浏览插件", build: "开发插件", github: "GitHub", language: "English" },
+  nav: { browse: "浏览插件", build: "开发插件", github: "GitHub", language: "语言" },
   footer: { description: "面向 PI-Desktop 的安静、本地优先插件目录。", marketplace: "插件市场", contributing: "参与贡献", source: "源代码" },
   home: {
     eyebrow: "官方扩展目录", titlePrefix: "让你的工作区", titleAccent: "更加强大。", description: "为 PI-Desktop 提供工具、面板、技能和工作流，让能力始终贴近你的代码和本机。", browse: "浏览全部插件", build: "开发插件", note: "开源包 · 权限透明 · 无需账号", previewTitle: "已安装扩展", previewReady: "就绪", previewNames: ["Git Lens", "Token 用量分析", "小清新待办"], stats: ["目录中的插件", "种查找方式", "可审阅的包源码", "所需云端账号"], startKicker: "从这里开始", startTitle: "第一次使用就能派上用场。", startDescription: "专注而小巧的目录，解决 Agent 只差一个能力的时刻。", viewAll: "查看全部插件", exploreKicker: "按目的探索", exploreTitle: "找到适合你的能力。", trustKicker: "为信任而设计", trustTitle: "把真正有用的信息放在明面上。", trustDescription: "每个插件进入工作区之前都可以被检查。它能访问什么，由你决定。", trustItems: [{ number: "01 / 源码", title: "开放包源码", description: "从官方仓库安装前，先阅读 manifest、README 和实际实现。" }, { number: "02 / 权限", title: "明确的能力边界", description: "文件、网络、Shell 和 Agent 权限都会在浏览过程中直接展示。" }, { number: "03 / 安装", title: "简单的包流程", description: "下载版本化的 .piplug 包，在 PI-Desktop 中安装，然后检查宿主权限提示。" }], builderKicker: "面向开发者", builderTitle: "开发你的工作流所缺少的插件。", builderDescription: "仓库提供小型示例和实用模板，帮助你从想法开始，完成可安装的插件包。", builderButton: "阅读贡献指南",
@@ -161,14 +162,16 @@ const simplifiedChinese: SiteCopy = {
   docs: { home: "首页", kicker: "面向开发者", title: "开发插件。", description: "PI-Desktop 插件是小型、版本化的扩展包，可以为本地工作区增加工具、面板、技能和工作流。", quickStart: "快速开始", qualityTitle: "什么样的插件更好？", qualityItems: ["README 清楚说明插件做什么，以及会访问什么。", "每个发布版本使用语义化版本号，并附带简短变更记录。", "只申请必要权限，并用易懂的语言说明风险。", "提供 UI 面板时，同时填写本地化的面板标题。"], submitTitle: "提交到官方目录", submitDescription: "按照仓库中的完整贡献清单操作。合并后，目录和插件包就会对 PI-Desktop 用户开放。", readGuide: "阅读 CONTRIBUTING.md", localTitle: "本地验证", localDescription: "在 PI-Desktop 中加载开发插件，确认命令和面板，检查权限行为，然后在提交 PR 前测试打包后的 .piplug 文件。", templateTitle: "从模板开始", templateDescription: "复制实用的工作区摘要模板，或最小化的 Hello 示例。", permissionTitle: "只申请真正需要的权限", permissionDescription: "用户会检查插件权限，权限范围应尽可能小。", packageTitle: "打包并发布", packageDescription: "构建 .piplug 包、重建目录，然后提交 Pull Request。", sourceFirst: "官方目录坚持源码优先：安装前先阅读 manifest 和 README。" },
 };
 
-export const copy: Record<Locale, SiteCopy> = { en: english, "zh-CN": simplifiedChinese };
+export const copy: Record<string, SiteCopy> = { en: english, "zh-CN": simplifiedChinese };
 
 export function resolveLocale(value: unknown): Locale {
-  return value === "zh-CN" ? "zh-CN" : defaultLocale;
+  if (typeof value !== "string") return defaultLocale;
+  const candidate = value.trim();
+  return /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(candidate) ? candidate : defaultLocale;
 }
 
 export function getCopy(locale: Locale): SiteCopy {
-  return copy[locale];
+  return copy[locale] ?? copy[defaultLocale];
 }
 
 export function localeHref(path: string, locale: Locale): string {
@@ -185,10 +188,29 @@ export function categoryCopy(category: string, locale: Locale) {
 }
 
 export function formatLocalizedDate(date: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(date));
+  try {
+    return new Intl.DateTimeFormat(locale || defaultLocale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(date));
+  } catch {
+    return new Intl.DateTimeFormat(defaultLocale, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(date));
+  }
+}
+
+export function localeLabel(locale: Locale): string {
+  if (locale === "en") return "English";
+  if (locale === "zh-CN") return "简体中文";
+  try {
+    return new Intl.DisplayNames([defaultLocale], { type: "language" }).of(locale) ?? locale;
+  } catch {
+    return locale;
+  }
 }

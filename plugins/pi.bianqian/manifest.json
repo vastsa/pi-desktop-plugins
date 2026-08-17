@@ -4,6 +4,18 @@
   "name": "便签",
   "version": "0.1.0",
   "description": "Markdown 桌面便签：多便签管理、实时预览、任务列表勾选、荧光笔高亮与回收站。Sticky notes with Markdown preview, task lists, text highlights and recycle bin.",
+  "i18n": {
+    "en": {
+      "name": "Sticky Notes",
+      "description": "Markdown desktop sticky notes with multiple-note management, live preview, task checkboxes, text highlights and a recycle bin.",
+      "safetyNotes": "Note data stays in the plugin's own settings. The plugin does not access the workspace or make network requests; external links open in the system browser."
+    },
+    "zh-CN": {
+      "name": "便签",
+      "description": "Markdown 桌面便签：多便签管理、实时预览、任务列表勾选、荧光笔高亮与回收站。",
+      "safetyNotes": "便签数据仅保存在插件自己的 settings 中，不访问工作区或发起网络请求；点击便签内的外部链接会打开系统浏览器。"
+    }
+  },
   "author": "ZY",
   "main": "main.js",
   "ui": {

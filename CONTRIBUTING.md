@@ -71,6 +71,12 @@ plugins/<id>/
 }
 ```
 
+Use BCP-47 locale keys in `i18n`. The marketplace discovers available locale
+options from these keys, so additional locales do not require a website code
+change. The website falls back to English when its own UI copy is not yet
+translated, while plugin metadata falls back to English, Simplified Chinese,
+then the base manifest fields.
+
 ### Recommended fields for marketplace quality
 
 - `categories`: e.g. `["productivity", "official"]`

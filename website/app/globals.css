@@ -50,7 +50,7 @@ button { cursor: pointer; }
 .desktop-nav { display: flex; align-items: center; gap: 28px; color: var(--text-soft); font-size: 14px; }
 .desktop-nav a { display: inline-flex; align-items: center; gap: 4px; transition: color 180ms ease; }
 .desktop-nav a:hover, .footer-links a:hover { color: var(--brand-strong); }
-.language-switcher { padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); font-size: 12px; font-weight: 600; }
+.language-switcher { appearance: none; cursor: pointer; padding: 6px 26px 6px 9px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; font-size: 12px; font-weight: 600; }
 .language-switcher:hover { border-color: var(--brand); color: var(--brand-strong); }
 .header-github { display: none; color: var(--text-soft); }
 .mobile-actions { display: none; align-items: center; gap: 10px; }

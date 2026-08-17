@@ -1,4 +1,4 @@
-import type { Locale } from "./i18n";
+import { defaultLocale, siteLocales, type Locale } from "./i18n";
 
 export type Permission = string;
 
@@ -17,7 +17,7 @@ export type Plugin = {
   id: string;
   name: string;
   description: string;
-  i18n?: Partial<Record<Locale, LocalizedPluginContent>>;
+  i18n?: Record<string, LocalizedPluginContent>;
   author: string;
   categories: string[];
   verified?: boolean;
@@ -74,8 +74,16 @@ export async function getPlugin(id: string): Promise<Plugin | undefined> {
   return catalog.plugins.find((plugin) => plugin.id === id);
 }
 
+export function getAvailableLocales(catalog: Catalog): string[] {
+  const available = new Set<string>(siteLocales);
+  for (const plugin of catalog.plugins) {
+    for (const locale of Object.keys(plugin.i18n ?? {})) available.add(locale);
+  }
+  return [...available].sort((a, b) => a.localeCompare(b));
+}
+
 export function localizedPlugin(plugin: Plugin, locale: Locale) {
-  const content = plugin.i18n?.[locale] ?? plugin.i18n?.en ?? {};
+  const content = plugin.i18n?.[locale] ?? plugin.i18n?.[defaultLocale] ?? plugin.i18n?.["zh-CN"] ?? {};
   return {
     ...plugin,
     name: content.name ?? plugin.name,

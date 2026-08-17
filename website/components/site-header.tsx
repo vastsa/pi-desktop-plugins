@@ -5,7 +5,7 @@ import { REPOSITORY_URL } from "../lib/catalog";
 import { getCopy, localeHref, type Locale } from "../lib/i18n";
 import { LanguageSwitcher } from "./language-switcher";
 
-export function SiteHeader({ locale }: { locale: Locale }) {
+export function SiteHeader({ locale, availableLocales }: { locale: Locale; availableLocales: string[] }) {
   const copy = getCopy(locale);
   return (
     <header className="site-header">
@@ -20,10 +20,10 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">
             {copy.nav.github} <ArrowUpRight size={14} />
           </a>
-          <LanguageSwitcher locale={locale} label={copy.nav.language} />
+          <LanguageSwitcher locale={locale} label={copy.nav.language} availableLocales={availableLocales} />
         </nav>
         <div className="mobile-actions">
-          <LanguageSwitcher locale={locale} label={copy.nav.language} />
+          <LanguageSwitcher locale={locale} label={copy.nav.language} availableLocales={availableLocales} />
           <a className="header-github" href={REPOSITORY_URL} target="_blank" rel="noreferrer" aria-label="Open GitHub repository">
             <Github size={17} />
           </a>
@@ -33,7 +33,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   );
 }
 
-export function SiteFooter({ locale }: { locale: Locale }) {
+export function SiteFooter({ locale, availableLocales }: { locale: Locale; availableLocales: string[] }) {
   const copy = getCopy(locale);
   return (
     <footer className="site-footer">
@@ -49,7 +49,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           <Link href={localeHref("/plugins", locale)}>{copy.footer.marketplace}</Link>
           <Link href={localeHref("/docs", locale)}>{copy.footer.contributing}</Link>
           <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">{copy.footer.source}</a>
-          <LanguageSwitcher locale={locale} label={copy.nav.language} />
+          <LanguageSwitcher locale={locale} label={copy.nav.language} availableLocales={availableLocales} />
         </div>
       </div>
     </footer>
