@@ -1,0 +1,374 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * 主题自适应：宿主通过 appearance 通道设置 <html data-theme="light|dark">。
+ * 组件里不用 text-black/70、bg-white/55 这类固定色，改用 tailwind.config.js
+ * 注册的 text-ink/70、bg-paper/55 —— --ink/--paper 是两个 RGB 三元组，随主题切换。
+ */
+:root {
+  color-scheme: light;
+  --ink: 0 0 0;
+  --paper: 255 255 255;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --ink: 255 255 255;
+  --paper: 43 41 34;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+}
+
+/* Allow text selection in content areas */
+.note-content,
+.note-content * {
+  user-select: text;
+}
+
+.cm-editor {
+  height: 100%;
+  outline: none !important;
+  font-size: 14px;
+  background: transparent !important;
+}
+
+.cm-scroller {
+  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace !important;
+  line-height: 1.55 !important;
+  overflow: auto !important;
+}
+
+.cm-content {
+  padding: 12px 14px !important;
+  caret-color: rgb(var(--ink) / 0.75);
+}
+
+.cm-focused {
+  outline: none !important;
+}
+
+/* Markdown preview typography */
+.md-preview {
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgb(var(--ink) / 0.85);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4 {
+  font-weight: 700;
+  margin: 0.6em 0 0.35em;
+  line-height: 1.3;
+}
+
+.md-preview h1 {
+  font-size: 1.45em;
+  border-bottom: 1px solid rgb(var(--ink) / 0.08);
+  padding-bottom: 0.2em;
+}
+
+.md-preview h2 {
+  font-size: 1.25em;
+}
+
+.md-preview h3 {
+  font-size: 1.1em;
+}
+
+.md-preview p {
+  margin: 0.45em 0;
+}
+
+/* 编辑模式回车产生的空行：预览中保持可见（高度由内联 style 按空行数设置） */
+.md-preview .md-blank {
+  height: 1.6em;
+  margin: 0;
+  list-style: none;
+}
+.md-preview li.md-blank {
+  margin: 0;
+}
+
+.md-preview ul,
+.md-preview ol {
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+}
+
+/* Nested lists: larger step so multi-level hierarchy is obvious */
+.md-preview ul ul,
+.md-preview ol ol,
+.md-preview ul ol,
+.md-preview ol ul {
+  margin: 0.12em 0;
+  padding-left: 1.35em;
+}
+
+.md-preview li {
+  margin: 0.15em 0;
+}
+
+/* Task lists: no bullet; don't use negative margin (it cancels nest indent) */
+.md-preview li.task-list-item {
+  list-style: none;
+  position: relative;
+}
+
+/* Top-level task list: flush left (no empty bullet gutter) */
+.md-preview-body > ul.contains-task-list,
+.md-preview-body > ol.contains-task-list {
+  padding-left: 0.1em;
+}
+
+/* Nested under a task item: clear step indent (~1.5 checkbox widths) */
+.md-preview li.task-list-item > ul,
+.md-preview li.task-list-item > ol {
+  margin-top: 0.12em;
+  margin-bottom: 0.12em;
+  padding-left: 1.7em;
+}
+
+.md-preview li.task-list-item input[type='checkbox'] {
+  margin: 0 0.45em 0 0;
+  vertical-align: -0.1em;
+  cursor: pointer;
+}
+
+.md-preview blockquote {
+  margin: 0.5em 0;
+  padding: 0.25em 0.75em;
+  border-left: 3px solid rgb(var(--ink) / 0.2);
+  color: rgb(var(--ink) / 0.62);
+  background: rgb(var(--ink) / 0.04);
+}
+
+/* 高亮标记（右键标记颜色）：色值与 lib/highlight.ts 的 HIGHLIGHT_COLORS 对应 */
+.md-preview mark {
+  background: #fff176;
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+.md-preview mark.hl-green {
+  background: #c5e1a5;
+}
+
+.md-preview mark.hl-blue {
+  background: #90caf9;
+}
+
+.md-preview mark.hl-pink {
+  background: #f8bbd0;
+}
+
+.md-preview mark.hl-orange {
+  background: #ffcc80;
+}
+
+.md-preview mark.hl-red {
+  background: #ef9a9a;
+}
+
+.md-preview code {
+  font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+  background: rgb(var(--ink) / 0.07);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+.md-preview pre {
+  margin: 0.55em 0;
+  padding: 0.7em 0.85em;
+  background: rgb(var(--ink) / 0.07);
+  border-radius: 6px;
+  overflow: auto;
+}
+
+.md-preview pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+
+.md-preview a {
+  color: #1565c0;
+  text-decoration: underline;
+}
+
+[data-theme='dark'] .md-preview a {
+  color: #82b1ff;
+}
+
+.md-preview table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  width: 100%;
+  font-size: 0.92em;
+}
+
+.md-preview th,
+.md-preview td {
+  border: 1px solid rgb(var(--ink) / 0.15);
+  padding: 0.3em 0.55em;
+  text-align: left;
+}
+
+.md-preview th {
+  background: rgb(var(--ink) / 0.05);
+}
+
+.md-preview hr {
+  border: none;
+  border-top: 1px solid rgb(var(--ink) / 0.12);
+  margin: 0.8em 0;
+}
+
+.md-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  margin: 0.5em 0;
+  box-shadow: 0 1px 3px rgb(var(--ink) / 0.08);
+}
+
+/* Color themes for note chrome（亮色） */
+.note-yellow {
+  --note-bg: #fff9c4;
+  --note-bar: #f9a825;
+  --note-border: #f0e68c;
+}
+.note-pink {
+  --note-bg: #fce4ec;
+  --note-bar: #ec407a;
+  --note-border: #f8bbd0;
+}
+.note-blue {
+  --note-bg: #e3f2fd;
+  --note-bar: #42a5f5;
+  --note-border: #bbdefb;
+}
+.note-green {
+  --note-bg: #e8f5e9;
+  --note-bar: #66bb6a;
+  --note-border: #c8e6c9;
+}
+.note-purple {
+  --note-bg: #f3e5f5;
+  --note-bar: #ab47bc;
+  --note-border: #e1bee7;
+}
+.note-gray {
+  --note-bg: #f5f5f5;
+  --note-bar: #9e9e9e;
+  --note-border: #e0e0e0;
+}
+
+/* 暗色变体：同色系的深色纸面，色条保持原色 */
+[data-theme='dark'] .note-yellow {
+  --note-bg: #37311c;
+  --note-bar: #f9a825;
+  --note-border: #4d4530;
+}
+[data-theme='dark'] .note-pink {
+  --note-bg: #3b2430;
+  --note-bar: #ec407a;
+  --note-border: #4d3343;
+}
+[data-theme='dark'] .note-blue {
+  --note-bg: #1d2a3d;
+  --note-bar: #42a5f5;
+  --note-border: #2c3d55;
+}
+[data-theme='dark'] .note-green {
+  --note-bg: #1e3324;
+  --note-bar: #66bb6a;
+  --note-border: #2c4533;
+}
+[data-theme='dark'] .note-purple {
+  --note-bg: #2e2338;
+  --note-bar: #ab47bc;
+  --note-border: #41334d;
+}
+[data-theme='dark'] .note-gray {
+  --note-bg: #2c2c2c;
+  --note-bar: #9e9e9e;
+  --note-border: #3f3f3f;
+}
+
+/* Highlight.js 覆盖：代码块底色透明，暗色下换浅色文字 */
+.hljs {
+  background: transparent !important;
+  color: #24292e;
+}
+
+[data-theme='dark'] .hljs {
+  color: #d6d3cb;
+}
+
+[data-theme='dark'] .hljs-comment,
+[data-theme='dark'] .hljs-quote {
+  color: #8b949e;
+}
+
+[data-theme='dark'] .hljs-keyword,
+[data-theme='dark'] .hljs-selector-tag,
+[data-theme='dark'] .hljs-literal {
+  color: #ff7b72;
+}
+
+[data-theme='dark'] .hljs-string,
+[data-theme='dark'] .hljs-title,
+[data-theme='dark'] .hljs-section,
+[data-theme='dark'] .hljs-attribute,
+[data-theme='dark'] .hljs-template-tag {
+  color: #a5d6ff;
+}
+
+[data-theme='dark'] .hljs-number,
+[data-theme='dark'] .hljs-symbol,
+[data-theme='dark'] .hljs-bullet {
+  color: #79c0ff;
+}
+
+[data-theme='dark'] .hljs-built_in,
+[data-theme='dark'] .hljs-builtin-name,
+[data-theme='dark'] .hljs-type {
+  color: #ffa657;
+}
+
+/* Scrollbar */
+.note-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.note-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--ink) / 0.15);
+  border-radius: 4px;
+}
+.note-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--ink) / 0.28);
+}
+
+/* Hide native search clear on WebKit so our own button wins */
+input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
