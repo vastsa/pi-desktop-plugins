@@ -4,6 +4,18 @@
   "name": "Workspace Summary",
   "version": "0.2.0",
   "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
+  "i18n": {
+    "en": {
+      "name": "Workspace Summary",
+      "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
+      "safetyNotes": "Reads the current project only. No network or write access."
+    },
+    "zh-CN": {
+      "name": "工作区摘要",
+      "description": "实用的插件模板：扫描当前工作区、总结关键文件，并提供 Agent 工具和隔离面板。",
+      "safetyNotes": "只读取当前项目，不访问网络，也不会写入文件。"
+    }
+  },
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": ["productivity", "template", "official"],

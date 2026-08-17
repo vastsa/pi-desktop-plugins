@@ -54,6 +54,16 @@ plugins/<id>/
   "name": "My Plugin",
   "version": "0.1.0",
   "description": "What it does",
+  "i18n": {
+    "en": {
+      "name": "My Plugin",
+      "description": "What it does"
+    },
+    "zh-CN": {
+      "name": "我的插件",
+      "description": "插件功能简介"
+    }
+  },
   "author": "your-name",
   "main": "main.js",
   "permissions": ["ui.panel"],
@@ -64,6 +74,7 @@ plugins/<id>/
 ### Recommended fields for marketplace quality
 
 - `categories`: e.g. `["productivity", "official"]`
+- `i18n`: localized `name`, `description`, `safetyNotes` and optional `readmeMarkdown`
 - `changelog`: short release notes for the current version
 - `safetyNotes`: plain-language risk summary
 - `ui.panel`: isolated panel html entry

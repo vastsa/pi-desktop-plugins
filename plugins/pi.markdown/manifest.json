@@ -4,6 +4,18 @@
   "name": "Pi Markdown 笔记",
   "version": "0.4.0",
   "description": "本地 Markdown 笔记：真·所见即所得编辑（输入 # / - [ ] / > / ``` / $…$ 即出样式，Typora 风格，Milkdown Crepe）、米白/黑夜双主题切换、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Todo 任务列表、KaTeX 公式、全局搜索（标题/内容）、导出 Markdown/HTML/图像；文件夹与笔记拖拽排序、右键操作菜单；数据保存在插件数据目录。",
+  "i18n": {
+    "en": {
+      "name": "Pi Markdown Notes",
+      "description": "A local Markdown notebook with true WYSIWYG editing, light and dark themes, a five-level folder tree, H1-H5 outline, 297 language syntaxes, todo lists, KaTeX formulas, full-text search and Markdown/HTML/image export.",
+      "safetyNotes": "All data is stored in the plugin data directory as settings.json. Images are embedded in note content as data URLs. No network requests or workspace file access; the editor, syntax highlighting and formula libraries are bundled for offline use."
+    },
+    "zh-CN": {
+      "name": "Pi Markdown 笔记",
+      "description": "本地 Markdown 笔记：真·所见即所得编辑、米白/黑夜主题、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Todo、KaTeX 公式、全文搜索，以及 Markdown/HTML/图片导出。",
+      "safetyNotes": "所有数据仅保存于插件数据目录 settings.json，图片以 data URL 嵌入笔记正文；不访问网络或工作区文件，编辑器、代码高亮和公式库均随插件打包，可离线使用。"
+    }
+  },
   "author": "Tioit-Wang",
   "categories": [
     "productivity",

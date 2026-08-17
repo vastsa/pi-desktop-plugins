@@ -21,6 +21,11 @@ https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json
 Catalog responses are revalidated every five minutes. Set `CATALOG_URL` to
 use a different catalog provider during preview or development.
 
+The site defaults to English and switches to Simplified Chinese with
+`?lang=zh-CN`. Internal links preserve the selected language. Plugin names,
+descriptions and safety notes are read from the manifest `i18n` object and fall
+back to the default manifest fields when a translation is not available.
+
 ## Vercel deployment
 
 Create a Vercel project from this repository and set the project root to:

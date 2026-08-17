@@ -4,6 +4,18 @@
   "name": "小清新待办",
   "version": "0.6.0",
   "description": "PI-Desktop 官方待办：四象限与简单列表双布局，可设到期时间与原生系统提醒；注册 todo_manage agent 工具，AI 可直接查询/添加/拆分/完成/延期/清空。",
+  "i18n": {
+    "en": {
+      "name": "Todo List",
+      "description": "The official PI-Desktop todo list with list and four-quadrant layouts, due dates, native reminders and a todo_manage agent tool for querying, adding, splitting, completing and rescheduling tasks.",
+      "safetyNotes": "Todo data stays in the plugin data directory, with localStorage used as a synchronized cache. Due reminders use native host notifications. The agent tool only reads and writes this plugin's own data; there are no network requests, other file access or automatic code execution."
+    },
+    "zh-CN": {
+      "name": "小清新待办",
+      "description": "PI-Desktop 官方待办：支持四象限与简单列表双布局、到期时间和原生系统提醒，并提供 todo_manage 工具让 AI 查询、添加、拆分、完成和延期任务。",
+      "safetyNotes": "待办数据仅保存在插件数据目录，localStorage 只作为同步缓存；到期提醒通过宿主原生通知发送；Agent 工具只读写本插件数据，不访问网络、其他文件或自动执行代码。"
+    }
+  },
   "author": "PI-Desktop",
   "categories": [
     "productivity",

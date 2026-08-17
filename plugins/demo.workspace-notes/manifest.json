@@ -4,6 +4,10 @@
   "name": "Workspace Notes",
   "version": "0.2.0",
   "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
+  "i18n": {
+    "en": { "name": "Workspace Notes", "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants." },
+    "zh-CN": { "name": "工作区笔记", "description": "读写工作区笔记，并在明确授权后获取远程片段。" }
+  },
   "author": "PI-Desktop",
   "main": "main.js",
   "ui": {"panel": "renderer/index.html", "width": 480, "height": 420, "title": {"en": "Workspace Notes", "zh-CN": "工作区笔记"}},

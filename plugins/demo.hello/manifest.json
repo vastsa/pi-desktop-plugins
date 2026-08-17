@@ -4,6 +4,10 @@
   "name": "Hello",
   "version": "0.3.0",
   "description": "Official sample plugin with panel, command, and echo tool.",
+  "i18n": {
+    "en": { "name": "Hello", "description": "Official sample plugin with panel, command, and echo tool." },
+    "zh-CN": { "name": "Hello", "description": "官方示例插件，包含面板、命令和回声工具。" }
+  },
   "author": "PI-Desktop",
   "main": "main.js",
   "ui": {"panel": "renderer/index.html", "width": 420, "height": 320, "title": {"en": "Hello Plugin", "zh-CN": "你好插件"}},

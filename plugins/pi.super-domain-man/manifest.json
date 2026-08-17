@@ -4,6 +4,18 @@
   "name": "超级域名侠",
   "version": "0.4.0",
   "description": "本地优先的多平台域名解析记录管理与 SSL 证书监控/申请工具：支持阿里云 / 腾讯云 / Cloudflare / AWS Route53 / 火山引擎 / 华为云，凭据仅本地存储（无密码保护）",
+  "i18n": {
+    "en": {
+      "name": "Super Domain Man",
+      "description": "A local-first DNS and SSL workspace for Alibaba Cloud, Tencent Cloud, Cloudflare, AWS Route53, Volcano Engine and Huawei Cloud. Credentials stay on this device.",
+      "safetyNotes": "Credentials are stored in panel localStorage without a master password. Network requests go only to the selected cloud provider APIs, crt.sh, configured notification webhooks and ACME certificate authorities."
+    },
+    "zh-CN": {
+      "name": "超级域名侠",
+      "description": "本地优先的多平台 DNS 解析记录与 SSL 证书管理工具，支持阿里云、腾讯云、Cloudflare、AWS Route53、火山引擎和华为云；凭据仅保存在本机。",
+      "safetyNotes": "凭据保存在面板 localStorage 中且没有主密码保护；网络请求仅发送到所选云厂商 API、crt.sh、用户配置的通知 Webhook 和 ACME 证书机构。"
+    }
+  },
   "author": "Tioit-Wang",
   "categories": [
     "productivity",

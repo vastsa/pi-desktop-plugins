@@ -4,6 +4,18 @@
   "name": "Token Insights",
   "version": "0.4.2",
   "description": "A private local dashboard for the tokens you spend across PI-Desktop, Claude Code, Codex and OpenCode: follows the app's theme and language, filters by tool, model, provider, date range or keyword, and keeps a streak and milestone worth looking at.",
+  "i18n": {
+    "en": {
+      "name": "Token Insights",
+      "description": "A private local dashboard for token usage across PI-Desktop, Claude Code, Codex and OpenCode, with filters for tool, model, provider, date range and keyword plus streaks and milestones.",
+      "safetyNotes": "Reads local metadata only and is always read-only. It never reads message text, tool arguments, project paths or credentials, never stores a full session ID and makes no network requests."
+    },
+    "zh-CN": {
+      "name": "Token 用量分析",
+      "description": "本地隐私优先的 Token 用量仪表盘，汇总 PI-Desktop、Claude Code、Codex 和 OpenCode，支持按工具、模型、提供商、日期或关键词筛选，并展示连续使用天数和里程碑。",
+      "safetyNotes": "只读取本地元数据且始终为只读，不读取消息正文、工具参数、项目路径或凭据，不保存完整 session ID，也不会发起网络请求。"
+    }
+  },
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": [

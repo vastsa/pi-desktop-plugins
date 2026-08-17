@@ -33,6 +33,7 @@ def main() -> int:
                 "id": plugin_id,
                 "name": manifest.get("name", plugin_id),
                 "description": manifest.get("description", ""),
+                "i18n": manifest.get("i18n") or {},
                 "author": manifest.get("author", "PI-Desktop"),
                 "categories": manifest.get("categories")
                 or (["official"] if plugin_id.startswith("demo.") else ["community"]),

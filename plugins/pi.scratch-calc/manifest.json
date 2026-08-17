@@ -4,6 +4,18 @@
   "name": "草稿计算器",
   "version": "0.3.0",
   "description": "草稿计算器：草稿纸式多行演算。左侧为当前草稿——输入行实时计算、回车确认入本稿历史，每行可加备注、结果一键复制；底部清空、复制为图片。右侧为草稿列表——时间命名新建、点击切换、管理模式下可删除。支持百分比 %、乘方 ^、π/e、隐式乘法，深色模式，全部数据本地保存。",
+  "i18n": {
+    "en": {
+      "name": "Scratch Calculator",
+      "description": "A paper-like multi-line calculator: evaluate as you type, keep a draft history, add notes to each line, copy results or export the sheet as an image, with local draft management and dark mode.",
+      "safetyNotes": "A pure frontend calculator. History stays in localStorage with a limit of 200 entries; there are no network requests, file access or automatic code execution."
+    },
+    "zh-CN": {
+      "name": "草稿计算器",
+      "description": "草稿纸式多行演算：输入行实时计算、回车确认入历史、每行可加备注、结果一键复制，也支持草稿管理、图片复制和深色模式。",
+      "safetyNotes": "纯前端计算器，历史仅保存在 localStorage（上限 200 条）；无网络请求、文件访问或自动执行代码。"
+    }
+  },
   "author": "Tioit-Wang",
   "categories": [
     "productivity",
