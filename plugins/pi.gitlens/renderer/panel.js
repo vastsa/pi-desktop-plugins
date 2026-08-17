@@ -312,7 +312,7 @@ async function renderOverview() {
   const status = await bridge("git.status");
   const log = await bridge("git.log", { count: 10 });
 
-  const grid = el("div", "stat-grid");
+  const grid = el("div", "tile-grid");
   const stats = [
     { label: t.staged, value: status.staged.length, cls: "staged" },
     { label: t.unstaged, value: status.unstaged.length, cls: "unstaged" },
@@ -320,9 +320,9 @@ async function renderOverview() {
     { label: t.conflicts, value: status.conflicts.length, cls: "conflicts" },
   ];
   for (const item of stats) {
-    const stat = el("div", "stat");
-    stat.append(el("div", `value ${item.cls}`, String(item.value)), el("div", "label", item.label));
-    grid.appendChild(stat);
+    const tile = el("div", "tile");
+    tile.append(el("div", `value ${item.cls}`, String(item.value)), el("div", "label", item.label));
+    grid.appendChild(tile);
   }
   view.appendChild(grid);
 
@@ -861,6 +861,8 @@ async function init() {
   } catch (error) {
     showBanner(error.message || String(error));
     activateView("overview");
+  } finally {
+    document.documentElement.dataset.booting = "false";
   }
 }
 
