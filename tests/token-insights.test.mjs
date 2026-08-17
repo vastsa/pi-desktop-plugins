@@ -46,7 +46,7 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.3.1");
+  assert.equal(manifest.version, "0.4.3");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.0");
   assert.deepEqual(

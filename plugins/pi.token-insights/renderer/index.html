@@ -7,6 +7,12 @@
     content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'none'; form-action 'none'; base-uri 'none'"
   />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    PI-Desktop owns exactly a transparent 46px drag band and a minimal
+    three-button window-control capsule. Normal-flow content is offset
+    automatically; window-level fixed or sticky UI must start at
+    top: var(--pi-plugin-titlebar-height, 46px).
+  -->
   <title>Token Insights</title>
   <link rel="stylesheet" href="panel.css" />
   <!--

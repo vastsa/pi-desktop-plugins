@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      PI-Desktop owns exactly a transparent 46px drag band and a minimal
+      three-button window-control capsule. Normal-flow content is offset
+      automatically; window-level fixed or sticky UI must start at
+      top: var(--pi-plugin-titlebar-height, 46px).
+    -->
     <title>小清新待办</title>
     <!-- 外观预绘：在任何 CSS 生效前从缓存回放 data-theme/data-lang，避免闪屏 -->
     <script>window.__APPEARANCE_CACHE_KEY = "pdtodo.appearance.v1";</script>

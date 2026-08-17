@@ -123,7 +123,10 @@ onUnmounted(() => {
  */
 .confirm-root {
   position: fixed;
-  inset: 0;
+  top: var(--pi-plugin-titlebar-height, 46px);
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 9999;
   display: flex;
   align-items: center;

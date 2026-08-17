@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "demo.workspace-summary",
   "name": "Workspace Summary",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
   "i18n": {
     "en": {
@@ -19,7 +19,7 @@
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": ["productivity", "template", "official"],
-  "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
+  "changelog": "Release 0.2.1: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule. Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
   "safetyNotes": "Reads the current project only. No network or write access.",
   "ui": {
     "panel": "renderer/index.html",

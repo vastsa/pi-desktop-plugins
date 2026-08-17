@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    PI-Desktop owns exactly a transparent 46px drag band and a minimal
+    three-button window-control capsule. Normal-flow content is offset
+    automatically; window-level fixed or sticky UI must start at
+    top: var(--pi-plugin-titlebar-height, 46px).
+  -->
   <title>Workspace Notes</title>
   <script>window.__APPEARANCE_CACHE_KEY = "demo.workspace-notes.appearance.v1";</script>
   <script src="./appearance-boot.js"></script>

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-08-17T11:36:56Z",
+  "updatedAt": "2026-08-17T13:56:54Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -31,13 +31,13 @@
       "safetyNotes": null,
       "versions": [
         {
-          "version": "0.3.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Release 0.3.0",
+          "version": "0.3.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.3.1: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule.",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "abf5bbd4a9fe9951b681f36c20ab3799da2ea0b78edb8e3a3ff242f298e19dcc",
-          "url": "packages/demo.hello-0.3.0.piplug",
-          "sizeBytes": 14419,
+          "shasum": "ed0d7140903ad47b65b164f36b66f124c741489bfef269505e4cf8602205f5d9",
+          "url": "packages/demo.hello-0.3.1.piplug",
+          "sizeBytes": 15088,
           "permissions": [
             "ui.panel",
             "agent.tool.register",
@@ -72,13 +72,13 @@
       "safetyNotes": null,
       "versions": [
         {
-          "version": "0.2.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Release 0.2.0",
+          "version": "0.2.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.2.1: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule.",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "79b7c0966bc5cdbacf0dc81fcfe86831c602f75cf6b87209b79f8bb18a75abce",
-          "url": "packages/demo.workspace-notes-0.2.0.piplug",
-          "sizeBytes": 17275,
+          "shasum": "22ea208bb2d04e0d0e469caa15f18828d9c9fb8c16edd8b3a185fab00945eab9",
+          "url": "packages/demo.workspace-notes-0.2.1.piplug",
+          "sizeBytes": 17984,
           "permissions": [
             "ui.panel",
             "fs.read.workspace",
@@ -123,13 +123,13 @@
       "safetyNotes": "Reads the current project only. No network or write access.",
       "versions": [
         {
-          "version": "0.2.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
+          "version": "0.2.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.2.1: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule. Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "3966d25d34d59fabd5c9ca3809a571c0ad217539a8181374d0573bca4339b25b",
-          "url": "packages/demo.workspace-summary-0.2.0.piplug",
-          "sizeBytes": 25091,
+          "shasum": "4fe31db5501d07730ba9cf265e63b52db6230e37b547a9c1c362a168d5e4dd26",
+          "url": "packages/demo.workspace-summary-0.2.1.piplug",
+          "sizeBytes": 26071,
           "permissions": [
             "ui.panel",
             "fs.read.workspace",
@@ -168,13 +168,13 @@
       "safetyNotes": "\u4fbf\u7b7e\u6570\u636e\u4ec5\u5b58\u4e8e\u63d2\u4ef6\u81ea\u5df1\u7684 settings \u4e2d\uff0c\u4e0d\u8bbf\u95ee\u5de5\u4f5c\u533a\u6216\u7f51\u7edc\uff1b\u70b9\u51fb\u4fbf\u7b7e\u5185\u7684\u5916\u90e8\u94fe\u63a5\u4f1a\u6253\u5f00\u7cfb\u7edf\u6d4f\u89c8\u5668\u3002",
       "versions": [
         {
-          "version": "0.1.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "\u9996\u4e2a\u7248\u672c\uff1a\u591a\u4fbf\u7b7e\u7ba1\u7406\u3001Markdown \u9884\u89c8/\u7f16\u8f91\u3001\u4efb\u52a1\u5217\u8868\u3001\u8367\u5149\u7b14\u9ad8\u4eae\u3001\u56fe\u7247\u7c98\u8d34\u3001\u56de\u6536\u7ad9\u3002",
+          "version": "0.1.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.1.1\uff1a\u9002\u914d PI-Desktop \u8de8\u5e73\u53f0 46px \u4e3b\u673a\u62d6\u62fd\u5e26\u548c\u7b80\u7ea6\u4e09\u6309\u94ae\u7a97\u53e3\u63a7\u5236\u80f6\u56ca\u3002\u9996\u4e2a\u7248\u672c\uff1a\u591a\u4fbf\u7b7e\u7ba1\u7406\u3001Markdown \u9884\u89c8/\u7f16\u8f91\u3001\u4efb\u52a1\u5217\u8868\u3001\u8367\u5149\u7b14\u9ad8\u4eae\u3001\u56fe\u7247\u7c98\u8d34\u3001\u56de\u6536\u7ad9\u3002",
           "minPiDesktop": ">=0.7.1",
-          "shasum": "c77c62ee11347c01a13d774509b9259d95d2645e34da00e15f926cd1efaebb7d",
-          "url": "packages/pi.bianqian-0.1.0.piplug",
-          "sizeBytes": 1057007,
+          "shasum": "05214eac71e366a15a5cabde37a4f690dd64ab1fba72904ddabe602de26d1986",
+          "url": "packages/pi.bianqian-0.1.1.piplug",
+          "sizeBytes": 1057963,
           "permissions": [
             "ui.panel",
             "agent.tool.register",
@@ -214,13 +214,13 @@
       "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials. Commits, branch switches/deletes and stash operations are local git operations that respect repository hooks; the tools cannot push, pull, fetch or force anything beyond explicit branch deletion (git branch -D only when the caller asks for force). The panel is an isolated, context-isolated window that talks to the plugin process through the host bridge only.",
       "versions": [
         {
-          "version": "0.1.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Release 0.1.0: first release. Adds a multi-view Git panel (Overview / History / Changes / Branches / Blame) that follows the app language and color mode, five palette commands, nine agent tools (git_status, git_log, git_show, git_diff, git_blame, git_branch, git_commit, git_stash, git_open_panel) so the AI can inspect and manage the current project's git repository, and a Git workflow skill that teaches when to use each tool. All git operations run through the system git binary against the resolved repository root of the current workspace; read-only tools are low risk, mutating tools (branch/commit/stash) are medium risk and go through the normal Agent permission policy.",
+          "version": "0.1.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.1.1: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule. Release 0.1.0: first release. Adds a multi-view Git panel (Overview / History / Changes / Branches / Blame) that follows the app language and color mode, five palette commands, nine agent tools (git_status, git_log, git_show, git_diff, git_blame, git_branch, git_commit, git_stash, git_open_panel) so the AI can inspect and manage the current project's git repository, and a Git workflow skill that teaches when to use each tool. All git operations run through the system git binary against the resolved repository root of the current workspace; read-only tools are low risk, mutating tools (branch/commit/stash) are medium risk and go through the normal Agent permission policy.",
           "minPiDesktop": ">=0.2.9",
-          "shasum": "7eadc0331f626159a23e6a57edc2d9b26778a7ca3d7721894525ce9265f07eaf",
-          "url": "packages/pi.gitlens-0.1.0.piplug",
-          "sizeBytes": 119404,
+          "shasum": "ab53338140084c8f281f013b03bd14a2e1e4de19bce23bc15e3fbaacb2581698",
+          "url": "packages/pi.gitlens-0.1.1.piplug",
+          "sizeBytes": 119818,
           "permissions": [
             "ui.panel",
             "agent.tool.register",
@@ -258,13 +258,13 @@
       "safetyNotes": "\u5168\u90e8\u6570\u636e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff08\u56fe\u7247\u4ee5 data URL \u5185\u5d4c\u4e8e\u7b14\u8bb0\u6b63\u6587\uff09\uff1b\u65e0\u7f51\u7edc\u8bf7\u6c42\u3001\u65e0\u5de5\u4f5c\u533a\u6587\u4ef6\u8bfb\u5199\uff1b\u6e32\u67d3\u7aef\u4ee3\u7801\u9ad8\u4eae/\u516c\u5f0f/\u7f16\u8f91\u5668\u5e93\uff08Milkdown/Prism/KaTeX\uff09\u5168\u90e8\u968f\u63d2\u4ef6\u6253\u5305\uff0c\u79bb\u7ebf\u53ef\u7528\u3002",
       "versions": [
         {
-          "version": "0.4.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Release 0.4.0\uff1a\u9762\u677f\u8ddf\u968f app \u4e3b\u4f53\u7684\u8bed\u8a00\u4e0e\u989c\u8272\u6a21\u5f0f\u2014\u2014\u5bbf\u4e3b\u5207\u6362\u4eae/\u6697\u6216\u8bed\u8a00\u65f6\uff0c\u7f16\u8f91\u5668\u4e0e\u754c\u9762\u914d\u8272\u5b9e\u65f6\u66f4\u65b0\uff08CSS \u7531 :root[data-theme=...] \u9a71\u52a8\uff0c\u914d\u5408\u5bbf\u4e3b app.getAppearance \u901a\u9053\u4e0e appearance:changed \u4e8b\u4ef6\uff09\uff1b\u672a\u624b\u52a8\u8986\u76d6\u4e3b\u9898\u65f6 settings.theme \u81ea\u52a8\u540c\u6b65\u4e3a\u5bbf\u4e3b base\uff0c\u9762\u677f\u5185\u7684\u7c73\u767d/\u9ed1\u591c\u5207\u6362\u4ecd\u53ef\u624b\u52a8\u8986\u76d6\uff08\u6b64\u540e\u4e0d\u518d\u88ab\u5bbf\u4e3b\u8986\u76d6\uff09\uff1b\u65e7\u7248\u5bbf\u4e3b\u81ea\u52a8\u964d\u7ea7\u4e3a\u9762\u677f\u81ea\u5e26\u7684\u4e3b\u9898\u8ddf\u968f\u3002Release 0.3.1\uff1a\u4fee\u590d LaTeX \u516c\u5f0f\u4f9d\u8d56 CodeMirror \u5bfc\u81f4\u7f16\u8f91\u5668\u65e0\u6cd5\u521d\u59cb\u5316\u7684\u95ee\u9898\uff1b\u4fee\u590d HTML/PNG \u5bfc\u51fa\u4e2d\u5757\u7ea7\u516c\u5f0f\u4e0e\u4ee3\u7801\u9ad8\u4eae\u7f3a\u5931\u7684\u95ee\u9898\uff08\u6539\u4e3a Markdown \u6e90\u7801\u7ecf\u7f16\u8f91\u5668 parser/serializer \u6e32\u67d3\uff09\uff1b\u65b0\u589e\u7c73\u767d\uff08\u9ed8\u8ba4\uff09/\u9ed1\u591c\u53cc\u4e3b\u9898\u4e0e\u72b6\u6001\u680f\u5207\u6362\u5f00\u5173\uff0c\u4e3b\u9898\u504f\u597d\u968f settings.json \u6301\u4e45\u5316\uff1b\u4ee3\u7801\u5757\u9884\u89c8\u5373\u6240\u5f97\uff08LaTeX \u76f4\u63a5\u663e\u793a KaTeX \u516c\u5f0f\u3001\u666e\u901a\u4ee3\u7801\u5757\u663e\u793a\u9ad8\u4eae\uff09\u3002Release 0.3.0\uff1a\u7f16\u8f91\u5668\u7531 Toast UI WYSIWYG\uff08\u5bcc\u6587\u672c+\u8865\u4e01\uff09\u66f4\u6362\u4e3a Milkdown Crepe\u2014\u2014\u771f\u6b63\u7684\u6240\u89c1\u5373\u6240\u5f97 Markdown \u7f16\u8f91\uff0c\u8f93\u5165\u8bed\u6cd5\u5373\u51fa\u6837\u5f0f\uff08\u542b\u4e2d\u6587\u8f93\u5165\u6cd5\uff09\u3001\u659c\u6760\u83dc\u5355/\u5757\u62d6\u62fd\u624b\u67c4\u3001\u56fe\u7247 data URL \u5185\u5d4c\u3001297 \u79cd\u8bed\u8a00 Prism \u9ad8\u4eae\u3002Release 0.2.0\uff1a\u5b8c\u6574 Markdown \u7b14\u8bb0\u5e94\u7528\uff08React + TypeScript + Tailwind \u91cd\u5199\u9762\u677f\uff09\u3002Release 0.1.0\uff1a\u6a21\u677f\u521d\u59cb\u7248\u672c\u3002",
+          "version": "0.4.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.4.1\uff1a\u9002\u914d PI-Desktop \u8de8\u5e73\u53f0 46px \u4e3b\u673a\u62d6\u62fd\u5e26\u548c\u7b80\u7ea6\u4e09\u6309\u94ae\u7a97\u53e3\u63a7\u5236\u80f6\u56ca\u3002Release 0.4.0\uff1a\u9762\u677f\u8ddf\u968f app \u4e3b\u4f53\u7684\u8bed\u8a00\u4e0e\u989c\u8272\u6a21\u5f0f\u2014\u2014\u5bbf\u4e3b\u5207\u6362\u4eae/\u6697\u6216\u8bed\u8a00\u65f6\uff0c\u7f16\u8f91\u5668\u4e0e\u754c\u9762\u914d\u8272\u5b9e\u65f6\u66f4\u65b0\uff08CSS \u7531 :root[data-theme=...] \u9a71\u52a8\uff0c\u914d\u5408\u5bbf\u4e3b app.getAppearance \u901a\u9053\u4e0e appearance:changed \u4e8b\u4ef6\uff09\uff1b\u672a\u624b\u52a8\u8986\u76d6\u4e3b\u9898\u65f6 settings.theme \u81ea\u52a8\u540c\u6b65\u4e3a\u5bbf\u4e3b base\uff0c\u9762\u677f\u5185\u7684\u7c73\u767d/\u9ed1\u591c\u5207\u6362\u4ecd\u53ef\u624b\u52a8\u8986\u76d6\uff08\u6b64\u540e\u4e0d\u518d\u88ab\u5bbf\u4e3b\u8986\u76d6\uff09\uff1b\u65e7\u7248\u5bbf\u4e3b\u81ea\u52a8\u964d\u7ea7\u4e3a\u9762\u677f\u81ea\u5e26\u7684\u4e3b\u9898\u8ddf\u968f\u3002Release 0.3.1\uff1a\u4fee\u590d LaTeX \u516c\u5f0f\u4f9d\u8d56 CodeMirror \u5bfc\u81f4\u7f16\u8f91\u5668\u65e0\u6cd5\u521d\u59cb\u5316\u7684\u95ee\u9898\uff1b\u4fee\u590d HTML/PNG \u5bfc\u51fa\u4e2d\u5757\u7ea7\u516c\u5f0f\u4e0e\u4ee3\u7801\u9ad8\u4eae\u7f3a\u5931\u7684\u95ee\u9898\uff08\u6539\u4e3a Markdown \u6e90\u7801\u7ecf\u7f16\u8f91\u5668 parser/serializer \u6e32\u67d3\uff09\uff1b\u65b0\u589e\u7c73\u767d\uff08\u9ed8\u8ba4\uff09/\u9ed1\u591c\u53cc\u4e3b\u9898\u4e0e\u72b6\u6001\u680f\u5207\u6362\u5f00\u5173\uff0c\u4e3b\u9898\u504f\u597d\u968f settings.json \u6301\u4e45\u5316\uff1b\u4ee3\u7801\u5757\u9884\u89c8\u5373\u6240\u5f97\uff08LaTeX \u76f4\u63a5\u663e\u793a KaTeX \u516c\u5f0f\u3001\u666e\u901a\u4ee3\u7801\u5757\u663e\u793a\u9ad8\u4eae\uff09\u3002Release 0.3.0\uff1a\u7f16\u8f91\u5668\u7531 Toast UI WYSIWYG\uff08\u5bcc\u6587\u672c+\u8865\u4e01\uff09\u66f4\u6362\u4e3a Milkdown Crepe\u2014\u2014\u771f\u6b63\u7684\u6240\u89c1\u5373\u6240\u5f97 Markdown \u7f16\u8f91\uff0c\u8f93\u5165\u8bed\u6cd5\u5373\u51fa\u6837\u5f0f\uff08\u542b\u4e2d\u6587\u8f93\u5165\u6cd5\uff09\u3001\u659c\u6760\u83dc\u5355/\u5757\u62d6\u62fd\u624b\u67c4\u3001\u56fe\u7247 data URL \u5185\u5d4c\u3001297 \u79cd\u8bed\u8a00 Prism \u9ad8\u4eae\u3002Release 0.2.0\uff1a\u5b8c\u6574 Markdown \u7b14\u8bb0\u5e94\u7528\uff08React + TypeScript + Tailwind \u91cd\u5199\u9762\u677f\uff09\u3002Release 0.1.0\uff1a\u6a21\u677f\u521d\u59cb\u7248\u672c\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "56ef43f00cf1d6e6c6c1c7874e61c0a5dd7dcc783ad1caf1969f881e7b7a90ae",
-          "url": "packages/pi.markdown-0.4.0.piplug",
-          "sizeBytes": 10806914,
+          "shasum": "be2937d580b06add596b6032621a70fb9c37aed7f1c5cc49e10f5a789aa34bac",
+          "url": "packages/pi.markdown-0.4.1.piplug",
+          "sizeBytes": 10807408,
           "permissions": [
             "ui.panel",
             "agent.prompt.inject"
@@ -301,13 +301,13 @@
       "safetyNotes": "\u7eaf\u524d\u7aef\u8ba1\u7b97\u5668\uff1a\u5386\u53f2\u4ec5\u4fdd\u5b58\u5728\u672c\u673a localStorage\uff08\u4e0a\u9650 200 \u6761\uff09\uff1b\u65e0\u7f51\u7edc\u8bf7\u6c42\u3001\u65e0\u6587\u4ef6\u8bbf\u95ee\u3001\u65e0\u81ea\u52a8\u6267\u884c\u4ee3\u7801\u3002",
       "versions": [
         {
-          "version": "0.3.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Release 0.3.0\uff1a\u5916\u89c2\u8ddf\u968f app \u4e3b\u4f53\u2014\u2014\u9ed8\u8ba4\u8ddf\u968f\u5bbf\u4e3b\u4e3b\u9898\uff08app \u5207\u6362 light/dark \u5b9e\u65f6\u66f4\u65b0\uff0c\u65e0\u95ea\u5c4f\uff09\uff0c\u9762\u677f\u5185\u4fdd\u7559\u624b\u52a8\u4eae/\u6697\u5207\u6362\uff08\u8986\u76d6\u540e\u4e0d\u518d\u8ddf\u968f\uff0c\u53ef\u624b\u52a8\u6062\u590d\uff09\uff1b\u53ef\u89c1 chrome \u6587\u6848\uff08\u6807\u9898\u3001\u6309\u94ae\u3001toast\u3001\u5360\u4f4d\u63d0\u793a\u7b49\uff09\u652f\u6301 en/zh \u8ddf\u968f\u5bbf\u4e3b\u8bed\u8a00\u3002Release 0.2.0\uff1a\u91cd\u6784\u4e3a\u591a\u8349\u7a3f\u7a3f\u7eb8\uff08\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff09\u2014\u2014\u5de6\u4fa7\u5f53\u524d\u8349\u7a3f\uff1a\u8f93\u5165\u884c\u5b9e\u65f6\u8ba1\u7b97 + \u672c\u7a3f\u5386\u53f2 + \u6bcf\u884c\u53ef\u7f16\u8f91\u5907\u6ce8 + \u6e05\u7a7a/\u590d\u5236\u4e3a\u56fe\u7247\uff1b\u53f3\u4fa7\u8349\u7a3f\u5217\u8868\uff1a\u65f6\u95f4\u547d\u540d\u65b0\u5efa\u3001\u70b9\u51fb\u5207\u6362\u3001\u7ba1\u7406\u6a21\u5f0f\u9010\u6761\u5220\u9664\u3002\u65e7\u7248\u5386\u53f2\u81ea\u52a8\u8fc1\u79fb\u3002",
+          "version": "0.3.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.3.1\uff1a\u9002\u914d PI-Desktop \u8de8\u5e73\u53f0 46px \u4e3b\u673a\u62d6\u62fd\u5e26\u548c\u7b80\u7ea6\u4e09\u6309\u94ae\u7a97\u53e3\u63a7\u5236\u80f6\u56ca\u3002Release 0.3.0\uff1a\u5916\u89c2\u8ddf\u968f app \u4e3b\u4f53\u2014\u2014\u9ed8\u8ba4\u8ddf\u968f\u5bbf\u4e3b\u4e3b\u9898\uff08app \u5207\u6362 light/dark \u5b9e\u65f6\u66f4\u65b0\uff0c\u65e0\u95ea\u5c4f\uff09\uff0c\u9762\u677f\u5185\u4fdd\u7559\u624b\u52a8\u4eae/\u6697\u5207\u6362\uff08\u8986\u76d6\u540e\u4e0d\u518d\u8ddf\u968f\uff0c\u53ef\u624b\u52a8\u6062\u590d\uff09\uff1b\u53ef\u89c1 chrome \u6587\u6848\uff08\u6807\u9898\u3001\u6309\u94ae\u3001toast\u3001\u5360\u4f4d\u63d0\u793a\u7b49\uff09\u652f\u6301 en/zh \u8ddf\u968f\u5bbf\u4e3b\u8bed\u8a00\u3002Release 0.2.0\uff1a\u91cd\u6784\u4e3a\u591a\u8349\u7a3f\u7a3f\u7eb8\uff08\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff09\u2014\u2014\u5de6\u4fa7\u5f53\u524d\u8349\u7a3f\uff1a\u8f93\u5165\u884c\u5b9e\u65f6\u8ba1\u7b97 + \u672c\u7a3f\u5386\u53f2 + \u6bcf\u884c\u53ef\u7f16\u8f91\u5907\u6ce8 + \u6e05\u7a7a/\u590d\u5236\u4e3a\u56fe\u7247\uff1b\u53f3\u4fa7\u8349\u7a3f\u5217\u8868\uff1a\u65f6\u95f4\u547d\u540d\u65b0\u5efa\u3001\u70b9\u51fb\u5207\u6362\u3001\u7ba1\u7406\u6a21\u5f0f\u9010\u6761\u5220\u9664\u3002\u65e7\u7248\u5386\u53f2\u81ea\u52a8\u8fc1\u79fb\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "eba9cab62339da7f66adaa5bfa240bc8f5bc49d08e2064beed1237ef75d9bc01",
-          "url": "packages/pi.scratch-calc-0.3.0.piplug",
-          "sizeBytes": 435361,
+          "shasum": "2ca6328e8e47fc2ddd27502741e96a4b58e41233e7826c09016e839264ea1986",
+          "url": "packages/pi.scratch-calc-0.3.1.piplug",
+          "sizeBytes": 436708,
           "permissions": [
             "ui.panel"
           ]
@@ -343,13 +343,13 @@
       "safetyNotes": "\u8d26\u53f7\u51ed\u636e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\uff08\u9762\u677f localStorage\uff09\uff0c\u65e0\u4e3b\u5bc6\u7801\u4fdd\u62a4\uff1b\u7f51\u7edc\u8bf7\u6c42\u4ec5\u53d1\u5f80\u6240\u9009\u4e91\u5382\u5546 API\u3001crt.sh \u8bc1\u4e66\u900f\u660e\u65e5\u5fd7\u4e0e\u7528\u6237\u81ea\u884c\u914d\u7f6e\u7684\u901a\u77e5 Webhook\uff1b\u53ef\u8bfb\u5199\u526a\u8d34\u677f\u3001\u6253\u5f00\u5916\u90e8\u94fe\u63a5\u3002",
       "versions": [
         {
-          "version": "0.4.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "v0.4.0\uff1a\u5916\u89c2\u8ddf\u968f app \u4e3b\u4f53\u2014\u2014\u9884\u7ed8\u6309\u300c\u5916\u89c2\u7f13\u5b58 \u2192 \u81ea\u5e26 sdm.settings.theme \u2192 \u7cfb\u7edf\u300d\u6062\u590d\u4e3b\u9898\u5e76\u540c\u6b65 data-lang/lang\uff0c\u8fd0\u884c\u65f6\u8ba2\u9605\u5bbf\u4e3b theme/locale \u5b9e\u65f6\u66f4\u65b0\uff08\u65e0\u95ea\u5c4f\uff09\uff1b\u9762\u677f\u5185\u624b\u52a8\u5207\u6362\u4e3b\u9898\u4ecd\u53ef\u7528\u3002v0.3.1\uff1a\u58f0\u660e manifest.net.domains \u7f51\u7edc\u767d\u540d\u5355\uff08\u4e91\u5382\u5546 API\u3001crt.sh\u3001\u901a\u77e5 Webhook\u3001ACME CA\uff09\uff0c\u4fee\u590d\u65b0\u7248\u5bbf\u4e3b egress \u7b56\u7565\u4e0b\u6240\u6709\u7f51\u7edc\u8bf7\u6c42\u88ab\u62d2\uff08plugin declares no manifest.net.domains; api.cloudflare.com is unreachable\uff09\u7684\u95ee\u9898\u3002v0.2.0\uff1a\u91cd\u6784\u4e3a\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff08\u9ed1\u767d\u7070 + \u6a59\u8272\u5f3a\u8c03\u3001\u65e0\u5706\u89d2\u65e0\u6295\u5f71\u30011px \u7ec6\u7ebf\u5206\u9694\uff09\uff1b\u9ed8\u8ba4\u8ddf\u968f\u7cfb\u7edf\u6df1\u6d45\u6a21\u5f0f\uff0c\u4fa7\u8fb9\u680f\u53ef\u4e00\u952e\u5207\u6362\uff1b\u8fdb\u5165\u89e3\u6790\u8bb0\u5f55\u81ea\u52a8\u62c9\u53d6\u6570\u636e\uff1b\u5b50\u9875\u9762\u5bfc\u822a\u4fdd\u6301\u7236\u83dc\u5355\u9009\u4e2d\u6001\u3002",
+          "version": "0.4.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "v0.4.1\uff1a\u9002\u914d PI-Desktop \u8de8\u5e73\u53f0 46px \u4e3b\u673a\u62d6\u62fd\u5e26\u548c\u7b80\u7ea6\u4e09\u6309\u94ae\u7a97\u53e3\u63a7\u5236\u80f6\u56ca\u3002v0.4.0\uff1a\u5916\u89c2\u8ddf\u968f app \u4e3b\u4f53\u2014\u2014\u9884\u7ed8\u6309\u300c\u5916\u89c2\u7f13\u5b58 \u2192 \u81ea\u5e26 sdm.settings.theme \u2192 \u7cfb\u7edf\u300d\u6062\u590d\u4e3b\u9898\u5e76\u540c\u6b65 data-lang/lang\uff0c\u8fd0\u884c\u65f6\u8ba2\u9605\u5bbf\u4e3b theme/locale \u5b9e\u65f6\u66f4\u65b0\uff08\u65e0\u95ea\u5c4f\uff09\uff1b\u9762\u677f\u5185\u624b\u52a8\u5207\u6362\u4e3b\u9898\u4ecd\u53ef\u7528\u3002v0.3.1\uff1a\u58f0\u660e manifest.net.domains \u7f51\u7edc\u767d\u540d\u5355\uff08\u4e91\u5382\u5546 API\u3001crt.sh\u3001\u901a\u77e5 Webhook\u3001ACME CA\uff09\uff0c\u4fee\u590d\u65b0\u7248\u5bbf\u4e3b egress \u7b56\u7565\u4e0b\u6240\u6709\u7f51\u7edc\u8bf7\u6c42\u88ab\u62d2\uff08plugin declares no manifest.net.domains; api.cloudflare.com is unreachable\uff09\u7684\u95ee\u9898\u3002v0.2.0\uff1a\u91cd\u6784\u4e3a\u5e72\u51c0\u5229\u843d\u7684\u76f4\u89d2\u98ce\u683c\uff08\u9ed1\u767d\u7070 + \u6a59\u8272\u5f3a\u8c03\u3001\u65e0\u5706\u89d2\u65e0\u6295\u5f71\u30011px \u7ec6\u7ebf\u5206\u9694\uff09\uff1b\u9ed8\u8ba4\u8ddf\u968f\u7cfb\u7edf\u6df1\u6d45\u6a21\u5f0f\uff0c\u4fa7\u8fb9\u680f\u53ef\u4e00\u952e\u5207\u6362\uff1b\u8fdb\u5165\u89e3\u6790\u8bb0\u5f55\u81ea\u52a8\u62c9\u53d6\u6570\u636e\uff1b\u5b50\u9875\u9762\u5bfc\u822a\u4fdd\u6301\u7236\u83dc\u5355\u9009\u4e2d\u6001\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "7014892b393f61699c4da5154e74fba39654804027ce6cd1f3d7d4d6edeb4df4",
-          "url": "packages/pi.super-domain-man-0.4.0.piplug",
-          "sizeBytes": 284506,
+          "shasum": "a8b69bad1f67b67b625aebfe9343a18d53c62da094319c2222dd2b270f48ce35",
+          "url": "packages/pi.super-domain-man-0.4.1.piplug",
+          "sizeBytes": 285828,
           "permissions": [
             "ui.panel",
             "net.fetch",
@@ -391,13 +391,13 @@
       "safetyNotes": "\u5f85\u529e\u6570\u636e\u4ec5\u4fdd\u5b58\u5728\u672c\u673a\u63d2\u4ef6\u6570\u636e\u76ee\u5f55\uff08settings.json\uff0clocalStorage \u7f13\u5b58\u540c\u6b65\uff09\uff1b\u5230\u671f\u63d0\u9192\u901a\u8fc7\u5bbf\u4e3b\u539f\u751f\u7cfb\u7edf\u901a\u77e5\uff08notify \u6743\u9650\uff09\u53d1\u51fa\uff1bagent \u5de5\u5177 todo_manage \u53ea\u8bfb\u5199\u672c\u63d2\u4ef6\u81ea\u8eab\u6570\u636e\uff1b\u65e0\u7f51\u7edc\u8bf7\u6c42\u3001\u65e0\u5176\u4ed6\u6587\u4ef6\u8bbf\u95ee\u3001\u65e0\u81ea\u52a8\u6267\u884c\u4ee3\u7801\u3002",
       "versions": [
         {
-          "version": "0.6.0",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Release 0.6.0\uff1a\u9762\u677f\u8ddf\u968f app \u4e3b\u4f53\u7684\u8bed\u8a00\u4e0e\u989c\u8272\u6a21\u5f0f\u2014\u2014\u65b0\u589e\u6df1\u8272\u914d\u8272\uff08\u4fdd\u7559\u539f\u6d45\u8272\u89c2\u611f\uff09\uff0c\u5bbf\u4e3b\u5207\u6362\u4eae/\u6697\u65f6\u5b9e\u65f6\u6362\u80a4\uff1b\u53ef\u89c1\u6587\u6848\uff08\u6807\u9898/\u5360\u4f4d\u7b26/\u7b5b\u9009/\u8c61\u9650/\u6309\u94ae/\u7a7a\u6001/\u5230\u671f\u63d0\u793a/\u63d0\u9192\u7b49\uff09\u62bd\u6210\u4e2d\u82f1\u53cc\u8bed\u8868\uff0c\u6309 app \u8bed\u8a00\u5b9e\u65f6\u5207\u6362\uff1b\u65e7\u7248\u5bbf\u4e3b\u81ea\u52a8\u964d\u7ea7\uff08\u8ddf\u968f\u7cfb\u7edf\u504f\u597d + \u4e2d\u6587\u754c\u9762\uff09\u3002Release 0.1.0\uff1a\u9996\u4e2a\u7248\u672c\uff0c\u7b80\u5355\u5217\u8868\u5f85\u529e\u3002Release 0.2.0\uff1a\u65b0\u589e\u56db\u8c61\u9650\u77e9\u9635\u5e03\u5c40\uff08\u62d6\u62fd\u79fb\u52a8\u8c61\u9650\uff09\u3001\u53cc\u5e03\u5c40\u5207\u6362\u5e76\u8bb0\u4f4f\u3001\u7a97\u53e3 1000\u00d7700\u3002Release 0.3.0\uff1a\u4efb\u52a1\u53ef\u8bbe\u7f6e\u5230\u671f\u65f6\u95f4\u3001\u5230\u671f\u63d0\u9192\uff08\u4f4e\u5360\u7528\u5355\u5b9a\u65f6\u5668\u8c03\u5ea6\uff09\u3002Release 0.3.1\uff1a\u5230\u671f\u63d0\u9192\u5347\u7ea7\u4e3a\u539f\u751f\u7cfb\u7edf\u901a\u77e5\uff08ui.showNativeNotification\uff0c\u5bbf\u4e3b ADR 0074\uff09\u3002Release 0.4.0\uff1a\u63d2\u4ef6 id \u5b9a\u7a3f\u4e3a pi.todo\uff08\u5b98\u65b9 pi. \u524d\u7f00\uff09\u3002Release 0.5.0\uff1a\u6ce8\u518c agent \u5de5\u5177 todo_manage\uff08AI \u53ef\u7ba1\u7406\u5f85\u529e\uff1a\u67e5\u8be2/\u6dfb\u52a0/\u5927\u6bb5\u62c6\u5206/\u6a21\u7cca\u5b8c\u6210/\u5ef6\u671f/\u6e05\u7a7a\u8fc7\u671f/\u5220\u9664\uff09\uff1b\u6570\u636e\u8fc1\u79fb\u81f3\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff0c\u9762\u677f\u4e0e AI \u5171\u4eab\u540c\u4e00\u4efd\u6570\u636e\uff0c\u53cc\u5411\u540c\u6b65\u3002Release 0.5.1\uff1a\u8865\u4e01\u53d1\u5e03\uff0c\u65e0\u529f\u80fd\u53d8\u66f4\uff08\u540c\u6b65\u6e90\u7801\u4ed3\u5e93\u4e0e\u5e02\u573a\u7248\u672c\u53f7\uff09\u3002",
+          "version": "0.6.1",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.6.1\uff1a\u9002\u914d PI-Desktop \u8de8\u5e73\u53f0 46px \u4e3b\u673a\u62d6\u62fd\u5e26\u548c\u7b80\u7ea6\u4e09\u6309\u94ae\u7a97\u53e3\u63a7\u5236\u80f6\u56ca\u3002Release 0.6.0\uff1a\u9762\u677f\u8ddf\u968f app \u4e3b\u4f53\u7684\u8bed\u8a00\u4e0e\u989c\u8272\u6a21\u5f0f\u2014\u2014\u65b0\u589e\u6df1\u8272\u914d\u8272\uff08\u4fdd\u7559\u539f\u6d45\u8272\u89c2\u611f\uff09\uff0c\u5bbf\u4e3b\u5207\u6362\u4eae/\u6697\u65f6\u5b9e\u65f6\u6362\u80a4\uff1b\u53ef\u89c1\u6587\u6848\uff08\u6807\u9898/\u5360\u4f4d\u7b26/\u7b5b\u9009/\u8c61\u9650/\u6309\u94ae/\u7a7a\u6001/\u5230\u671f\u63d0\u793a/\u63d0\u9192\u7b49\uff09\u62bd\u6210\u4e2d\u82f1\u53cc\u8bed\u8868\uff0c\u6309 app \u8bed\u8a00\u5b9e\u65f6\u5207\u6362\uff1b\u65e7\u7248\u5bbf\u4e3b\u81ea\u52a8\u964d\u7ea7\uff08\u8ddf\u968f\u7cfb\u7edf\u504f\u597d + \u4e2d\u6587\u754c\u9762\uff09\u3002Release 0.1.0\uff1a\u9996\u4e2a\u7248\u672c\uff0c\u7b80\u5355\u5217\u8868\u5f85\u529e\u3002Release 0.2.0\uff1a\u65b0\u589e\u56db\u8c61\u9650\u77e9\u9635\u5e03\u5c40\uff08\u62d6\u62fd\u79fb\u52a8\u8c61\u9650\uff09\u3001\u53cc\u5e03\u5c40\u5207\u6362\u5e76\u8bb0\u4f4f\u3001\u7a97\u53e3 1000\u00d7700\u3002Release 0.3.0\uff1a\u4efb\u52a1\u53ef\u8bbe\u7f6e\u5230\u671f\u65f6\u95f4\u3001\u5230\u671f\u63d0\u9192\uff08\u4f4e\u5360\u7528\u5355\u5b9a\u65f6\u5668\u8c03\u5ea6\uff09\u3002Release 0.3.1\uff1a\u5230\u671f\u63d0\u9192\u5347\u7ea7\u4e3a\u539f\u751f\u7cfb\u7edf\u901a\u77e5\uff08ui.showNativeNotification\uff0c\u5bbf\u4e3b ADR 0074\uff09\u3002Release 0.4.0\uff1a\u63d2\u4ef6 id \u5b9a\u7a3f\u4e3a pi.todo\uff08\u5b98\u65b9 pi. \u524d\u7f00\uff09\u3002Release 0.5.0\uff1a\u6ce8\u518c agent \u5de5\u5177 todo_manage\uff08AI \u53ef\u7ba1\u7406\u5f85\u529e\uff1a\u67e5\u8be2/\u6dfb\u52a0/\u5927\u6bb5\u62c6\u5206/\u6a21\u7cca\u5b8c\u6210/\u5ef6\u671f/\u6e05\u7a7a\u8fc7\u671f/\u5220\u9664\uff09\uff1b\u6570\u636e\u8fc1\u79fb\u81f3\u63d2\u4ef6\u6570\u636e\u76ee\u5f55 settings.json\uff0c\u9762\u677f\u4e0e AI \u5171\u4eab\u540c\u4e00\u4efd\u6570\u636e\uff0c\u53cc\u5411\u540c\u6b65\u3002Release 0.5.1\uff1a\u8865\u4e01\u53d1\u5e03\uff0c\u65e0\u529f\u80fd\u53d8\u66f4\uff08\u540c\u6b65\u6e90\u7801\u4ed3\u5e93\u4e0e\u5e02\u573a\u7248\u672c\u53f7\uff09\u3002",
           "minPiDesktop": ">=0.1.0",
-          "shasum": "d8c0877ac0681c425f13969c0d6de900e914f0249e65d07c2f9e00ba9069108c",
-          "url": "packages/pi.todo-0.6.0.piplug",
-          "sizeBytes": 78881,
+          "shasum": "f5beab07a96ec819bbe8044b510858e78eb43f4060f3de0294168f1e05b13a41",
+          "url": "packages/pi.todo-0.6.1.piplug",
+          "sizeBytes": 80362,
           "permissions": [
             "ui.panel",
             "notify",
@@ -435,13 +435,13 @@
       "safetyNotes": "Reads only local metadata, always read-only, always on this device. Usage comes from the tool metadata files PI-Desktop, Claude Code, Codex and OpenCode already write; appearance (theme, language, active plugin theme CSS) and provider display names come from PI-Desktop's own local records. It never reads message text, tool arguments, project paths or credentials, never keeps a full session id (only an 8-character prefix), never writes anywhere except its own plugin settings, and makes no network request.",
       "versions": [
         {
-          "version": "0.4.2",
-          "publishedAt": "2026-08-17T11:36:56Z",
-          "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
+          "version": "0.4.3",
+          "publishedAt": "2026-08-17T13:56:54Z",
+          "changelog": "Release 0.4.3: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule. Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
           "minPiDesktop": ">=0.2.9",
-          "shasum": "6065471b48b8ab2e28c990f6bb832ec09e2f5a25d0c6d5fb51750114b3a3f2f8",
-          "url": "packages/pi.token-insights-0.4.2.piplug",
-          "sizeBytes": 155530,
+          "shasum": "9af6fa08dcb5569ae5c01ddf6ea68e22a6454036f4b270f9d480ff88d84fd0b0",
+          "url": "packages/pi.token-insights-0.4.3.piplug",
+          "sizeBytes": 156903,
           "permissions": [
             "ui.panel",
             "agent.tool.register"

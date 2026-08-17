@@ -105,10 +105,15 @@ follow the active application language:
 
 Do not hard-code a replacement title when opening the panel from a command. Use
 `pi.ui.openPanel()` without a `title` option so the host can resolve the
-localized manifest title. PI-Desktop owns the panel titlebar and adapts its
-background and foreground to the page appearance; plugin content should start
-below that host-owned chrome and should not implement a second draggable window
-titlebar.
+localized manifest title. PI-Desktop reserves exactly a 46px transparent drag
+band at the top of every panel and renders a minimal three-button window-control
+capsule in the top-right corner. The band is intentionally not clickable; the
+host may show a development hint for it. Normal-flow plugin content is offset
+below the band automatically. Plugins own every other visible part of the
+panel, and must not implement a second draggable window titlebar. A plugin
+element that is fixed or sticky to the window edge must begin at
+`top: var(--pi-plugin-titlebar-height, 46px)`; sticky elements inside their own
+scrollable views can keep their local `top: 0` behavior.
 
 ## Local verification in PI-Desktop
 

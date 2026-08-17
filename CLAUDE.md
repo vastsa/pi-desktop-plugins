@@ -49,7 +49,13 @@ Canonical source for following the host's color mode (light/dark) and locale (zh
 - `appearance.js` — loaded at the end of `<body>`; `window.__appearance.init(window.pluginBridge)` pulls `bridge.invoke("app.getAppearance")` and subscribes to `bridge.on("appearance:changed")`, re-applying live and writing the cache. Degrades silently on hosts without the channel.
 - Panel CSS keys off `[data-theme="dark"]` / `[data-theme="light"]`; text switches via `onThemeChange` / `onLocaleChange` (or `current().locale`).
 
-Panel chrome (titlebar, drag region) is host-owned — plugin content must not implement a second titlebar.
+PI-Desktop reserves exactly a 46px transparent, non-clickable drag band at the
+top of every panel and owns a minimal three-button window-control capsule in the
+top-right corner. The host offsets normal-flow content automatically; plugins
+own all other visible panel UI and must not implement a second draggable window
+titlebar. Window-level fixed or sticky plugin UI must start at
+`top: var(--pi-plugin-titlebar-height, 46px)`. Sticky UI inside a nested plugin
+scroll container may keep a local `top: 0` offset.
 
 ### Packages & catalog
 

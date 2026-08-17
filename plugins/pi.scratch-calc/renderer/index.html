@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      PI-Desktop owns exactly a transparent 46px drag band and a minimal
+      three-button window-control capsule. Normal-flow content is offset
+      automatically; window-level fixed or sticky UI must start at
+      top: var(--pi-plugin-titlebar-height, 46px).
+    -->
     <title>草稿计算器</title>
     <script>window.__APPEARANCE_CACHE_KEY = "scratch-calc.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>
@@ -528,7 +534,10 @@
       /* ============ 图片预览（复制失败降级） ============ */
       .preview-overlay {
         position: fixed;
-        inset: 0;
+        top: var(--pi-plugin-titlebar-height, 46px);
+        right: 0;
+        bottom: 0;
+        left: 0;
         background: rgba(20, 20, 20, 0.6);
         display: none;
         align-items: center;

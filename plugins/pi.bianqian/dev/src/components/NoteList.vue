@@ -70,7 +70,7 @@ function onKeydown(e: KeyboardEvent): void {
       borderColor: 'var(--note-border)'
     }"
   >
-    <!-- 面板内工具栏（宿主拥有面板标题栏，这里不是窗口标题栏） -->
+    <!-- 面板内工具栏；宿主只保留顶部 46px 拖拽带和右上角胶囊 -->
     <header
       class="flex h-10 shrink-0 items-center gap-1 border-b px-2"
       :style="{

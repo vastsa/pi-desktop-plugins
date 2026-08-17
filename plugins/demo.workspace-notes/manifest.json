@@ -2,8 +2,9 @@
   "schemaVersion": 1,
   "id": "demo.workspace-notes",
   "name": "Workspace Notes",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
+  "changelog": "Release 0.2.1: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule.",
   "i18n": {
     "en": { "name": "Workspace Notes", "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants." },
     "zh-CN": { "name": "工作区笔记", "description": "读写工作区笔记，并在明确授权后获取远程片段。" }

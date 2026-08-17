@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.token-insights",
   "name": "Token Insights",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "A private local dashboard for the tokens you spend across PI-Desktop, Claude Code, Codex and OpenCode: follows the app's theme and language, filters by tool, model, provider, date range or keyword, and keeps a streak and milestone worth looking at.",
   "i18n": {
     "en": {
@@ -22,7 +22,7 @@
     "productivity",
     "official"
   ],
-  "changelog": "Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
+  "changelog": "Release 0.4.3: Align the panel with PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule. Fixes two visible faults: elements toggled with the hidden attribute were being kept on screen by their own CSS display, so the loading skeleton stayed over real data, an empty chip strip and the custom date inputs were always drawn, and the last scan sentence lingered; and the from/to fields now always show the window the selected range covers, so picking 7D/90D/ALL keeps them in step and switching to Custom inherits what you were looking at. Includes 0.4.1's scan progress with a real file count, stale-scan recovery, visibility-based polling and debounced source watching, on top of 0.4.0's theme/language following, filters and streak layer.",
   "safetyNotes": "Reads only local metadata, always read-only, always on this device. Usage comes from the tool metadata files PI-Desktop, Claude Code, Codex and OpenCode already write; appearance (theme, language, active plugin theme CSS) and provider display names come from PI-Desktop's own local records. It never reads message text, tool arguments, project paths or credentials, never keeps a full session id (only an 8-character prefix), never writes anywhere except its own plugin settings, and makes no network request.",
   "ui": {
     "panel": "renderer/index.html",
