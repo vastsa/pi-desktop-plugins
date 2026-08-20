@@ -1,0 +1,76 @@
+/* The domain manager is compiled separately, so this sheet is intentionally
+   loaded after the bundle's generated utility CSS. */
+:root, :root[data-theme="dark"] {
+  --bg: #18191b !important;
+  --bg-2: #141517 !important;
+  --panel: #222326 !important;
+  --panel-2: #2a2c30 !important;
+  --line: #383b40 !important;
+  --line-2: #4d5158 !important;
+  --text: #f2f3f5 !important;
+  --ink-strong: #ffffff !important;
+  --muted: #a2a6ad !important;
+  --faint: #6f747b !important;
+  --accent: #f2f3f5 !important;
+  --accent-text: #18191b !important;
+  --hover: #2a2c30 !important;
+  --row-hover: #2a2c30 !important;
+  --row-active: #303238 !important;
+}
+:root[data-theme="light"] {
+  --bg: #f7f7f8 !important;
+  --bg-2: #f1f2f3 !important;
+  --panel: #ffffff !important;
+  --panel-2: #f1f2f3 !important;
+  --line: #e2e4e7 !important;
+  --line-2: #cdd1d6 !important;
+  --text: #1a1c1f !important;
+  --ink-strong: #0d0e10 !important;
+  --muted: #70757c !important;
+  --faint: #9298a0 !important;
+  --accent: #1a1c1f !important;
+  --accent-text: #ffffff !important;
+  --hover: #f1f2f3 !important;
+  --row-hover: #f1f2f3 !important;
+  --row-active: #ebedf0 !important;
+}
+
+body { font-size: 13px !important; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+aside[class*="w-["] { width: 192px !important; }
+main[class*="ml-["] { margin-left: 192px !important; }
+main[class*="ml-["] > div { max-width: 1240px; margin-inline: auto; padding: 22px 28px 40px !important; }
+.view-head { margin-bottom: 18px !important; padding-bottom: 14px !important; }
+.view-title { font-size: 18px !important; letter-spacing: -0.01em; }
+.view-sub { color: var(--muted) !important; }
+button {
+  min-height: 32px;
+  border-radius: 8px !important;
+  font-weight: 560;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+button:hover { opacity: 0.86; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 2px;
+}
+input, textarea, select {
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line-2) !important;
+}
+[class*="bg-surface-panel"] { background: var(--panel) !important; }
+[class*="bg-surface-bg2"] { background: var(--bg-2) !important; }
+[class*="border-line"] { border-color: var(--line) !important; }
+.log-box, pre.pem { border-radius: 8px !important; }
+@media (max-width: 760px) {
+  aside[class*="w-["] { width: 164px !important; }
+  main[class*="ml-["] { margin-left: 164px !important; }
+  main[class*="ml-["] > div { padding-inline: 18px !important; }
+}
+@media (max-width: 560px) {
+  aside[class*="w-["] { width: 148px !important; }
+  main[class*="ml-["] { margin-left: 148px !important; }
+  main[class*="ml-["] > div { padding-inline: 14px !important; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }

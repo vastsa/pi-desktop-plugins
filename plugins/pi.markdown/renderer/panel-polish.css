@@ -1,0 +1,23 @@
+/* The editor keeps its warm paper identity; the surrounding chrome follows
+   the compact PI-Desktop rhythm and remains readable on small panels. */
+html, body { scrollbar-gutter: stable; }
+body { font-size: 13.5px !important; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+#root { background: rgb(var(--c-bg)); }
+.milkdown .ProseMirror {
+  max-width: 900px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 6vw, 72px);
+}
+.milkdown .ProseMirror pre { border-radius: 8px; }
+.milkdown .ProseMirror img { border-radius: 8px; }
+button, input, textarea, select { min-height: 32px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid rgb(var(--c-accent) / 0.28);
+  outline-offset: 2px;
+}
+@media (max-width: 720px) {
+  .milkdown .ProseMirror { padding-inline: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
