@@ -1,0 +1,91 @@
+:root {
+  --panel-border: rgb(var(--ink) / 0.1);
+  --panel-border-strong: rgb(var(--ink) / 0.18);
+  --panel-hover: rgb(var(--ink) / 0.06);
+  --panel-focus: rgb(var(--ink) / 0.22);
+  --panel-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+
+html,
+body,
+#app {
+  font-family: var(--panel-font);
+  color: rgb(var(--ink) / 0.78);
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button,
+input,
+textarea,
+.group,
+.confirm-panel,
+.btn,
+.fixed {
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--panel-focus);
+  outline-offset: 2px;
+}
+
+input[type="search"] {
+  border-color: var(--panel-border);
+  box-shadow: 0 1px 0 rgb(var(--ink) / 0.02) inset;
+}
+
+input[type="search"]:focus {
+  border-color: var(--panel-border-strong);
+  background: rgb(var(--paper) / 0.86);
+  box-shadow: 0 0 0 3px rgb(var(--ink) / 0.06);
+}
+
+.group:hover {
+  border-color: var(--panel-border-strong);
+}
+
+.confirm-panel {
+  border-color: var(--panel-border);
+  box-shadow: 0 1px 2px rgb(var(--ink) / 0.04),
+    0 16px 40px rgb(var(--ink) / 0.14), 0 0 0 1px rgb(var(--ink) / 0.03) inset;
+}
+
+.confirm-accent {
+  background: var(--note-bar, rgb(var(--ink) / 0.55));
+}
+
+.btn-danger,
+.btn-primary {
+  background-image: none;
+  box-shadow: 0 1px 2px rgb(var(--ink) / 0.1);
+}
+
+.btn-danger:hover,
+.btn-primary:hover {
+  box-shadow: 0 3px 8px rgb(var(--ink) / 0.14);
+}
+
+@media (max-width: 640px) {
+  .confirm-panel {
+    width: min(320px, calc(100vw - 32px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

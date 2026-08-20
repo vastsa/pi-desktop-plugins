@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.bianqian",
   "name": "便签",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Markdown 桌面便签：多便签管理、实时预览、任务列表勾选、荧光笔高亮与回收站。Sticky notes with Markdown preview, task lists, text highlights and recycle bin.",
   "i18n": {
     "en": {
@@ -132,7 +132,7 @@
   "permissions": ["ui.panel", "agent.tool.register", "agent.prompt.inject", "shell.openExternal"],
   "engines": { "piDesktop": ">=0.7.1" },
   "categories": ["productivity"],
-  "changelog": "Release 0.1.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊。首个版本：多便签管理、Markdown 预览/编辑、任务列表、荧光笔高亮、图片粘贴、回收站。",
+  "changelog": "Release 0.1.2: refreshes the sticky-notes panel chrome, controls, focus states, dialogs, and compact responsive spacing. Release 0.1.1: adapts the panel to PI-Desktop's cross-platform 46px host drag band and minimal three-button window-control capsule. First release: multiple notes, Markdown preview/editing, task lists, highlights, image paste, and recycle bin.",
   "safetyNotes": "便签数据仅存于插件自己的 settings 中，不访问工作区或网络；点击便签内的外部链接会打开系统浏览器。",
   "activationEvents": ["onCommand:bianqian.open", "onCommand:bianqian.new", "onStartup"]
 }
