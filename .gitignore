@@ -1,2 +1,11 @@
 # 插件 dev/ 工程依赖（构建产物体积已远超源码，不入库；pack_plugin.py 打包时同样排除）
 node_modules/
+
+# macOS 系统文件
+.DS_Store
+
+# PI-Desktop 本地会话产物（计划/会话文档）
+.pi/
+
+# 本地设计草稿（未定稿不入库）
+specs/
