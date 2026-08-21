@@ -62,7 +62,17 @@
   }
 
   var cached = readCache();
-  if (cached) applyAppearance(cached);
+  if (cached) {
+    applyAppearance(cached);
+  } else {
+    // First-ever open with no cached appearance: fall back to the OS palette
+    // synchronously rather than leaving [data-theme] unset. The content stays
+    // cloaked by [data-booting] until the host's real answer lands, but the
+    // painted background — and the host's one-shot window-control capsule
+    // color snapshot taken at DOMContentLoaded — now match the user's system
+    // instead of the browser's unstyled black-on-white defaults.
+    applyAppearance({});
+  }
 
   window.__tokenInsightsBoot = {
     cacheKey: CACHE_KEY,
