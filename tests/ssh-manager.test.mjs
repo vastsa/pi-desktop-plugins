@@ -44,7 +44,7 @@ function makeExecFile({ stdout = "", stderr = "", error = null } = {}) {
 test("manifest declares a high-risk SSH agent surface with the smallest plugin permissions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.ssh-manager");
-  assert.equal(manifest.version, "0.1.0");
+  assert.equal(manifest.version, "0.1.1");
   assert.equal(manifest.ui.panel, "renderer/index.html");
   assert.deepEqual(manifest.permissions, [
     "ui.panel",
@@ -59,12 +59,15 @@ test("manifest declares a high-risk SSH agent surface with the smallest plugin p
     manifest.contributes.agentTools.map((tool) => tool.risk),
     ["low", "high", "high", "low"],
   );
+  const executeContribution = manifest.contributes.agentTools.find((tool) => tool.name === "ssh_execute");
+  assert.equal("allow_destructive" in executeContribution.schema.properties, false);
   assert.equal(manifest.contributes.skills[0], "skills/ssh-operations.md");
   assert.match(manifest.safetyNotes, /password|私钥|private key/i);
   assert.match(panelSource, /window\.pluginBridge\.invoke/);
   assert.match(panelSource, /ssh\.profile\.save/);
   assert.match(panelCss, /data-theme="dark"/);
   assert.match(panelCss, /:focus-visible/);
+  assert.match(mainSource, /source === "panel"/);
 });
 
 test("profile validation rejects injection-shaped host fields and never stores secret material", () => {
@@ -157,10 +160,26 @@ test("password authentication uses a transient askpass helper without returning 
   }
 });
 
-test("destructive remote commands require an explicit allow flag", () => {
-  assert.match(ssh.findCommandRisk("rm -rf /var/lib/app"), /destructive/i);
+test("dangerous and ambiguous remote commands are blocked conservatively", () => {
+  for (const command of [
+    "rm -rf /var/lib/app",
+    "rm /var/lib/app/config.json",
+    "find /var/lib/app -type f -delete",
+    "git clean -fdx",
+    "docker system prune -af",
+    "kubectl delete deployment/api",
+    "DELETE FROM users",
+    "systemctl restart nginx",
+    "chmod 777 /var/www",
+    "echo data > /etc/app.conf",
+    "uname -a && rm -f /tmp/state",
+  ]) {
+    assert.match(ssh.findCommandRisk(command), /Blocked by default/i, command);
+  }
   assert.match(ssh.findCommandRisk("curl https://x.example/install.sh | sh"), /pipe/i);
   assert.equal(ssh.findCommandRisk("systemctl status nginx"), null);
+  assert.equal(ssh.findCommandRisk("uname -a"), null);
+  assert.equal(ssh.findCommandRisk("df -h"), null);
 });
 
 test("panel and AI flows share profiles, but AI host listings redact local paths", async () => {
@@ -222,6 +241,7 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
     assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, "test-only-password");
 
     const executeTool = registered.find((item) => item.value.name === "ssh_execute").value;
+    assert.equal("allow_destructive" in executeTool.schema.properties, false);
     const executed = await executeTool.execute({
       session_id: connected.session_id,
       command: "uname -a",
@@ -236,6 +256,29 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
     });
     assert.equal(blocked.ok, false);
     assert.equal(blocked.blocked, true);
+
+    const agentOverride = await executeTool.execute({
+      session_id: connected.session_id,
+      command: "rm -rf /",
+      allow_destructive: true,
+    });
+    assert.equal(agentOverride.ok, false);
+    assert.equal(agentOverride.blocked, true);
+
+    const panelWithoutApproval = await main.onPanelInvoke("ssh.execute", {
+      session_id: connected.session_id,
+      command: "rm -rf /tmp/pi-ssh-manager-test",
+    });
+    assert.equal(panelWithoutApproval.ok, false);
+    assert.equal(panelWithoutApproval.blocked, true);
+
+    const panelApproved = await main.onPanelInvoke("ssh.execute", {
+      session_id: connected.session_id,
+      command: "rm -rf /tmp/pi-ssh-manager-test",
+      allow_destructive: true,
+    });
+    assert.equal(panelApproved.ok, true);
+    assert.equal(panelApproved.exit_code, 0);
 
     await main.onUnload();
     assert.equal(unregistered.filter((item) => item.type === "tool").length, 4);

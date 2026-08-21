@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "id": "pi.ssh-manager",
   "name": "SSH Manager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A local-first SSH host manager for PI-Desktop with bounded OpenSSH commands that the AI can call through explicit, high-risk tools.",
   "i18n": {
     "en": {
       "name": "SSH Manager",
       "description": "A local-first SSH host manager with bounded OpenSSH commands that the AI can call through explicit, high-risk tools.",
-      "safetyNotes": "Uses the system OpenSSH client and the user's existing config, ssh-agent, identity-file path, or a password entered in the panel. Passwords are held in memory for at most 30 minutes and never persisted or passed to AI. The plugin never stores private-key contents, command output, or remote transcripts. AI connect and execute tools are high risk and remote destructive patterns are blocked by default."
+      "safetyNotes": "Uses the system OpenSSH client and the user's existing config, ssh-agent, identity-file path, or a password entered in the panel. Passwords are held in memory for at most 30 minutes and never persisted or passed to AI. The plugin never stores private-key contents, command output, or remote transcripts. AI connect and execute tools are high risk; conservative static filtering blocks mutating or ambiguous commands, and only a one-time approval checkbox in the management panel can release a blocked command."
     },
     "zh-CN": {
       "name": "SSH 在线管理",
       "description": "本地优先的 SSH 主机管理面板，使用 OpenSSH 执行有超时和输出上限的远程命令，并向 AI 暴露高风险工具。",
-      "safetyNotes": "插件只调用系统 OpenSSH，并复用用户已有的 SSH 配置、ssh-agent、私钥路径或面板输入的密码；密码最多在内存中保留 30 分钟，不写入设置，也不会传给 AI。插件不保存私钥内容、命令输出或远程会话记录。AI 连接和执行工具均为高风险操作，常见破坏性命令默认拦截。"
+          "safetyNotes": "插件只调用系统 OpenSSH，并复用用户已有的 SSH 配置、ssh-agent、私钥路径或面板输入的密码；密码最多在内存中保留 30 分钟，不写入设置，也不会传给 AI。插件不保存私钥内容、命令输出或远程会话记录。AI 连接和执行工具均为高风险操作，默认拦截删除、覆盖、数据库变更、服务/权限修改、容器删除及不明确的 shell 组合；只有管理面板的一次性勾选才能放行被拦截指令。"
     }
   },
   "author": "PI-Desktop",
@@ -22,7 +22,7 @@
     "productivity",
     "official"
   ],
-  "changelog": "Release 0.1.0: adds local SSH host profiles, strict host-key verification, OpenSSH key/agent and transient password authentication, bounded remote command execution, a focused management panel, and an AI skill describing safe SSH workflows.",
+  "changelog": "Release 0.1.1: strengthens destructive-command filtering and makes one-time dangerous-command approval available only from the SSH Manager panel. Release 0.1.0: adds local SSH host profiles, strict host-key verification, OpenSSH key/agent and transient password authentication, bounded remote command execution, a focused management panel, and an AI skill describing safe SSH workflows.",
   "safetyNotes": "SSH credentials are never persisted by this plugin. Passwords entered in the panel are held in memory for at most 30 minutes and private-key contents stay outside the plugin. Authentication is delegated to the local OpenSSH client. The panel stores only connection metadata in plugin settings; AI tools can connect to configured hosts and execute remote shell commands, so PI-Desktop's high-risk tool policy must remain enabled.",
   "main": "main.js",
   "ui": {
@@ -87,7 +87,7 @@
       },
       {
         "name": "ssh_execute",
-        "description": "Execute one bounded remote shell command on a configured SSH host.",
+        "description": "Execute one bounded remote shell command on a configured SSH host; conservative filtering blocks dangerous commands and AI cannot authorize an override.",
         "risk": "high",
         "schema": {
           "type": "object",
@@ -115,10 +115,6 @@
               "minimum": 1024,
               "maximum": 262144,
               "description": "Maximum returned stdout/stderr characters."
-            },
-            "allow_destructive": {
-              "type": "boolean",
-              "description": "Only after explicit user approval for a blocked destructive command."
             },
             "accept_new_host_key": {
               "type": "boolean",

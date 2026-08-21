@@ -207,13 +207,14 @@ function resolveExecutionProfile(args = {}) {
   return { error: "Provide session_id or profile_id" };
 }
 
-async function executeProfile(args = {}) {
+async function executeProfile(args = {}, { source = "agent" } = {}) {
   const command = requiredText(args.command, "command");
   const target = resolveExecutionProfile(args);
   if (target.error) return { ok: false, error: target.error };
 
   const risk = ssh.findCommandRisk(command);
-  if (risk && args.allow_destructive !== true) {
+  const panelApproval = source === "panel" && args.allow_destructive === true;
+  if (risk && !panelApproval) {
     return { ok: false, blocked: true, error: risk };
   }
 
@@ -327,7 +328,7 @@ async function registerTools() {
   await pi.agent.registerTool({
     name: "ssh_execute",
     description:
-      "Execute one bounded command on a configured SSH host. Provide session_id from ssh_connect or profile_id for a one-off run. The command runs remotely through the user's shell, so treat it as high risk; destructive patterns are blocked unless the user explicitly approves and allow_destructive=true. Output is truncated and never persisted by the plugin.",
+      "Execute one bounded command on a configured SSH host. Provide session_id from ssh_connect or profile_id for a one-off run. The command runs remotely through the user's shell, so treat it as high risk. Conservative static checks block destructive, mutating, chained, redirected, or ambiguous commands; only a checked one-time approval in the SSH Manager panel can release a blocked command, and AI cannot override that guard. Output is truncated and never persisted by the plugin.",
     risk: "high",
     schema: {
       type: "object",
@@ -337,7 +338,6 @@ async function registerTools() {
         command: { type: "string", description: "The remote shell command to execute." },
         timeout_seconds: { type: "integer", minimum: 1, maximum: 60, description: "Command timeout (default 20 seconds)." },
         max_output_chars: { type: "integer", minimum: 1024, maximum: 262144, description: "Maximum returned stdout/stderr characters." },
-        allow_destructive: { type: "boolean", description: "Must be true only after explicit user approval for a blocked destructive command." },
         accept_new_host_key: { type: "boolean", description: "Allow a new host key for this run, only with explicit user approval." },
       },
       required: ["command"],
@@ -419,7 +419,7 @@ async function onPanelInvoke(channel, payload = {}) {
     }
 
     case "ssh.execute":
-      return executeProfile(args);
+      return executeProfile(args, { source: "panel" });
 
     case "ssh.disconnect":
       return toolDisconnect(args);

@@ -403,19 +403,48 @@ async function runSsh(profile, options = {}) {
 }
 
 const COMMAND_RISK_RULES = [
-  { pattern: /\brm\s+-[^\s]*r/i, reason: "recursive deletion" },
-  { pattern: /\b(mkfs|fdisk|parted)\b/i, reason: "disk repartitioning" },
-  { pattern: /\b(shutdown|reboot|poweroff|halt)\b/i, reason: "host power operation" },
-  { pattern: /\bdd\s+[^\n]*\bif=/i, reason: "raw disk write" },
-  { pattern: /\b(curl|wget)\b[^\n]*\|\s*(sh|bash|zsh)\b/i, reason: "shell pipe from the network" },
+  { pattern: /[\u0000\r\n]/, reason: "control characters" },
+  { pattern: /`|\$\(|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?/, reason: "shell substitution or variable expansion" },
+  { pattern: /[;&|<>]/, reason: "shell chaining, pipeline, or redirection" },
   { pattern: /:\(\)\s*\{\s*:\s*\|\s*:/i, reason: "fork bomb" },
-  { pattern: /\bchmod\s+(?:-R\s+)?777\b/i, reason: "world-writable permission change" },
+  { pattern: /\b(?:rm|rmdir|unlink|shred|srm|wipefs)\b/i, reason: "file deletion or wiping" },
+  { pattern: /\bfind\b[^\r\n]*\s-delete\b/i, reason: "find-based deletion" },
+  { pattern: /\b(?:rsync)\b[^\r\n]*\s--delete(?:-before|-during|-delay)?\b/i, reason: "synchronization deletion" },
+  { pattern: /\b(?:mkfs|fdisk|sfdisk|cfdisk|parted|mount|umount|losetup)\b/i, reason: "disk or mount mutation" },
+  { pattern: /\b(?:dd|truncate)\b/i, reason: "raw or truncated file write" },
+  { pattern: /\b(?:shutdown|reboot|poweroff|halt)\b/i, reason: "host power operation" },
+  { pattern: /\b(?:systemctl|service|rc-service)\b[^\r\n]*\b(?:stop|start|restart|reload|disable|enable|mask|unmask|kill)\b/i, reason: "service state mutation" },
+  { pattern: /\b(?:kill|pkill|killall)\b/i, reason: "process termination" },
+  { pattern: /\b(?:sudo|doas|su)\b/i, reason: "privilege escalation" },
+  { pattern: /\b(?:passwd|useradd|usermod|userdel|groupadd|groupdel)\b/i, reason: "account or credential mutation" },
+  { pattern: /\b(?:chmod|chown|chgrp|setfacl)\b/i, reason: "permission or ownership mutation" },
+  { pattern: /\b(?:crontab|at)\b/i, reason: "scheduled task mutation" },
+  { pattern: /\bgit\s+(?:clean\b|reset\s+--hard\b|restore\b|checkout\s+--|branch\s+-D\b|push\b|rebase\b|stash\s+(?:drop|clear)\b)/i, reason: "destructive or external Git mutation" },
+  { pattern: /\b(?:docker|podman)\b[^\r\n]*\b(?:rm|rmi|system\s+prune|volume\s+(?:rm|prune)|container\s+(?:rm|prune)|image\s+prune)\b/i, reason: "container or image deletion" },
+  { pattern: /\b(?:kubectl)\b[^\r\n]*\bdelete\b/i, reason: "Kubernetes resource deletion" },
+  { pattern: /\b(?:helm)\b[^\r\n]*\buninstall\b/i, reason: "Helm release deletion" },
+  { pattern: /\b(?:terraform|pulumi)\b[^\r\n]*\b(?:destroy|apply)\b/i, reason: "infrastructure mutation" },
+  { pattern: /\b(?:apt(?:-get)?|dnf|yum|zypper|pacman|apk|brew|pip|npm|pnpm|yarn)\b[^\r\n]*\b(?:install|remove|uninstall|purge|autoremove|upgrade|dist-upgrade|erase|prune)\b/i, reason: "package or dependency mutation" },
+  { pattern: /\b(?:drop|truncate)\s+(?:database|schema|table|index|view)\b/i, reason: "database structure deletion" },
+  { pattern: /\bdelete\s+from\b/i, reason: "database row deletion" },
+  { pattern: /\bupdate\s+[^\r\n]+\s+set\b/i, reason: "database data mutation" },
+  { pattern: /\b(?:redis-cli)\b[^\r\n]*\b(?:flushall|flushdb)\b/i, reason: "database-wide deletion" },
+  { pattern: /\b(?:sed|perl)\b[^\r\n]*\s-(?:i|pi)\b|\btee\b/i, reason: "in-place or redirected file write" },
+  { pattern: /\b(?:curl|wget|fetch|nc|netcat|socat)\b/i, reason: "network transfer or remote execution" },
+  { pattern: /\b(?:eval|exec|source)\b|\b(?:sh|bash|zsh|fish|python(?:3)?|perl|ruby|php|node)\b\s+(?:-c|--eval|-e)\b/i, reason: "dynamic code or shell execution" },
+  { pattern: /\b(?:ssh|scp|sftp|ftp)\b/i, reason: "nested remote access" },
 ];
 
 function findCommandRisk(command) {
-  const value = String(command || "");
+  const value = String(command ?? "");
+  if (!value.trim()) return "Blocked by default: command is empty. Provide a bounded read-only command.";
+  if (value.length > MAX_COMMAND_CHARS) {
+    return `Blocked by default: command exceeds ${MAX_COMMAND_CHARS} characters. Keep the command bounded.`;
+  }
   const match = COMMAND_RISK_RULES.find((rule) => rule.pattern.test(value));
-  return match ? `Blocked by default: ${match.reason}. Ask the user for explicit approval and set allow_destructive=true.` : null;
+  return match
+    ? `Blocked by default: ${match.reason}. Ask the user to review it in the SSH Manager panel and check the one-time approval box; AI cannot override this guard.`
+    : null;
 }
 
 function createSessionId() {
