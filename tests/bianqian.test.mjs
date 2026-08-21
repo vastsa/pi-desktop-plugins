@@ -65,7 +65,7 @@ function makeNote(overrides = {}) {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.bianqian");
-  assert.equal(manifest.version, "0.1.1");
+  assert.equal(manifest.version, "0.1.2");
   assert.match(manifest.engines.piDesktop, /^>=/);
   assert.equal(manifest.ui.panel, "renderer/index.html");
   assert.deepEqual(manifest.permissions, [
