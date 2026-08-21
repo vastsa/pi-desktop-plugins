@@ -12,6 +12,8 @@
     -->
     <meta name="pi-plugin-chrome" content="v3" />
     <title>超级域名侠</title>
+    <!-- 先于宿主 DOMContentLoaded 取色，让顶部背景和窗口胶囊使用同一套主题。 -->
+    <link rel="stylesheet" href="./panel-polish.css" data-pi-plugin-polish-preload="true" />
     <script>window.__APPEARANCE_CACHE_KEY = "sdm.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>
     <script>
@@ -97,5 +99,58 @@
       }
     </script>
     <script src="./style-boot.js"></script>
+    <script>
+      // 面板内切换主题不会经过宿主 appearance 事件，主动同步胶囊颜色。
+      // 宿主胶囊挂在 documentElement 上，元素本身可查询，变量会传入其 shadow root。
+      (function () {
+        function paletteColor(name, lightFallback, darkFallback) {
+          try {
+            var raw = window
+              .getComputedStyle(document.documentElement)
+              .getPropertyValue(name)
+              .trim();
+            if (/^#(?:[0-9a-f]{3}){1,2}$/i.test(raw)) return raw;
+          } catch (e) {}
+          return document.documentElement.dataset.theme === "dark"
+            ? darkFallback
+            : lightFallback;
+        }
+
+        function retint() {
+          var capsuleHost = document.querySelector("pi-plugin-panel-chrome");
+          if (!capsuleHost) return;
+          capsuleHost.style.setProperty(
+            "--pi-plugin-panel-page-background",
+            paletteColor("--bg", "#f7f7f8", "#18191b")
+          );
+          capsuleHost.style.setProperty(
+            "--pi-plugin-panel-page-foreground",
+            paletteColor("--text", "#1a1c1f", "#f2f3f5")
+          );
+        }
+
+        var scheduled = 0;
+        function schedule() {
+          if (scheduled) return;
+          scheduled = window.setTimeout(function () {
+            scheduled = 0;
+            retint();
+          }, 0);
+        }
+
+        if (typeof MutationObserver !== "undefined") {
+          new MutationObserver(schedule).observe(document.documentElement, {
+            childList: true,
+            attributes: true,
+            attributeFilter: ["data-theme"]
+          });
+        }
+        if (document.readyState === "loading") {
+          window.addEventListener("DOMContentLoaded", schedule, { once: true });
+        } else {
+          schedule();
+        }
+      })();
+    </script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,4 +43,48 @@ test("every panel plugin documents the host-owned 46px chrome contract", () => {
   }
 
   assert.equal(panelPlugins.length, 11, "the official marketplace should cover all panel plugins");
+});
+
+test("super domain keeps its v3 surface full-bleed and interactive", () => {
+  const pluginRoot = join(root, "plugins", "pi.super-domain-man", "renderer");
+  const panel = readFileSync(join(pluginRoot, "index.html"), "utf8");
+  const polish = readFileSync(join(pluginRoot, "panel-polish.css"), "utf8");
+  const boot = readFileSync(join(pluginRoot, "style-boot.js"), "utf8");
+
+  assert.match(panel, /<link\s+rel="stylesheet"\s+href="\.\/panel-polish\.css"/);
+  assert.match(panel, /pi-plugin-panel-page-background/);
+  assert.match(panel, /attributeFilter:\s*\["data-theme"\]/);
+  assert.match(polish, /body\s*\{[\s\S]*background:\s*var\(--bg\)\s*!important/);
+  assert.match(polish, /#root\s*\{\s*background:\s*var\(--bg\)\s*!important/);
+  assert.match(polish, /#root\s*>\s*\.flex\.h-screen[\s\S]*height:\s*100%\s*!important/);
+  assert.match(polish, /#root\s+aside\[class\*="w-\["\][\s\S]*top:\s*0\s*!important/);
+  assert.match(polish, /#root\s+main\[class\*="ml-\["\][\s\S]*height:\s*100%\s*!important/);
+  assert.match(polish, /#root\s+main\[class\*="ml-\["\]\s*>\s*div[\s\S]*width:\s*100%\s*!important/);
+  assert.match(polish, /max-width:\s*none\s*!important/);
+  assert.match(boot, /data-pi-plugin-no-drag/);
+  assert.match(boot, /MutationObserver/);
+});
+
+test("remaining v3 panels reserve the capsule and expose a full page surface", () => {
+  const cases = [
+    ["pi.bianqian", /background:\s*rgb\(var\(--paper\)\)\s*!important/],
+    ["pi.clipboard-history", /padding:\s*7px\s+max\(116px/],
+    ["pi.gitlens", /\.view\s*>\s*\.toolbar:first-child\s*\{\s*padding-right:\s*104px/],
+    ["pi.scratch-calc", /max-width:\s*none\s*!important/],
+    ["pi.todo", /max-width:\s*none\s*!important/],
+    ["pi.token-insights", /\.titlebar\s*\{\s*padding-right:\s*116px\s*!important/],
+  ];
+
+  for (const [pluginId, surfacePattern] of cases) {
+    const renderer = join(root, "plugins", pluginId, "renderer");
+    const panel = readFileSync(join(renderer, "index.html"), "utf8");
+    const polishPath = join(renderer, "panel-polish.css");
+    const polish = readFileSync(existsSync(polishPath) ? polishPath : join(renderer, "index.html"), "utf8");
+    const retint = readFileSync(join(renderer, "capsule-retint.js"), "utf8");
+
+    assert.match(panel, /capsule-retint\.js/, `${pluginId} must load capsule retinting`);
+    assert.match(polish, surfacePattern, `${pluginId} must keep its v3 surface aligned`);
+    assert.match(retint, /--pi-plugin-panel-page-background/);
+    assert.match(retint, /MutationObserver/);
+  }
 });

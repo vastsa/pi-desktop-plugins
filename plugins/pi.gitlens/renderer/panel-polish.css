@@ -10,6 +10,7 @@ html, body { scrollbar-gutter: stable; }
   outline-offset: 2px;
 }
 .view { min-width: 0; }
+.view > .toolbar:first-child { padding-right: 104px; }
 @media (max-width: 600px) {
   .sidebar { width: 152px; }
   .content { min-width: 0; }

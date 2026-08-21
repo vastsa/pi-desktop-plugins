@@ -50,7 +50,7 @@ function createTempRepo() {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.gitlens");
-  assert.equal(manifest.version, "0.1.3");
+  assert.equal(manifest.version, "0.1.4");
   assert.match(manifest.engines.piDesktop, /^>=/);
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register", "agent.prompt.inject"]);
   assert.equal(typeof manifest.ui.title.en, "string");

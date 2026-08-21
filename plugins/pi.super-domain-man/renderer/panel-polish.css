@@ -35,10 +35,38 @@
   --row-active: #ebedf0 !important;
 }
 
-body { font-size: 13px !important; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-aside[class*="w-["] { width: 192px !important; }
-main[class*="ml-["] { margin-left: 192px !important; }
-main[class*="ml-["] > div { max-width: 1240px; margin-inline: auto; padding: 22px 28px 40px !important; }
+html, body, #root { height: 100% !important; min-height: 100%; }
+body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+#root { background: var(--bg) !important; }
+
+/* v3 owns the full viewport. The host paints its 46px drag band above this
+   page and punches holes around interactive elements; the panel must not
+   reserve that band a second time. */
+#root > .flex.h-screen { height: 100% !important; min-height: 100%; }
+#root aside[class*="w-["] {
+  top: 0 !important;
+  width: 192px !important;
+}
+#root main[class*="ml-["] {
+  height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  margin-left: 192px !important;
+}
+#root main[class*="ml-["] > div {
+  width: 100% !important;
+  height: 100%;
+  min-height: 0;
+  max-width: none !important;
+  margin-inline: 0 !important;
+  padding: 22px 28px 40px !important;
+}
 .view-head { margin-bottom: 18px !important; padding-bottom: 14px !important; }
 .view-title { font-size: 18px !important; letter-spacing: -0.01em; }
 .view-sub { color: var(--muted) !important; }
@@ -64,13 +92,13 @@ input, textarea, select {
 [class*="border-line"] { border-color: var(--line) !important; }
 .log-box, pre.pem { border-radius: 8px !important; }
 @media (max-width: 760px) {
-  aside[class*="w-["] { width: 164px !important; }
-  main[class*="ml-["] { margin-left: 164px !important; }
-  main[class*="ml-["] > div { padding-inline: 18px !important; }
+  #root aside[class*="w-["] { width: 164px !important; }
+  #root main[class*="ml-["] { margin-left: 164px !important; }
+  #root main[class*="ml-["] > div { padding-inline: 18px !important; }
 }
 @media (max-width: 560px) {
-  aside[class*="w-["] { width: 148px !important; }
-  main[class*="ml-["] { margin-left: 148px !important; }
-  main[class*="ml-["] > div { padding-inline: 14px !important; }
+  #root aside[class*="w-["] { width: 148px !important; }
+  #root main[class*="ml-["] { margin-left: 148px !important; }
+  #root main[class*="ml-["] > div { padding-inline: 14px !important; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
