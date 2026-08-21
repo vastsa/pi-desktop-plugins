@@ -1,0 +1,9 @@
+/* v3 chrome finishing pass: keep interactive content out of the host drag map. */
+html, body { scrollbar-gutter: stable; }
+.content, .detail, .panel-card, .ai-card { min-width: 0; }
+.button, .icon-button, .quick-button, input, textarea, select { -webkit-app-region: no-drag; }
+.page-header { padding-right: 104px; }
+.modal-backdrop { -webkit-app-region: no-drag; }
+@media (max-width: 620px) {
+  .page-header { padding-right: 0; }
+}

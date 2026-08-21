@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.ssh-manager",
+  "name": "SSH Manager",
+  "version": "0.1.0",
+  "description": "A local-first SSH host manager for PI-Desktop with bounded OpenSSH commands that the AI can call through explicit, high-risk tools.",
+  "i18n": {
+    "en": {
+      "name": "SSH Manager",
+      "description": "A local-first SSH host manager with bounded OpenSSH commands that the AI can call through explicit, high-risk tools.",
+      "safetyNotes": "Uses the system OpenSSH client and the user's existing config, ssh-agent, identity-file path, or a password entered in the panel. Passwords are held in memory for at most 30 minutes and never persisted or passed to AI. The plugin never stores private-key contents, command output, or remote transcripts. AI connect and execute tools are high risk and remote destructive patterns are blocked by default."
+    },
+    "zh-CN": {
+      "name": "SSH 在线管理",
+      "description": "本地优先的 SSH 主机管理面板，使用 OpenSSH 执行有超时和输出上限的远程命令，并向 AI 暴露高风险工具。",
+      "safetyNotes": "插件只调用系统 OpenSSH，并复用用户已有的 SSH 配置、ssh-agent、私钥路径或面板输入的密码；密码最多在内存中保留 30 分钟，不写入设置，也不会传给 AI。插件不保存私钥内容、命令输出或远程会话记录。AI 连接和执行工具均为高风险操作，常见破坏性命令默认拦截。"
+    }
+  },
+  "author": "PI-Desktop",
+  "categories": [
+    "developer-tools",
+    "productivity",
+    "official"
+  ],
+  "changelog": "Release 0.1.0: adds local SSH host profiles, strict host-key verification, OpenSSH key/agent and transient password authentication, bounded remote command execution, a focused management panel, and an AI skill describing safe SSH workflows.",
+  "safetyNotes": "SSH credentials are never persisted by this plugin. Passwords entered in the panel are held in memory for at most 30 minutes and private-key contents stay outside the plugin. Authentication is delegated to the local OpenSSH client. The panel stores only connection metadata in plugin settings; AI tools can connect to configured hosts and execute remote shell commands, so PI-Desktop's high-risk tool policy must remain enabled.",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "SSH Manager",
+      "zh-CN": "SSH 在线管理"
+    },
+    "width": 1080,
+    "height": 760
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "pi.ssh-manager.open",
+        "title": "SSH Manager: Open",
+        "keywords": [
+          "ssh",
+          "remote",
+          "server",
+          "terminal",
+          "远程",
+          "服务器"
+        ],
+        "category": "Developer"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "ssh_list_hosts",
+        "description": "List configured SSH host metadata without returning credential paths or secrets.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "ssh_connect",
+        "description": "Connect to a configured SSH host using local OpenSSH key, agent, config, or transient panel-password authentication.",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "profile_id": {
+              "type": "string",
+              "description": "Profile id returned by ssh_list_hosts."
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "Connection timeout in seconds."
+            },
+            "accept_new_host_key": {
+              "type": "boolean",
+              "description": "Allow OpenSSH to add a new host key after explicit user approval."
+            }
+          },
+          "required": ["profile_id"]
+        }
+      },
+      {
+        "name": "ssh_execute",
+        "description": "Execute one bounded remote shell command on a configured SSH host.",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "description": "Logical session id returned by ssh_connect."
+            },
+            "profile_id": {
+              "type": "string",
+              "description": "Profile id for a one-off command."
+            },
+            "command": {
+              "type": "string",
+              "description": "Remote shell command."
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "description": "Command timeout in seconds."
+            },
+            "max_output_chars": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 262144,
+              "description": "Maximum returned stdout/stderr characters."
+            },
+            "allow_destructive": {
+              "type": "boolean",
+              "description": "Only after explicit user approval for a blocked destructive command."
+            },
+            "accept_new_host_key": {
+              "type": "boolean",
+              "description": "Allow a new host key for this run after explicit user approval."
+            }
+          },
+          "required": ["command"]
+        }
+      },
+      {
+        "name": "ssh_disconnect",
+        "description": "Forget a logical SSH session; no remote process is left running by the plugin.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "description": "Logical session id returned by ssh_connect."
+            }
+          },
+          "required": ["session_id"]
+        }
+      }
+    ],
+    "skills": [
+      "skills/ssh-operations.md"
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "agent.tool.register",
+    "agent.prompt.inject"
+  ],
+  "engines": {
+    "piDesktop": ">=0.2.9"
+  },
+  "activationEvents": [
+    "onCommand:pi.ssh-manager.open"
+  ]
+}
