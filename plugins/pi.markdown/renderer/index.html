@@ -13,6 +13,18 @@
     <!-- 外观预绘：在任何 CSS 生效前从缓存回放 data-theme/data-lang，避免闪屏 -->
     <script>window.__APPEARANCE_CACHE_KEY = "pi-markdown.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>
+    <!-- 应用自身主题：在首帧绘制前同步恢复上次渲染的主题（settings.theme 的本地
+         镜像，由 bundle 的主题 effect 写入）。宿主在 DOMContentLoaded 时会对页面
+         颜色做一次快照来给窗口控制胶囊上色，若此刻 data-theme 还是旧值/回放值，
+         胶囊会按错误的墨色绘制而在深色背景下不可见。无记录时保持 boot 回放值。 -->
+    <script>
+      try {
+        var __pimdTheme = localStorage.getItem("pimd.theme.v1");
+        if (__pimdTheme === "dark" || __pimdTheme === "light") {
+          document.documentElement.dataset.theme = __pimdTheme;
+        }
+      } catch (e) {}
+    </script>
     <!-- 静态入口：file:// 协议下普通 <script>/<link> 可正常加载（module 会被 CORS 阻止） -->
     <link rel="stylesheet" href="./assets/app.css" />
     <link rel="stylesheet" href="./panel-polish.css" />
@@ -26,22 +38,10 @@
          时还会按 settings.theme 写一次 data-theme，二者在 main.js 同步下一致。 -->
     <script src="./appearance.js"></script>
     <script>
-      (function () {
-        var bridge = window.pluginBridge;
-        var appearance = window.__appearance;
-        // 让 main.js 把 settings.theme 收敛为宿主 base（未手动覆盖时），
-        // 使 bundle 下次挂载/同步拿到一致的主题。
-        function syncHostTheme() {
-          if (!bridge || typeof bridge.invoke !== "function") return;
-          bridge.invoke("appearance.sync", {}).catch(function () {});
-        }
-        if (appearance) {
-          appearance.onThemeChange(syncHostTheme);
-          appearance.init(bridge);
-        }
-        // 打开面板即同步一次：插件进程 onLoad 的同步可能发生在宿主切换外观之前。
-        syncHostTheme();
-      })();
+      // 外观运行时初始化：跟随宿主（app.getAppearance + appearance:changed）。
+      // 注：宿主没有 "appearance.sync" 通道，settings.theme 由 main.js 在
+      // onLoad 时收敛为宿主 base，这里不再重复同步。
+      if (window.__appearance) window.__appearance.init(window.pluginBridge);
     </script>
   </body>
 </html>
