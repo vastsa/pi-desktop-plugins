@@ -4,11 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      PI-Desktop owns exactly a transparent 46px drag band and a minimal
-      three-button window-control capsule. Normal-flow content is offset
-      automatically; window-level fixed or sticky UI must start at
-      top: var(--pi-plugin-titlebar-height, 46px).
+      PI-Desktop owns exactly a 46px drag band and a minimal three-button
+      window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
+      paint through the 46px band, while host-generated holes keep controls
+      clickable and empty space draggable. Fixed or sticky panel surfaces use
+      var(--pi-plugin-titlebar-height, 46px).
     -->
+    <meta name="pi-plugin-chrome" content="v3" />
     <title>超级域名侠</title>
     <script>window.__APPEARANCE_CACHE_KEY = "sdm.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>

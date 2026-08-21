@@ -3,10 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- PI-Desktop owns exactly a transparent 46px drag band and a minimal
-         three-button window-control capsule. Fixed or sticky panel surfaces
+    <!-- PI-Desktop owns exactly a 46px drag band and a minimal three-button
+         window-control capsule. This panel uses pi-plugin-chrome=v3: the page
+         can paint through the band, while host-generated holes keep controls
+         clickable and empty space draggable. Fixed or sticky panel surfaces
          use var(--pi-plugin-titlebar-height, 46px). -->
-    <meta name="pi-plugin-chrome" content="v2" />
+    <meta name="pi-plugin-chrome" content="v3" />
     <title>Clipboard History</title>
     <style>
       :root {
@@ -60,7 +62,6 @@
       }
       body {
         margin: 0;
-        padding-top: var(--pi-plugin-titlebar-height, 0px);
         overflow: hidden;
         background: var(--bg);
         color: var(--fg);

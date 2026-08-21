@@ -22,6 +22,11 @@ test("every panel plugin documents the host-owned 46px chrome contract", () => {
     const panelHtml = readFileSync(panelPath, "utf8");
     assert.match(
       panelHtml,
+      /<meta\s+name="pi-plugin-chrome"\s+content="v3"\s*\/>/,
+      `${pluginId} must opt into v3 paint-through chrome`,
+    );
+    assert.match(
+      panelHtml,
       /PI-Desktop owns exactly (?:a transparent 46px drag band|a 46px drag band)/,
       `${pluginId} must document the host-owned 46px drag band`,
     );

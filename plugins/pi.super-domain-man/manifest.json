@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.super-domain-man",
   "name": "超级域名侠",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "本地优先的多平台域名解析记录管理与 SSL 证书监控/申请工具：支持阿里云 / 腾讯云 / Cloudflare / AWS Route53 / 火山引擎 / 华为云，凭据仅本地存储（无密码保护）",
   "i18n": {
     "en": {
@@ -21,7 +21,7 @@
     "productivity",
     "community"
   ],
-  "changelog": "v0.4.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊。v0.4.0：外观跟随 app 主体——预绘按「外观缓存 → 自带 sdm.settings.theme → 系统」恢复主题并同步 data-lang/lang，运行时订阅宿主 theme/locale 实时更新（无闪屏）；面板内手动切换主题仍可用。v0.3.1：声明 manifest.net.domains 网络白名单（云厂商 API、crt.sh、通知 Webhook、ACME CA），修复新版宿主 egress 策略下所有网络请求被拒（plugin declares no manifest.net.domains; api.cloudflare.com is unreachable）的问题。v0.2.0：重构为干净利落的直角风格（黑白灰 + 橙色强调、无圆角无投影、1px 细线分隔）；默认跟随系统深浅模式，侧边栏可一键切换；进入解析记录自动拉取数据；子页面导航保持父菜单选中态。",
+  "changelog": "v0.4.2：迁移到 v3 穿透式顶部 chrome，顶部控件保持可点击，空白区域继续可拖拽。v0.4.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊。v0.4.0：外观跟随 app 主体——预绘按「外观缓存 → 自带 sdm.settings.theme → 系统」恢复主题并同步 data-lang/lang，运行时订阅宿主 theme/locale 实时更新（无闪屏）；面板内手动切换主题仍可用。v0.3.1：声明 manifest.net.domains 网络白名单（云厂商 API、crt.sh、通知 Webhook、ACME CA），修复新版宿主 egress 策略下所有网络请求被拒（plugin declares no manifest.net.domains; api.cloudflare.com is unreachable）的问题。v0.2.0：重构为干净利落的直角风格（黑白灰 + 橙色强调、无圆角无投影、1px 细线分隔）；默认跟随系统深浅模式，侧边栏可一键切换；进入解析记录自动拉取数据；子页面导航保持父菜单选中态。",
   "safetyNotes": "账号凭据仅保存在本机（面板 localStorage），无主密码保护；网络请求仅发往所选云厂商 API、crt.sh 证书透明日志与用户自行配置的通知 Webhook；可读写剪贴板、打开外部链接。",
   "main": "main.js",
   "ui": {

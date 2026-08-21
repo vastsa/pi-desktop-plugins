@@ -164,7 +164,7 @@ svg {
 
 .app {
   display: flex;
-  height: calc(100dvh - var(--pi-plugin-titlebar-height, var(--chrome-height)));
+  height: 100%;
 }
 
 /* ---- sidebar ---------------------------------------------------------- */
