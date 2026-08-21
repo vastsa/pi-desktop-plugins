@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "demo.hello",
   "name": "Hello",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Official sample plugin with panel, command, and echo tool.",
-  "changelog": "Release 0.3.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.3.1: refreshes the panel surface to match PI-Desktop's compact neutral design system.",
+  "changelog": "Release 0.3.3: fills the v3 panel surface, improves responsive spacing and focus states, and keeps the host window-control capsule synchronized with theme changes. Release 0.3.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.3.1: refreshes the panel surface to match PI-Desktop's compact neutral design system.",
   "i18n": {
     "en": { "name": "Hello", "description": "Official sample plugin with panel, command, and echo tool." },
     "zh-CN": { "name": "Hello", "description": "官方示例插件，包含面板、命令和回声工具。" }

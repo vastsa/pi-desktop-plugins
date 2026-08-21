@@ -26,9 +26,15 @@
   --pi-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
-html { min-height: 100%; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; min-height: 100%; }
 body {
+  display: flex;
+  min-width: 0;
   min-height: 100%;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
   background: var(--pi-surface) !important;
   color: var(--pi-text) !important;
   font-size: 13px !important;
@@ -41,11 +47,18 @@ h2 { font-size: 17px; line-height: 1.25; }
 p { color: var(--pi-muted); }
 
 .card {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   border-color: var(--pi-border) !important;
   border-radius: 12px !important;
   background: var(--pi-panel) !important;
   box-shadow: var(--pi-shadow);
 }
+.card h2 { margin: 0 0 8px; }
+.card p { margin: 0; }
 
 button {
   min-height: 32px;
@@ -56,6 +69,7 @@ button {
   font-weight: 560;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
+button:not(.secondary) { align-self: flex-start; margin-top: auto; }
 button:hover { background: var(--pi-panel-hover) !important; border-color: #c8ccd1 !important; }
 button:active { transform: translateY(1px); }
 button:not(.secondary) { background: var(--pi-accent) !important; color: var(--pi-on-accent) !important; border-color: var(--pi-accent) !important; }
@@ -77,7 +91,7 @@ textarea:focus, input:focus, select:focus {
 ::placeholder { color: var(--pi-muted); }
 
 @media (max-width: 560px) {
-  body { padding: 12px !important; }
+  body { padding: 10px !important; }
   .card { padding: 14px !important; }
 }
 

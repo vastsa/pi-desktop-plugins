@@ -24,16 +24,19 @@
   --pi-focus: rgba(242, 243, 245, 0.24);
   --pi-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
-html { min-height: 100%; }
-body { min-height: 100%; background: var(--pi-surface) !important; color: var(--pi-text) !important; font-size: 13px !important; -webkit-font-smoothing: antialiased; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; min-height: 100%; }
+body { display: flex; min-width: 0; min-height: 100%; margin: 0; padding: 12px; overflow: hidden; flex-direction: column; gap: 12px; background: var(--pi-surface) !important; color: var(--pi-text) !important; font-size: 13px !important; -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { color: var(--pi-text); letter-spacing: -0.01em; }
-.muted { color: var(--pi-muted) !important; }
-.card, .stat { border-color: var(--pi-border) !important; border-radius: 10px !important; background: var(--pi-panel) !important; box-shadow: var(--pi-shadow); }
-.stat { background: var(--pi-panel-hover) !important; }
+h1 { margin: 0; }
+.muted { margin: 0 !important; color: var(--pi-muted) !important; }
+.row, .stats { flex: 0 0 auto; margin: 0 !important; }
+.card { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; margin-bottom: 0 !important; border-color: var(--pi-border) !important; border-radius: 10px !important; background: var(--pi-panel) !important; box-shadow: var(--pi-shadow); }
+.stat { border-color: var(--pi-border) !important; border-radius: 10px !important; background: var(--pi-panel-hover) !important; }
 button { min-height: 32px; border: 1px solid var(--pi-border) !important; border-radius: 8px !important; background: var(--pi-accent) !important; color: var(--pi-on-accent) !important; font-weight: 560; transition: background-color 150ms ease, opacity 150ms ease; }
 button:hover { opacity: 0.86; }
 button.secondary { background: transparent !important; color: var(--pi-text) !important; }
 button:focus-visible { outline: 2px solid var(--pi-focus); outline-offset: 2px; }
-pre { color: var(--pi-text) !important; line-height: 1.55 !important; }
-@media (max-width: 560px) { body { padding: 12px !important; } .stats { grid-template-columns: 1fr !important; } }
+pre { width: 100%; min-height: 0; max-height: none !important; flex: 1 1 auto; overflow: auto; color: var(--pi-text) !important; line-height: 1.55 !important; }
+@media (max-width: 560px) { body { padding: 10px !important; } .stats { grid-template-columns: 1fr !important; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.001ms !important; } }

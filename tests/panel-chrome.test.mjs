@@ -88,3 +88,24 @@ test("remaining v3 panels reserve the capsule and expose a full page surface", (
     assert.match(retint, /MutationObserver/);
   }
 });
+
+test("demo panels use a full-height responsive surface", () => {
+  const cases = [
+    ["demo.hello", /\.card\s*\{[\s\S]*flex:\s*1 1 auto/],
+    ["demo.workspace-notes", /body\s*\{[\s\S]*display:\s*flex[\s\S]*gap:\s*12px/],
+    ["demo.workspace-summary", /pre\s*\{[\s\S]*max-height:\s*none\s*!important[\s\S]*overflow:\s*auto/],
+  ];
+
+  for (const [pluginId, surfacePattern] of cases) {
+    const renderer = join(root, "plugins", pluginId, "renderer");
+    const panel = readFileSync(join(renderer, "index.html"), "utf8");
+    const polish = readFileSync(join(renderer, "panel-polish.css"), "utf8");
+    const retint = readFileSync(join(renderer, "capsule-retint.js"), "utf8");
+
+    assert.match(panel, /capsule-retint\.js/, `${pluginId} must load capsule retinting`);
+    assert.match(polish, /html, body\s*\{[\s\S]*height:\s*100%/, `${pluginId} must fill the viewport`);
+    assert.match(polish, surfacePattern, `${pluginId} must keep its content surface responsive`);
+    assert.match(retint, /--pi-plugin-panel-page-background/);
+    assert.match(retint, /MutationObserver/);
+  }
+});
