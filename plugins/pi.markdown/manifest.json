@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "id": "pi.markdown",
   "name": "Pi Markdown 笔记",
-  "version": "0.4.7",
-  "description": "本地 Markdown 笔记：真·所见即所得编辑（输入 # / - [ ] / > / ``` / $…$ 即出样式，Typora 风格，Milkdown Crepe）、米白/黑夜双主题切换、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Todo 任务列表、KaTeX 公式、全局搜索（标题/内容）、导出 Markdown/HTML/图像；文件夹与笔记拖拽排序、右键操作菜单；数据保存在插件数据目录。",
+  "version": "0.4.8",
+  "description": "本地 Markdown 笔记：真·所见即所得编辑（输入 # / - [ ] / > / ``` / $…$ 即出样式，Typora 风格，Milkdown Crepe）、米白/黑夜双主题切换、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Mermaid 图表实时渲染、Todo 任务列表、KaTeX 公式、全局搜索（标题/内容）、导出 Markdown/HTML/图像；文件夹与笔记拖拽排序、右键操作菜单；Agent 工具 open_file——在宿主文件权限网关内按路径打开单个 Markdown/文本文件编辑并自动写回（首次调用请用户选定目录，单文件模式，不显示文档列表）；界面语言与面板标题跟随宿主（中文/English）；数据保存在插件数据目录。",
   "i18n": {
     "en": {
       "name": "Pi Markdown Notes",
-      "description": "A local Markdown notebook with true WYSIWYG editing, light and dark themes, a five-level folder tree, H1-H5 outline, 297 language syntaxes, todo lists, KaTeX formulas, full-text search and Markdown/HTML/image export.",
-      "safetyNotes": "All data is stored in the plugin data directory as settings.json. Images are embedded in note content as data URLs. No network requests or workspace file access; the editor, syntax highlighting and formula libraries are bundled for offline use."
+      "description": "A local Markdown notebook with true WYSIWYG editing, light and dark themes, a five-level folder tree, H1-H5 outline, 297 language syntaxes, Mermaid diagrams, todo lists, KaTeX formulas, full-text search and Markdown/HTML/image export. The Agent tool open_file opens a single Markdown/text file for editing with auto-save through the host pi.fs permission gateway (user-selected directory root, single-file mode).",
+      "safetyNotes": "All data is stored in the plugin data directory as settings.json. Images are embedded in note content as data URLs. No network requests or workspace file access; the editor, syntax highlighting and formula libraries are bundled for offline use. When the Agent invokes open_file, the plugin process reads/writes files inside the user-selected directory through the host pi.fs permission gateway—the first call prompts a native directory picker (grant lives in memory only and expires when the process exits), the gateway rejects out-of-root paths (including symlink escapes) and credential paths (.env, .ssh/, *.pem) with an audit log, and the tool validates absolute paths, regular files, the .md/.markdown/.txt whitelist, a 5MB size cap and utf8 text."
     },
     "zh-CN": {
       "name": "Pi Markdown 笔记",
-      "description": "本地 Markdown 笔记：真·所见即所得编辑、米白/黑夜主题、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Todo、KaTeX 公式、全文搜索，以及 Markdown/HTML/图片导出。",
-      "safetyNotes": "所有数据仅保存于插件数据目录 settings.json，图片以 data URL 嵌入笔记正文；不访问网络或工作区文件，编辑器、代码高亮和公式库均随插件打包，可离线使用。"
+      "description": "本地 Markdown 笔记：真·所见即所得编辑、米白/黑夜主题、5 级目录与 H1-H5 大纲、297 种语言代码高亮、Mermaid 图表、Todo、KaTeX 公式、全文搜索，以及 Markdown/HTML/图片导出；Agent 工具 open_file——在宿主文件权限网关内按路径打开单个 Markdown/文本文件编辑并自动写回（首次调用请用户选定目录，单文件模式）。",
+      "safetyNotes": "所有数据仅保存于插件数据目录 settings.json，图片以 data URL 嵌入笔记正文；不访问网络或工作区文件，编辑器、代码高亮和公式库均随插件打包，可离线使用。open_file 工具调用时，插件主进程经宿主 pi.fs 权限网关读写用户选定目录内的文件——首次调用弹出原生目录选择器（授权仅存内存、进程退出即失效），网关拒绝越界（含符号链接逃逸）与凭据类路径（.env、.ssh/、*.pem 等）并记录审计日志；工具内置校验（绝对路径、常规文件、扩展名白名单 .md/.markdown/.txt、≤5MB、utf8 文本拒绝二进制）。"
     }
   },
   "author": "Tioit-Wang",
@@ -21,8 +21,8 @@
     "productivity",
     "community"
   ],
-  "changelog": "Release 0.4.7：宿主顶部拖拽带按页面元素切分，控件可点击、空白处可拖拽；面板改为 v3 全出血布局。Release 0.4.6：修复 v2 面板顶部安全区重复留白；侧栏搜索与笔记标题行从宿主 46px 拖拽带下沿直接开始，保留宿主拖拽区并消除额外 8px 顶部内边距；同时让根布局填满视口，避免底部出现对应空白。Release 0.4.5：压缩面板内部的大间隙。根因是 Crepe 自带主题在 bundle 中排在应用自定义样式之后，其 .ProseMirror { padding: 60px 120px } 在级联中胜出——正文第一行之前实际垫了约 190px（46px 拖拽带 + 53px 标题行 + 60px Crepe 内边距 + 28px 首个标题外边距）。现由最后加载的 panel-polish.css 重新声明紧凑内边距（上 12px、随宽自适应、底部 40vh 滚动余量），并去掉首块元素的外边距；同时收紧各行高：侧栏搜索行 49px→43px、tabs 行 34px→30px、笔记标题行 53px→45px；侧栏的 46px 拖拽带区域改绘为侧栏头部同色，与搜索行连成一体，不再呈现为空洞。Release 0.4.4：面板改为 v2 全出血布局，并修复亮色模式下窗口控制胶囊不可见的问题。(1) 声明 pi-plugin-chrome=v2，宿主不再向 body 注入 46px 顶部内边距——内容直接顶到窗口上沿，滚动时从透明的宿主拖拽带下方穿过（胶囊即悬浮在内容之上）；搜索框、tabs、笔记标题行等交互行固定在带下沿（top: var(--pi-plugin-titlebar-height, 46px)）之外，因该区域仅为拖拽区、不接收点击。(2) 宿主只在自家外观广播时给胶囊重新取色，面板内米白/黑夜切换后墨色停留在旧主题上，亮色页面配浅色墨几乎不可见；现由渲染端监听 data-theme 变化，实时把当前调色板覆写到宿主胶囊元素的两个取色变量上，任何来源的主题切换胶囊都立即重上色。(3) body 直接着色 rgb(var(--c-bg))/rgb(var(--c-ink))，宿主一次性取色与实际页面永远一致。Release 0.4.3：修复宿主切换外观后重开面板时窗口控制胶囊仍按旧配色绘制而不可见的问题——宿主驱动的主题变更此前只改写 data-theme，React 不感知、pimd.theme.v1 镜像不更新，下次打开即按过期主题首绘，宿主在 DOMContentLoaded 对页面颜色的一次性快照（胶囊取色）拿到错误墨色；现由外观运行时在每次实际应用的主题变化时把真实主题写回镜像，首帧与镜像永远一致。同时压紧 46px 宿主拖拽带之下的首行 UI：侧栏头部内边距与搜索框高度收紧、背景改用页面底色，编辑器顶栏最小高度 44px 收窄为 36px，消除「空拖拽带 + 高工具行」叠成双层头部的观感。Release 0.4.2：修复深色主题下窗口控制胶囊近乎不可见的问题——宿主在 DOMContentLoaded 时对页面颜色做快照为胶囊上色，而此刻 data-theme 可能仍是旧值/回放值；现于首帧前从本地镜像（pimd.theme.v1）同步恢复应用真实主题，主题变更时实时写回镜像，初始 state 也跟随已应用的 data-theme 避免闪屏；移除对宿主不存在通道 appearance.sync 的无效调用。Release 0.4.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊。Release 0.4.0：面板跟随 app 主体的语言与颜色模式——宿主切换亮/暗或语言时，编辑器与界面配色实时更新（CSS 由 :root[data-theme=...] 驱动，配合宿主 app.getAppearance 通道与 appearance:changed 事件）；未手动覆盖主题时 settings.theme 自动同步为宿主 base，面板内的米白/黑夜切换仍可手动覆盖（此后不再被宿主覆盖）；旧版宿主自动降级为面板自带的主题跟随。Release 0.3.1：修复 LaTeX 公式依赖 CodeMirror 导致编辑器无法初始化的问题；修复 HTML/PNG 导出中块级公式与代码高亮缺失的问题（改为 Markdown 源码经编辑器 parser/serializer 渲染）；新增米白（默认）/黑夜双主题与状态栏切换开关，主题偏好随 settings.json 持久化；代码块预览即所得（LaTeX 直接显示 KaTeX 公式、普通代码块显示高亮）。Release 0.3.0：编辑器由 Toast UI WYSIWYG（富文本+补丁）更换为 Milkdown Crepe——真正的所见即所得 Markdown 编辑，输入语法即出样式（含中文输入法）、斜杠菜单/块拖拽手柄、图片 data URL 内嵌、297 种语言 Prism 高亮。Release 0.2.0：完整 Markdown 笔记应用（React + TypeScript + Tailwind 重写面板）。Release 0.1.0：模板初始版本。",
-  "safetyNotes": "全部数据仅保存在本机插件数据目录 settings.json（图片以 data URL 内嵌于笔记正文）；无网络请求、无工作区文件读写；渲染端代码高亮/公式/编辑器库（Milkdown/Prism/KaTeX）全部随插件打包，离线可用。",
+  "changelog": "Release 0.4.8：合并市场 0.4.7 基线——迁移 v3 穿透式顶部 chrome、panel-polish、窗口控制胶囊实时重着色与 pimd.theme.v1 主题镜像预绘；manifest 增补 i18n 双语块；保留本仓库独有 open_file（宿主 pi.fs 权限网关 + 单文件模式）与面板中英 i18n。Release 0.4.7：宿主顶部拖拽带按页面元素切分，控件可点击、空白处可拖拽；面板改为 v3 全出血布局。Release 0.4.6：修复 v2 面板顶部安全区重复留白；侧栏搜索与笔记标题行从宿主 46px 拖拽带下沿直接开始，保留宿主拖拽区并消除额外 8px 顶部内边距；同时让根布局填满视口，避免底部出现对应空白。Release 0.4.5：压缩面板内部的大间隙。根因是 Crepe 自带主题在 bundle 中排在应用自定义样式之后，其 .ProseMirror { padding: 60px 120px } 在级联中胜出——正文第一行之前实际垫了约 190px（46px 拖拽带 + 53px 标题行 + 60px Crepe 内边距 + 28px 首个标题外边距）。现由最后加载的 panel-polish.css 重新声明紧凑内边距（上 12px、随宽自适应、底部 40vh 滚动余量），并去掉首块元素的外边距；同时收紧各行高：侧栏搜索行 49px→43px、tabs 行 34px→30px、笔记标题行 53px→45px；侧栏的 46px 拖拽带区域改绘为侧栏头部同色，与搜索行连成一体，不再呈现为空洞。Release 0.4.4：面板改为 v2 全出血布局，并修复亮色模式下窗口控制胶囊不可见的问题。(1) 声明 pi-plugin-chrome=v2，宿主不再向 body 注入 46px 顶部内边距——内容直接顶到窗口上沿，滚动时从透明的宿主拖拽带下方穿过（胶囊即悬浮在内容之上）；搜索框、tabs、笔记标题行等交互行固定在带下沿（top: var(--pi-plugin-titlebar-height, 46px)）之外，因该区域仅为拖拽区、不接收点击。(2) 宿主只在自家外观广播时给胶囊重新取色，面板内米白/黑夜切换后墨色停留在旧主题上，亮色页面配浅色墨几乎不可见；现由渲染端监听 data-theme 变化，实时把当前调色板覆写到宿主胶囊元素的两个取色变量上，任何来源的主题切换胶囊都立即重上色。(3) body 直接着色 rgb(var(--c-bg))/rgb(var(--c-ink))，宿主一次性取色与实际页面永远一致。Release 0.4.3：修复宿主切换外观后重开面板时窗口控制胶囊仍按旧配色绘制而不可见的问题——宿主驱动的主题变更此前只改写 data-theme，React 不感知、pimd.theme.v1 镜像不更新，下次打开即按过期主题首绘，宿主在 DOMContentLoaded 对页面颜色的一次性快照（胶囊取色）拿到错误墨色；现由外观运行时在每次实际应用的主题变化时把真实主题写回镜像，首帧与镜像永远一致。同时压紧 46px 宿主拖拽带之下的首行 UI：侧栏头部内边距与搜索框高度收紧、背景改用页面底色，编辑器顶栏最小高度 44px 收窄为 36px，消除「空拖拽带 + 高工具行」叠成双层头部的观感。Release 0.4.2：修复深色主题下窗口控制胶囊近乎不可见的问题——宿主在 DOMContentLoaded 时对页面颜色做快照为胶囊上色，而此刻 data-theme 可能仍是旧值/回放值；现于首帧前从本地镜像（pimd.theme.v1）同步恢复应用真实主题，主题变更时实时写回镜像，初始 state 也跟随已应用的 data-theme 避免闪屏；移除对宿主不存在通道 appearance.sync 的无效调用。Release 0.4.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊；Agent 工具 open_file 落地（需 agent.tool.register 高风险权限）——Agent 传入完整绝对路径，即可在面板单文件模式中打开该文件编辑（隐藏笔记列表，仅显示当前文件，无法切换其他文件），编辑经 800ms 防抖自动保存写回原文件（保留原 BOM），仅支持 .md/.markdown/.txt、≤5MB、utf8 文本（拒绝二进制），面板 1s 轮询拉取待打开文件、心跳 60s 过期后可被新调用接管、Plan 模式不可用；随后文件内容读写由插件进程内 Node fs 迁移至宿主 pi.fs 权限网关（manifest.fs 声明 userSelected 根，首次调用弹出原生目录选择器，仅能打开/写回用户选定目录内的文件；网关负责越界/符号链接/凭据路径校验与审计）；manifest.ui.title 改为宿主双语 { en, \"zh-CN\" }；命令标题/面板标题/工具提示按宿主语言（pi.app.getLocale）切换；面板默认跟随宿主主题（读宿主注入的 data-theme），面板内切换保留为手动覆盖（themeSource 持久化）。Release 0.4.0：面板跟随 app 主体的语言与颜色模式——宿主切换亮/暗或语言时，编辑器与界面配色实时更新（CSS 由 :root[data-theme=...] 驱动，配合宿主 app.getAppearance 通道与 appearance:changed 事件）；未手动覆盖主题时 settings.theme 自动同步为宿主 base，面板内的米白/黑夜切换仍可手动覆盖（此后不再被宿主覆盖）；旧版宿主自动降级为面板自带的主题跟随。Release 0.3.2：代码块支持 Mermaid 图表实时渲染（输入 ```mermaid 即出图表，源码始终可编辑、300ms 防抖随明暗主题切换；HTML/PNG 导出渲染为内嵌 SVG）。Release 0.3.1：修复 LaTeX 公式依赖 CodeMirror 导致编辑器无法初始化的问题；修复 HTML/PNG 导出中块级公式与代码高亮缺失的问题（改为 Markdown 源码经编辑器 parser/serializer 渲染）；新增米白（默认）/黑夜双主题与状态栏切换开关，主题偏好随 settings.json 持久化；代码块预览即所得（LaTeX 直接显示 KaTeX 公式、普通代码块显示高亮）。Release 0.3.0：编辑器由 Toast UI WYSIWYG（富文本+补丁）更换为 Milkdown Crepe——真正的所见即所得 Markdown 编辑，输入语法即出样式（含中文输入法）、斜杠菜单/块拖拽手柄、图片 data URL 内嵌、297 种语言 Prism 高亮。Release 0.2.0：完整 Markdown 笔记应用（React + TypeScript + Tailwind 重写面板）。Release 0.1.0：模板初始版本。",
+  "safetyNotes": "全部数据仅保存在本机插件数据目录 settings.json（图片以 data URL 内嵌于笔记正文）；无网络请求、无工作区文件读写；渲染端代码高亮/公式/编辑器库（Milkdown/Prism/KaTeX）全部随插件打包，离线可用。注意：当 Agent 调用 open_file 工具时，插件主进程经宿主 pi.fs 权限网关读取并写回用户选定目录内的文件——首次调用会弹出原生目录选择器（fs.requestDirectory，userSelected 根，授权仅存内存、进程退出即失效）；只能访问选定目录内的路径，网关拒绝越界（含符号链接逃逸）与凭据类路径（.env、.ssh/、*.pem 等）并记录审计日志；工具内置校验（绝对路径、常规文件、扩展名白名单 .md/.markdown/.txt、≤5MB、utf8 文本拒绝二进制）。",
   "main": "main.js",
   "ui": {
     "panel": "renderer/index.html",
@@ -47,14 +47,44 @@
         "category": "Productivity"
       }
     ],
+    "agentTools": [
+      {
+        "name": "open_file",
+        "description": "打开一个 Markdown/纯文本文件（绝对路径）在 Pi Markdown 面板中编辑：仅打开指定文件，不显示文档列表、不允许切换其他文件，编辑内容自动保存回原文件。首次调用会弹出目录选择器，请用户选定一个目录——只能打开该目录内的文件；若文件不在已选定目录内会报错。仅支持 .md/.markdown/.txt。",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "文件的绝对路径（Windows 如 C:\\docs\\a.md；macOS/Linux 如 /Users/me/a.md）。文件必须在用户选定的目录内，否则调用会失败"
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      }
+    ],
     "skills": [
       "skills/pi-markdown.md"
     ]
   },
   "permissions": [
     "ui.panel",
-    "agent.prompt.inject"
+    "agent.prompt.inject",
+    "agent.tool.register",
+    "fs.read",
+    "fs.write"
   ],
+  "fs": {
+    "read": {
+      "root": "userSelected"
+    },
+    "write": {
+      "root": "userSelected"
+    }
+  },
   "engines": {
     "piDesktop": ">=0.1.0"
   },
