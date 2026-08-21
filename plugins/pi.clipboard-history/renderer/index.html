@@ -124,6 +124,7 @@
         min-width: 0;
         align-items: center;
         gap: 6px;
+        flex-wrap: wrap;
       }
       .pause-toggle {
         display: inline-flex;
@@ -224,6 +225,78 @@
         border-color: color-mix(in oklab, var(--danger) 32%, transparent);
         background: var(--danger-soft);
         color: var(--danger);
+      }
+      .save-images-toggle {
+        position: relative;
+        display: inline-flex;
+        height: 26px;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+        padding: 0 8px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--secondary);
+        cursor: pointer;
+        font-size: 12px;
+        user-select: none;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .save-images-toggle:hover {
+        background: var(--surface-hover);
+        color: var(--fg);
+      }
+      .save-images-toggle input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .toggle-track {
+        position: relative;
+        display: inline-block;
+        width: 26px;
+        height: 14px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--border-strong);
+        transition: background 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .toggle-thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--faint);
+        transition:
+          transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .save-images-toggle input:checked + .toggle-track {
+        background: color-mix(in oklab, var(--accent) 34%, transparent);
+      }
+      .save-images-toggle input:checked + .toggle-track .toggle-thumb {
+        transform: translateX(12px);
+        background: var(--accent);
+      }
+      .save-images-toggle input:focus-visible + .toggle-track {
+        outline: 2px solid color-mix(in oklab, var(--accent) 58%, transparent);
+        outline-offset: 2px;
+      }
+      .save-images-toggle:has(input:disabled) {
+        cursor: default;
+        opacity: 0.5;
+      }
+      .toggle-label {
+        white-space: nowrap;
       }
 
       /* ---------- paused banner ---------- */
@@ -479,6 +552,41 @@
         padding: 0 8px;
         font-size: 11px;
       }
+      .card-image {
+        display: block;
+        width: 100%;
+        max-height: 120px;
+        object-fit: contain;
+        border-radius: 6px;
+        background-image: repeating-conic-gradient(
+          color-mix(in oklab, var(--fg) 5%, transparent) 0% 25%,
+          color-mix(in oklab, var(--fg) 2%, transparent) 0% 50%
+        );
+        background-size: 12px 12px;
+      }
+      .card-image-placeholder {
+        display: flex;
+        min-height: 84px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 16px 10px;
+        border-radius: 6px;
+        background: var(--surface-active);
+        color: var(--muted);
+      }
+      .card-image-placeholder .ph-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--secondary);
+      }
+      .card-image-size {
+        color: var(--faint);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
 
       @media (min-width: 560px) {
         .toolbar {
@@ -528,6 +636,11 @@
             <select class="interval-select" id="interval-select" aria-label="Capture interval"></select>
             <span class="select-chevron" aria-hidden="true"></span>
           </span>
+          <label class="save-images-toggle" id="save-images-toggle">
+            <input type="checkbox" id="save-images" />
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label" id="save-images-label"></span>
+          </label>
           <button class="clear-all" id="clear-all" type="button"></button>
         </div>
       </header>
@@ -567,6 +680,8 @@
         const pauseLabel = pauseBtn.querySelector(".btn-label");
         const intervalSelect = document.getElementById("interval-select");
         const selectChevron = document.querySelector(".select-chevron");
+        const saveImagesInput = document.getElementById("save-images");
+        const saveImagesLabel = document.getElementById("save-images-label");
         const clearAllBtn = document.getElementById("clear-all");
         const banner = document.getElementById("banner");
         const bannerText = document.getElementById("banner-text");
@@ -595,6 +710,7 @@
           paused: false,
           pollIntervalMs: POLL_MS,
           permissionDenied: false,
+          saveImages: false,
           groups: [],
         };
 
@@ -605,6 +721,9 @@
             resume: "Resume capture",
             intervalLabel: "Capture interval",
             clearAll: "Clear all",
+            saveImages: "Save images",
+            saveImagesError: "Could not update image capture",
+            imageCopyUnsupported: "Image restore is not supported by this host",
             pausedBanner: "Capture paused — new clipboard content is not being recorded.",
             permissionTitle: "Clipboard access denied",
             permissionCopy:
@@ -638,6 +757,9 @@
             resume: "恢复采集",
             intervalLabel: "采集间隔",
             clearAll: "清空全部",
+            saveImages: "保存图片",
+            saveImagesError: "更新图片采集失败",
+            imageCopyUnsupported: "当前宿主不支持图片恢复",
             pausedBanner: "已暂停采集，期间不会记录新的剪贴板内容",
             permissionTitle: "无法读取剪贴板",
             permissionCopy: "在系统或插件的权限设置中允许“读取剪贴板”后自动恢复采集",
@@ -684,6 +806,8 @@
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l7 2.8v5.2c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6.3z"/><path d="M12 8.5v4"/><path d="M12 16h.01"/></svg>',
           chevron:
             '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+          image:
+            '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 4.5-4.5 3 3L16 13l3 3"/></svg>',
         };
 
         // ---------- theming / i18n ----------
@@ -751,12 +875,23 @@
           return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
         };
         const previewText = (text) => String(text ?? "").replace(/\r\n|\r|\n/g, " ").trim();
+        const formatSize = (bytes) => {
+          const n = Number(bytes);
+          if (!Number.isFinite(n) || n < 0) return "";
+          if (n < 1024) return `${n} B`;
+          if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+          return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+        };
         const signature = (s) =>
           JSON.stringify([
             s.permissionDenied,
             s.groups.map((g) => [
               g.dateKey,
-              g.items.map((i) => [i.id, i.hash, i.truncated, i.capturedAt]),
+              g.items.map((i) =>
+                i.type === "image"
+                  ? [i.id, i.type, i.sizeBytes, i.capturedAt]
+                  : [i.id, i.type, i.hash, i.truncated, i.capturedAt]
+              ),
             ]),
           ]);
 
@@ -801,6 +936,8 @@
           setPauseButton();
           syncIntervalSelect();
           intervalSelect.setAttribute("aria-label", t("intervalLabel"));
+          saveImagesLabel.textContent = t("saveImages");
+          saveImagesInput.checked = state.saveImages;
           if (clearAllBtn.dataset.armed !== "true") {
             clearAllBtn.textContent = t("clearAll");
             clearAllBtn.title = t("clearAll");
@@ -849,8 +986,12 @@
           try {
             await bridge.invoke("history.copy", { id });
             toast(t("copied"), "info");
-          } catch {
-            toast(t("copyError"), "error");
+          } catch (error) {
+            if (error && error.code === "UNSUPPORTED") {
+              toast(t("imageCopyUnsupported"), "error");
+            } else {
+              toast(t("copyError"), "error");
+            }
           }
         };
 
@@ -899,6 +1040,22 @@
           }
         };
 
+        const toggleSaveImages = async () => {
+          const next = !state.saveImages;
+          saveImagesInput.disabled = true;
+          try {
+            const res = await bridge.invoke("history.setSaveImages", { enabled: next });
+            state.saveImages =
+              res && res.saveImages !== undefined ? Boolean(res.saveImages) : next;
+            updateToolbar();
+          } catch {
+            toast(t("saveImagesError"), "error");
+            updateToolbar();
+          } finally {
+            saveImagesInput.disabled = false;
+          }
+        };
+
         const setIntervalMs = async (ms) => {
           try {
             const res = await bridge.invoke("history.setInterval", { ms });
@@ -922,16 +1079,43 @@
           main.type = "button";
           main.className = "card-main";
           main.setAttribute("aria-label", t("copyAria"));
-          main.title = previewText(item.text);
+          main.title =
+            item.type === "image"
+              ? formatSize(item.sizeBytes) || t("copyAria")
+              : previewText(item.text);
           main.addEventListener("click", () => void copyItem(item.id));
 
-          const text = document.createElement("span");
-          text.className = "card-text";
-          text.textContent = previewText(item.text);
+          if (item.type === "image") {
+            if (item.imageDataUrl) {
+              const img = document.createElement("img");
+              img.className = "card-image";
+              img.src = item.imageDataUrl;
+              img.alt = "";
+              img.draggable = false;
+              img.loading = "lazy";
+              main.append(img);
+            } else {
+              const placeholder = document.createElement("span");
+              placeholder.className = "card-image-placeholder";
+              const icon = document.createElement("span");
+              icon.className = "ph-icon";
+              icon.innerHTML = svg.image;
+              const size = document.createElement("span");
+              size.className = "card-image-size";
+              size.textContent = formatSize(item.sizeBytes);
+              placeholder.append(icon, size);
+              main.append(placeholder);
+            }
+          } else {
+            const text = document.createElement("span");
+            text.className = "card-text";
+            text.textContent = previewText(item.text);
+            main.append(text);
+          }
 
           const foot = document.createElement("span");
           foot.className = "card-foot";
-          if (item.truncated) {
+          if (item.type === "text" && item.truncated) {
             const badge = document.createElement("span");
             badge.className = "card-trunc";
             badge.textContent = t("truncated");
@@ -943,7 +1127,7 @@
           time.textContent = formatTime(item.capturedAt);
           foot.append(time);
 
-          main.append(text, foot);
+          main.append(foot);
 
           const del = document.createElement("button");
           del.type = "button";
@@ -1045,12 +1229,14 @@
             paused: Boolean(res && res.paused),
             pollIntervalMs: Number(res && res.pollIntervalMs) || state.pollIntervalMs,
             permissionDenied: Boolean(res && res.permissionDenied),
+            saveImages: Boolean(res && res.saveImages),
             groups: Array.isArray(res && res.groups) ? res.groups : [],
           };
           const sig = signature(next);
           state.paused = next.paused;
           state.pollIntervalMs = next.pollIntervalMs;
           state.permissionDenied = next.permissionDenied;
+          state.saveImages = next.saveImages;
           updateToolbar();
           if (!loaded || sig !== lastSignature) {
             lastSignature = sig;
@@ -1077,6 +1263,7 @@
           const ms = Number(intervalSelect.value);
           if (ms > 0) void setIntervalMs(ms);
         });
+        saveImagesInput.addEventListener("change", () => void toggleSaveImages());
         clearAllBtn.addEventListener("click", () =>
           armConfirm(clearAllBtn, "clearConfirm", () => void clearAll())
         );
