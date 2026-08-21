@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.todo",
   "name": "小清新待办",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "PI-Desktop 官方待办：四象限与简单列表双布局，可设到期时间与原生系统提醒；注册 todo_manage agent 工具，AI 可直接查询/添加/拆分/完成/延期/清空。",
   "i18n": {
     "en": {
@@ -21,7 +21,7 @@
     "productivity",
     "official"
   ],
-  "changelog": "Release 0.6.2：迁移到 v3 穿透式顶部 chrome，顶部控件保持可点击，空白区域继续可拖拽。Release 0.6.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊。Release 0.6.0：面板跟随 app 主体的语言与颜色模式——新增深色配色（保留原浅色观感），宿主切换亮/暗时实时换肤；可见文案（标题/占位符/筛选/象限/按钮/空态/到期提示/提醒等）抽成中英双语表，按 app 语言实时切换；旧版宿主自动降级（跟随系统偏好 + 中文界面）。Release 0.1.0：首个版本，简单列表待办。Release 0.2.0：新增四象限矩阵布局（拖拽移动象限）、双布局切换并记住、窗口 1000×700。Release 0.3.0：任务可设置到期时间、到期提醒（低占用单定时器调度）。Release 0.3.1：到期提醒升级为原生系统通知（ui.showNativeNotification，宿主 ADR 0074）。Release 0.4.0：插件 id 定稿为 pi.todo（官方 pi. 前缀）。Release 0.5.0：注册 agent 工具 todo_manage（AI 可管理待办：查询/添加/大段拆分/模糊完成/延期/清空过期/删除）；数据迁移至插件数据目录 settings.json，面板与 AI 共享同一份数据，双向同步。Release 0.5.1：补丁发布，无功能变更（同步源码仓库与市场版本号）。",
+  "changelog": "Release 0.6.3：源码仓库对齐市场 0.6.2 基线（v3 穿透式顶部 chrome + panel-polish.css + i18n manifest 双语块）。Release 0.6.2：迁移到 v3 穿透式顶部 chrome，顶部控件保持可点击，空白区域继续可拖拽。Release 0.6.1：适配 PI-Desktop 跨平台 46px 主机拖拽带和简约三按钮窗口控制胶囊。Release 0.6.0：面板跟随 app 主体的语言与颜色模式——新增深色配色（保留原浅色观感），宿主切换亮/暗时实时换肤；可见文案（标题/占位符/筛选/象限/按钮/空态/到期提示/提醒等）抽成中英双语表，按 app 语言实时切换；旧版宿主自动降级（跟随系统偏好 + 中文界面）。Release 0.1.0：首个版本，简单列表待办。Release 0.2.0：新增四象限矩阵布局（拖拽移动象限）、双布局切换并记住、窗口 1000×700。Release 0.3.0：任务可设置到期时间、到期提醒（低占用单定时器调度）。Release 0.3.1：到期提醒升级为原生系统通知（ui.showNativeNotification，宿主 ADR 0074）。Release 0.4.0：插件 id 定稿为 pi.todo（官方 pi. 前缀）。Release 0.5.0：注册 agent 工具 todo_manage（AI 可管理待办：查询/添加/大段拆分/模糊完成/延期/清空过期/删除）；数据迁移至插件数据目录 settings.json，面板与 AI 共享同一份数据，双向同步。Release 0.5.1：补丁发布，无功能变更（同步源码仓库与市场版本号）。",
   "safetyNotes": "待办数据仅保存在本机插件数据目录（settings.json，localStorage 缓存同步）；到期提醒通过宿主原生系统通知（notify 权限）发出；agent 工具 todo_manage 只读写本插件自身数据；无网络请求、无其他文件访问、无自动执行代码。",
   "main": "main.js",
   "ui": {
