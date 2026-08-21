@@ -1,7 +1,16 @@
 /* The editor keeps its warm paper identity; the surrounding chrome follows
    the compact PI-Desktop rhythm and remains readable on small panels. */
 html, body { scrollbar-gutter: stable; }
-body { font-size: 13.5px !important; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body {
+  font-size: 13.5px !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Paint the body itself so the host's one-shot capsule color sample
+     (body computed background/color at DOMContentLoaded) always matches the
+     visible page, in both themes and after in-panel theme toggles. */
+  background: rgb(var(--c-bg));
+  color: rgb(var(--c-ink));
+}
 #root { background: rgb(var(--c-bg)); }
 .milkdown .ProseMirror {
   max-width: 900px;
@@ -22,20 +31,76 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
-/* --- Host drag-band seam ---------------------------------------------------
-   The host owns a 46px transparent, non-clickable drag band above normal-flow
-   content. The first row below it used to stack a tinted strip (#222 sidebar
-   header) plus tall toolbars onto that void, which read as a second titlebar
-   (~90px of chrome in total). Keep that row compact and painted in the page
-   background so the band flows into the UI instead of doubling it. */
-.sidebar-header {
-  padding-top: 6px;
-  padding-bottom: 6px;
+/* --- v2 chrome: full-bleed layout under the host drag band -----------------
+   This page opts in with <meta name="pi-plugin-chrome" content="v2">, so the
+   host does NOT add 46px of body padding. The panel is full-bleed instead:
+
+   - Normal-flow content starts at the very top of the window. Scroll
+     containers get an in-flow padding-top equal to the titlebar height, so
+     the first row clears the band initially while scrolled content stays
+     visible as it travels through (and under) the transparent band.
+   - The band is drag-only and never accepts clicks, so every interactive row
+     (sidebar search, tabs, note title) is pinned below it via
+     var(--pi-plugin-titlebar-height, 46px). Embedded surfaces report 0 and
+     collapse back to a plain layout automatically. */
+
+:root {
+  --pimd-titlebar-h: var(--pi-plugin-titlebar-height, 46px);
+  /* Deterministic row metrics for the sticky offsets below. */
+  --pimd-sidebar-header-h: 49px;  /* 12 + 28 (search input) + 8 + 1 border  */
+  --pimd-title-row-h: 53px;       /* 12 + 32 (title input) + 8 + 1 border  */
+}
+
+/* Sidebar: the whole column is the scroll container, so notes/search hits
+   scroll beneath the band; the tinted header and the tab row stay pinned. */
+.sidebar-container {
+  padding-top: var(--pimd-titlebar-h);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar-container > .sidebar-header {
+  position: sticky;
+  top: var(--pimd-titlebar-h);
+  z-index: 30;
+  flex: none;
+  box-sizing: border-box;
+  height: var(--pimd-sidebar-header-h);
+  padding-top: 12px;
+  padding-bottom: 8px;
+}
+.sidebar-container > .sidebar-header input { min-height: 28px; }
+.sidebar-container > .sidebar-tabs {
+  position: sticky;
+  top: calc(var(--pimd-titlebar-h) + var(--pimd-sidebar-header-h));
+  z-index: 29;
+  flex: none;
+  box-sizing: border-box;
+  height: 34px;
+  align-items: center;
+  /* Opaque: list content passes underneath while pinned. */
   background: rgb(var(--c-bg));
 }
-.sidebar-header input {
-  min-height: 28px;
+
+/* Editor pane: the note title row is lifted out of flow and floats just
+   below the band; the scroll area spans the full column so the document
+   itself scrolls under the band (and behind the window-control capsule). */
+.editor-pane > .editor-title-row {
+  position: absolute;
+  top: var(--pimd-titlebar-h);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  box-sizing: border-box;
+  height: var(--pimd-title-row-h);
+  padding-top: 12px;
+  padding-bottom: 8px;
+  background: rgb(var(--c-bg));
+}
+.editor-pane > .pi-md-scroll {
+  padding-top: calc(var(--pimd-titlebar-h) + var(--pimd-title-row-h));
 }
 .milkdown .milkdown-top-bar {
+  position: sticky;
+  top: calc(var(--pimd-titlebar-h) + var(--pimd-title-row-h));
   min-height: 36px;
 }
