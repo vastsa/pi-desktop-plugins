@@ -21,3 +21,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+/* --- Host drag-band seam ---------------------------------------------------
+   The host owns a 46px transparent, non-clickable drag band above normal-flow
+   content. The first row below it used to stack a tinted strip (#222 sidebar
+   header) plus tall toolbars onto that void, which read as a second titlebar
+   (~90px of chrome in total). Keep that row compact and painted in the page
+   background so the band flows into the UI instead of doubling it. */
+.sidebar-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background: rgb(var(--c-bg));
+}
+.sidebar-header input {
+  min-height: 28px;
+}
+.milkdown .milkdown-top-bar {
+  min-height: 36px;
+}

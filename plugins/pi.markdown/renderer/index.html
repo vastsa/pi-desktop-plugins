@@ -41,7 +41,21 @@
       // 外观运行时初始化：跟随宿主（app.getAppearance + appearance:changed）。
       // 注：宿主没有 "appearance.sync" 通道，settings.theme 由 main.js 在
       // onLoad 时收敛为宿主 base，这里不再重复同步。
-      if (window.__appearance) window.__appearance.init(window.pluginBridge);
+      //
+      // 宿主驱动的主题变更不经过 React（bundle 不监听外观通道）：data-theme
+      // 被外观运行时直接改写，而 state.theme 与下方 pimd.theme.v1 镜像都不
+      // 更新，于是下次打开按过期主题首绘，宿主在 DOMContentLoaded 对页面
+      // 颜色做的一次性快照（窗口控制胶囊取色）拿到错误墨色，胶囊在深色背景
+      // 上近乎不可见。这里在每次实际应用的主题变化时把真实主题写回镜像，
+      // 使镜像与首帧永远一致。
+      if (window.__appearance) {
+        window.__appearance.onThemeChange(function (base) {
+          try {
+            localStorage.setItem("pimd.theme.v1", base);
+          } catch (e) {}
+        });
+        window.__appearance.init(window.pluginBridge);
+      }
     </script>
   </body>
 </html>
