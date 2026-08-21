@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.clipboard-history",
   "name": "剪贴板历史",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Capture clipboard text while PI-Desktop runs, keep 30 days of history, restore any entry with one click.",
   "i18n": {
     "en": {
@@ -21,7 +21,7 @@
     "productivity",
     "community"
   ],
-  "changelog": "Release 0.2.0: 支持剪贴板图片采集与恢复（宿主 getHistory 可用时自动启用，可关闭）；新增保存图片开关。Image capture & restore when the host exposes getHistory, with a save-images toggle.\nRelease 0.1.0: 首个版本——后台采集剪贴板文本、按天归档保留 30 天、面板一键恢复/删除/清空、暂停开关与轮询间隔可调。Initial release — background clipboard capture, 30-day daily archives, one-click restore/delete/clear in a panel, pause toggle and configurable poll interval.",
+  "changelog": "Release 0.2.1: migrates the panel to v3 paint-through chrome and removes the duplicate 46px top inset; top-band controls remain clickable while blank space remains draggable. Release 0.2.0: 支持剪贴板图片采集与恢复（宿主 getHistory 可用时自动启用，可关闭）；新增保存图片开关。Image capture & restore when the host exposes getHistory, with a save-images toggle.\nRelease 0.1.0: 首个版本——后台采集剪贴板文本、按天归档保留 30 天、面板一键恢复/删除/清空、暂停开关与轮询间隔可调。Initial release — background clipboard capture, 30-day daily archives, one-click restore/delete/clear in a panel, pause toggle and configurable poll interval.",
   "safetyNotes": "在 PI-Desktop 运行期间本地采集剪贴板文本，以明文形式在磁盘上保留最多 30 天。复制的敏感内容（密码、令牌等）同样会被记录——可使用暂停开关或删除条目清除。数据不会离开本机。",
   "main": "main.js",
   "ui": {

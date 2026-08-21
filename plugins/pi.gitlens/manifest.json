@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.gitlens",
   "name": "Git Lens",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Ships an isolated multi-view panel, agent tools the AI can call, and an AI-callable tool that opens any panel page on demand.",
   "i18n": {
     "en": {
@@ -22,7 +22,7 @@
     "productivity",
     "official"
   ],
-  "changelog": "Release 0.1.2: tightens responsive spacing, focus treatment, and control sizing on top of the PI-Desktop design system. Release 0.1.1: restyles the panel to mirror the PI-Desktop design system exactly — the purple accent and bespoke palette are replaced by the app's neutral monochrome accent and `--ds-*` tokens (surfaces, text tiers, borders, radii, type ramp), semantic git colors map to the app's success/warning/error tokens, and a contributed app theme now re-skins the panel the same way it re-skins the shell. No behavior, tool, command or permission changes.",
+  "changelog": "Release 0.1.3: migrates the panel to v3 paint-through chrome and restores full viewport height without the legacy 46px double subtraction. Release 0.1.2: tightens responsive spacing, focus treatment, and control sizing on top of the PI-Desktop design system. Release 0.1.1: restyles the panel to mirror the PI-Desktop design system exactly — the purple accent and bespoke palette are replaced by the app's neutral monochrome accent and `--ds-*` tokens (surfaces, text tiers, borders, radii, type ramp), semantic git colors map to the app's success/warning/error tokens, and a contributed app theme now re-skins the panel the same way it re-skins the shell. No behavior, tool, command or permission changes.",
   "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials. Commits, branch switches/deletes and stash operations are local git operations that respect repository hooks; the tools cannot push, pull, fetch or force anything beyond explicit branch deletion (git branch -D only when the caller asks for force). The panel is an isolated, context-isolated window that talks to the plugin process through the host bridge only.",
   "main": "main.js",
   "ui": {
