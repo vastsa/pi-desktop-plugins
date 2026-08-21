@@ -12,20 +12,11 @@ body {
   color: rgb(var(--c-ink));
 }
 #root { background: rgb(var(--c-bg)); }
-.milkdown .ProseMirror {
-  max-width: 900px;
-  margin-inline: auto;
-  padding-inline: clamp(20px, 6vw, 72px);
-}
-.milkdown .ProseMirror pre { border-radius: 8px; }
-.milkdown .ProseMirror img { border-radius: 8px; }
+
 button, input, textarea, select { min-height: 32px; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid rgb(var(--c-accent) / 0.28);
   outline-offset: 2px;
-}
-@media (max-width: 720px) {
-  .milkdown .ProseMirror { padding-inline: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
@@ -42,48 +33,48 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
    - The band is drag-only and never accepts clicks, so every interactive row
      (sidebar search, tabs, note title) is pinned below it via
      var(--pi-plugin-titlebar-height, 46px). Embedded surfaces report 0 and
-     collapse back to a plain layout automatically. */
+     collapse back to a plain layout automatically.
+   - The band itself is painted with each column's own surface so it reads as
+     the top of the UI instead of a void. */
 
 :root {
   --pimd-titlebar-h: var(--pi-plugin-titlebar-height, 46px);
-  /* Deterministic row metrics for the sticky offsets below. */
-  --pimd-sidebar-header-h: 49px;  /* 12 + 28 (search input) + 8 + 1 border  */
-  --pimd-title-row-h: 53px;       /* 12 + 32 (title input) + 8 + 1 border  */
+  /* Deterministic row metrics for the offsets below (pad + control + pad). */
+  --pimd-sidebar-header-h: 43px;  /* 8 + 28 (search input) + 6 + 1 border */
+  --pimd-tabs-h: 30px;
+  --pimd-title-row-h: 45px;       /* 8 + 32 (title input) + 4 + 1 border  */
 }
 
-/* Sidebar: the whole column is the scroll container, so notes/search hits
-   scroll beneath the band; the tinted header and the tab row stay pinned. */
+/* Sidebar: paint the drag-band strip in the header tint so band + header read
+   as one continuous block; the list below keeps the page background. */
 .sidebar-container {
   padding-top: var(--pimd-titlebar-h);
-  overflow-y: auto;
-  overflow-x: hidden;
+  background:
+    linear-gradient(
+      rgb(var(--c-sidebar-header)),
+      rgb(var(--c-sidebar-header))
+    ) top / 100% var(--pimd-titlebar-h) no-repeat,
+    rgb(var(--c-bg));
 }
 .sidebar-container > .sidebar-header {
-  position: sticky;
-  top: var(--pimd-titlebar-h);
-  z-index: 30;
   flex: none;
   box-sizing: border-box;
   height: var(--pimd-sidebar-header-h);
-  padding-top: 12px;
-  padding-bottom: 8px;
+  padding-top: 8px;
+  padding-bottom: 6px;
 }
 .sidebar-container > .sidebar-header input { min-height: 28px; }
+.sidebar-container .tab-button { min-height: 27px; }
 .sidebar-container > .sidebar-tabs {
-  position: sticky;
-  top: calc(var(--pimd-titlebar-h) + var(--pimd-sidebar-header-h));
-  z-index: 29;
   flex: none;
   box-sizing: border-box;
-  height: 34px;
+  height: var(--pimd-tabs-h);
   align-items: center;
-  /* Opaque: list content passes underneath while pinned. */
-  background: rgb(var(--c-bg));
 }
 
-/* Editor pane: the note title row is lifted out of flow and floats just
-   below the band; the scroll area spans the full column so the document
-   itself scrolls under the band (and behind the window-control capsule). */
+/* Editor pane: the note title row floats just below the band; the scroll
+   area spans the full column so the document scrolls under the band (and
+   behind the window-control capsule). */
 .editor-pane > .editor-title-row {
   position: absolute;
   top: var(--pimd-titlebar-h);
@@ -92,8 +83,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   z-index: 30;
   box-sizing: border-box;
   height: var(--pimd-title-row-h);
-  padding-top: 12px;
-  padding-bottom: 8px;
+  padding-top: 8px;
+  padding-bottom: 4px;
   background: rgb(var(--c-bg));
 }
 .editor-pane > .pi-md-scroll {
@@ -103,4 +94,22 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   position: sticky;
   top: calc(var(--pimd-titlebar-h) + var(--pimd-title-row-h));
   min-height: 36px;
+}
+
+/* --- Editor rhythm ----------------------------------------------------------
+   Crepe's vendored theme ships `.milkdown .ProseMirror { padding: 60px 120px }`
+   LATER in the cascade than the app's own override, so its 60px top padding
+   silently won and text started ~190px below the window top (band spacer +
+   title row + Crepe padding + first-heading margin). This sheet loads last:
+   re-assert compact padding and drop the leading margin of the first block. */
+.milkdown .ProseMirror {
+  max-width: 900px;
+  margin-inline: auto;
+  padding: 12px clamp(20px, 6vw, 72px) 40vh;
+}
+.milkdown .ProseMirror pre { border-radius: 8px; }
+.milkdown .ProseMirror img { border-radius: 8px; }
+.milkdown .ProseMirror > :first-child { margin-top: 0; }
+@media (max-width: 720px) {
+  .milkdown .ProseMirror { padding-inline: 20px; }
 }
