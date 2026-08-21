@@ -22,12 +22,12 @@ test("every panel plugin documents the host-owned 46px chrome contract", () => {
     const panelHtml = readFileSync(panelPath, "utf8");
     assert.match(
       panelHtml,
-      /PI-Desktop owns exactly a transparent 46px drag band/,
-      `${pluginId} must document the non-clickable host drag band`,
+      /PI-Desktop owns exactly (?:a transparent 46px drag band|a 46px drag band)/,
+      `${pluginId} must document the host-owned 46px drag band`,
     );
     assert.match(
       panelHtml,
-      /three-button window-control capsule/,
+      /three-button[\s\S]*window-control capsule/,
       `${pluginId} must document the host window-control capsule`,
     );
     assert.match(

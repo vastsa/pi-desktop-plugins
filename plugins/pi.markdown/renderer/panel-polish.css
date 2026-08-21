@@ -11,7 +11,12 @@ body {
   background: rgb(var(--c-bg));
   color: rgb(var(--c-ink));
 }
-#root { background: rgb(var(--c-bg)); }
+#root {
+  background: rgb(var(--c-bg));
+  /* v3 paints through the transparent host overlay; keep the root full-height
+     so the host chrome is not mirrored as an empty strip at the bottom. */
+  height: 100%;
+}
 
 button, input, textarea, select { min-height: 32px; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
@@ -22,20 +27,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
-/* --- v2 chrome: full-bleed layout under the host drag band -----------------
-   This page opts in with <meta name="pi-plugin-chrome" content="v2">, so the
-   host does NOT add 46px of body padding. The panel is full-bleed instead:
-
-   - Normal-flow content starts at the very top of the window. Scroll
-     containers get an in-flow padding-top equal to the titlebar height, so
-     the first row clears the band initially while scrolled content stays
-     visible as it travels through (and under) the transparent band.
-   - The band is drag-only and never accepts clicks, so every interactive row
-     (sidebar search, tabs, note title) is pinned below it via
-     var(--pi-plugin-titlebar-height, 46px). Embedded surfaces report 0 and
-     collapse back to a plain layout automatically.
-   - The band itself is painted with each column's own surface so it reads as
-     the top of the UI instead of a void. */
+/* --- v3 chrome: paint-through layout under the host drag map ---------------
+   This page opts in with <meta name="pi-plugin-chrome" content="v3">. The
+   host keeps only the capsule above the page and lets the page draw in the
+   former 46px band. The editor and sidebar own their first visible rows, while
+   standard controls remain clickable through host-generated drag gaps. */
 
 :root {
   --pimd-titlebar-h: var(--pi-plugin-titlebar-height, 46px);
@@ -45,16 +41,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   --pimd-title-row-h: 45px;       /* 8 + 32 (title input) + 4 + 1 border  */
 }
 
-/* Sidebar: paint the drag-band strip in the header tint so band + header read
-   as one continuous block; the list below keeps the page background. */
+/* Sidebar: the search row now paints into the former host band. */
 .sidebar-container {
-  padding-top: var(--pimd-titlebar-h);
-  background:
-    linear-gradient(
-      rgb(var(--c-sidebar-header)),
-      rgb(var(--c-sidebar-header))
-    ) top / 100% var(--pimd-titlebar-h) no-repeat,
-    rgb(var(--c-bg));
+  padding-top: 0;
+  background: rgb(var(--c-sidebar-header));
 }
 .sidebar-container > .sidebar-header {
   flex: none;
@@ -72,12 +62,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   align-items: center;
 }
 
-/* Editor pane: the note title row floats just below the band; the scroll
-   area spans the full column so the document scrolls under the band (and
-   behind the window-control capsule). */
+/* Editor pane: the note title row paints into the former host band; reserve
+   only that row before the document begins and keep the capsule clear. */
 .editor-pane > .editor-title-row {
   position: absolute;
-  top: var(--pimd-titlebar-h);
+  top: 0;
   left: 0;
   right: 0;
   z-index: 30;
@@ -85,14 +74,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   height: var(--pimd-title-row-h);
   padding-top: 8px;
   padding-bottom: 4px;
+  padding-right: 116px;
   background: rgb(var(--c-bg));
 }
 .editor-pane > .pi-md-scroll {
-  padding-top: calc(var(--pimd-titlebar-h) + var(--pimd-title-row-h));
+  padding-top: var(--pimd-title-row-h);
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 .milkdown .milkdown-top-bar {
   position: sticky;
-  top: calc(var(--pimd-titlebar-h) + var(--pimd-title-row-h));
+  top: var(--pimd-title-row-h);
   min-height: 36px;
 }
 
