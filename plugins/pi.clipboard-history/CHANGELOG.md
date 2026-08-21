@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 (2026-08-21)
+
+- 支持剪贴板图片：宿主提供 `pi.clipboard.getHistory()` 时自动启用，同步采集文本与图片并按天归档
+- 图片以二进制文件存储于 `history/images/<dateKey>/`，元数据写入 JSONL；列表仅对 ≤2 MiB 的图片返回缩略图
+- 新增「保存图片」开关（`saveImages`，默认开启），关闭后跳过图片采集
+- 一键恢复图片：通过 `pi.clipboard.writeImage` 写回剪贴板（宿主不支持时返回 `UNSUPPORTED`）
+- 宿主未提供 `getHistory` 时自动回退到原有轮询（仅文本）
+- `history.list` 新增 `saveImages` 字段；新增 `history.setSaveImages` 通道
+
+Image support: sync text + images via host `getHistory` when available
+(fallback to text-only polling otherwise), per-day binary image files,
+save-images toggle, one-click image restore via `writeImage`.
+
 ## 0.1.0 (2026-08-21)
 
 - 首个版本：后台采集剪贴板文本，按天归档保留 30 天

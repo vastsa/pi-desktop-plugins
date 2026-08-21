@@ -53,6 +53,8 @@ async function onPanelInvoke(channel, payload) {
       return { paused: await service.setPaused(p.paused) };
     case "history.setInterval":
       return { pollIntervalMs: await service.setIntervalMs(p.ms) };
+    case "history.setSaveImages":
+      return { saveImages: await service.setSaveImages(p.enabled) };
     default: {
       const err = new Error(`Unsupported channel: ${channel}`);
       err.code = "UNSUPPORTED";

@@ -3,8 +3,16 @@
 /**
  * Storage layer for pi.clipboard-history.
  *
- * Layout: <dataPath>/history/YYYY-MM-DD.jsonl — one JSON object per line:
- *   { id, text, hash, capturedAt, truncated }
+ * Layout:
+ *   <dataPath>/history/YYYY-MM-DD.jsonl              — one JSON object per line
+ *   <dataPath>/history/images/<dateKey>/<id>.<ext>   — binary image files
+ *
+ * Text record line:  { id, type: "text", text, hash, capturedAt, truncated }
+ * Image record line: { id, type: "image", format, width, height, sizeBytes,
+ *                      file, hash, capturedAt }
+ *   `file` is a posix-style path relative to the history root, e.g.
+ *   "images/2026-08-21/abc123.png". Per-day image subdirs make purge and
+ *   clearDay trivial (remove the day's dir).
  *
  * In-memory model: Map<dateKey, record[]> with records appended newest-last
  * (the last element of a day's array is that day's newest record). Served
@@ -12,24 +20,31 @@
  *
  * Write path: mutate the model first, then persist. Appends use
  * fs.appendFileSync; structural rewrites (touch / remove / clearDay / cap
- * enforcement) use a temp file + rename for atomicity.
+ * enforcement / migration) use a temp file + rename for atomicity.
  *
  * The model is loaded lazily on the first request (service start defers all
- * file IO until the first history.* call). Corrupt lines are skipped.
+ * file IO until the first history.* call). Corrupt lines are skipped. Image
+ * DATA is never loaded at startup — it is read from disk on demand (list
+ * thumbnails, copy-back).
+ *
+ * The 5 MiB per-day cap applies to the JSONL metadata lines only; image
+ * files are stored separately and bounded by host-side caps.
  */
 
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const MAX_TEXT_BYTES = 102400; // 100 KiB UTF-8 per record
-const DAY_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB per day file
+const MAX_TEXT_BYTES = 102400; // 100 KiB UTF-8 per text record
+const DAY_CAP_BYTES = 5 * 1024 * 1024; // 5 MiB per day JSONL file
 const RETENTION_DAYS = 30;
+const MAX_IMAGE_DATA_URL_BYTES = 2 * 1024 * 1024; // 2 MiB — larger images get imageDataUrl: null
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 class Store {
   constructor(dataPath) {
     this.root = path.join(dataPath, "history");
+    this.imagesRoot = path.join(this.root, "images");
     this.records = new Map(); // dateKey -> records[], oldest first
     this.loaded = false;
   }
@@ -53,8 +68,19 @@ class Store {
     return crypto.createHash("sha256").update(text, "utf8").digest("hex");
   }
 
+  hashBytes(buf) {
+    return crypto.createHash("sha256").update(buf).digest("hex");
+  }
+
   makeId() {
     return Date.now().toString(36) + "-" + crypto.randomBytes(4).toString("hex");
+  }
+
+  extForFormat(format) {
+    const f = String(format || "").toLowerCase();
+    if (f === "jpeg" || f === "jpg") return "jpeg";
+    if (f === "webp") return "webp";
+    return "png";
   }
 
   /**
@@ -76,7 +102,14 @@ class Store {
 
   makeRecord(text, hash, capturedAt) {
     const t = this.truncateText(text);
-    return { id: this.makeId(), text: t.text, hash, capturedAt, truncated: t.truncated };
+    return {
+      id: this.makeId(),
+      type: "text",
+      text: t.text,
+      hash,
+      capturedAt,
+      truncated: t.truncated,
+    };
   }
 
   lineBytes(record) {
@@ -110,8 +143,10 @@ class Store {
           if (!line.trim()) continue;
           try {
             const rec = JSON.parse(line);
-            if (rec && typeof rec.id === "string" && typeof rec.text === "string") {
-              records.push(rec);
+            if (rec && typeof rec.id === "string" && typeof rec.hash === "string") {
+              if (rec.type === "image" || typeof rec.text === "string") {
+                records.push(rec);
+              }
             }
           } catch {
             // tolerate corrupt lines: skip them
@@ -164,14 +199,50 @@ class Store {
   /* ------------------------------- writes ------------------------------- */
 
   /**
-   * Append a new record and persist. Enforces the per-day 5 MiB soft cap:
-   * if the file plus the new line would exceed it, drop the day's oldest
-   * records until it fits, then rewrite the file atomically.
+   * Append a text record and persist. Enforces the per-day 5 MiB soft cap
+   * on the JSONL file: if the file plus the new line would exceed it, drop
+   * the day's oldest records (and their image files) until it fits, then
+   * rewrite the file atomically.
    */
   append(text, hash, capturedAt = new Date().toISOString()) {
     this.ensureLoaded();
     const dateKey = this.localDateKey(Date.parse(capturedAt));
     const rec = this.makeRecord(text, hash, capturedAt);
+    return this.appendRecord(rec, dateKey);
+  }
+
+  /**
+   * Append an image record: write the binary file first, then the metadata
+   * line. `info` = { format, width, height, sizeBytes, data (Buffer) }.
+   */
+  appendImage(info, capturedAt = new Date().toISOString()) {
+    this.ensureLoaded();
+    const dateKey = this.localDateKey(Date.parse(capturedAt));
+    const id = this.makeId();
+    const ext = this.extForFormat(info.format);
+    const file = path.posix.join("images", dateKey, `${id}.${ext}`);
+    const rec = {
+      id,
+      type: "image",
+      format: info.format,
+      width: info.width,
+      height: info.height,
+      sizeBytes: info.sizeBytes,
+      file,
+      hash: this.hashBytes(info.data),
+      capturedAt,
+    };
+    this.writeImageFile(dateKey, id, ext, info.data);
+    try {
+      return this.appendRecord(rec, dateKey);
+    } catch (err) {
+      this.removeImageFile(rec); // avoid orphan file
+      throw err;
+    }
+  }
+
+  /** Shared append: model mutation + day-cap enforcement + persistence. */
+  appendRecord(rec, dateKey) {
     let arr = this.records.get(dateKey);
     if (!arr) {
       arr = [];
@@ -190,7 +261,9 @@ class Store {
     if (fileBytes + newBytes > DAY_CAP_BYTES) {
       let droppedBytes = 0;
       while (arr.length > 1 && fileBytes - droppedBytes + newBytes > DAY_CAP_BYTES) {
-        droppedBytes += this.lineBytes(arr.shift());
+        const dropped = arr.shift();
+        droppedBytes += this.lineBytes(dropped);
+        this.removeImageFile(dropped);
       }
       this.writeDayFile(dateKey);
     } else {
@@ -208,12 +281,26 @@ class Store {
    * Move a record into another day's array and persist both files. Used by
    * the touch helpers when a re-capture/copy-back happens on a later calendar
    * day: the card must surface under the new day ("置顶"), not stay under a
-   * stale date showing today's clock time.
+   * stale date showing today's clock time. Image files are moved into the
+   * new day's images/ subdir before the old day may be cleaned up.
    */
   migrateToDay(entry, dateKey) {
     const idx = entry.arr.indexOf(entry.rec);
     if (idx >= 0) entry.arr.splice(idx, 1);
-    this.writeDayFile(entry.dateKey); // persists removal / removes empty file
+    if (entry.rec.type === "image" && entry.rec.file) {
+      const oldAbs = path.join(this.root, entry.rec.file);
+      const ext = this.extForFormat(entry.rec.format);
+      const newFile = path.posix.join("images", dateKey, `${entry.rec.id}.${ext}`);
+      const newAbs = path.join(this.root, newFile);
+      try {
+        fs.mkdirSync(path.dirname(newAbs), { recursive: true });
+        fs.renameSync(oldAbs, newAbs);
+        entry.rec.file = newFile;
+      } catch {
+        /* best effort — keep the old path */
+      }
+    }
+    this.writeDayFile(entry.dateKey); // persists removal / removes empty day
     let arr = this.records.get(dateKey);
     if (!arr) {
       arr = [];
@@ -262,7 +349,8 @@ class Store {
       const arr = this.records.get(dateKey);
       const idx = arr.findIndex((r) => r.id === id);
       if (idx >= 0) {
-        arr.splice(idx, 1);
+        const [rec] = arr.splice(idx, 1);
+        this.removeImageFile(rec);
         this.writeDayFile(dateKey); // removes file + map entry when day empties
         return true;
       }
@@ -275,6 +363,7 @@ class Store {
     if (!DATE_KEY_RE.test(dateKey)) return false;
     const existed = this.records.delete(dateKey);
     this.removeDayFile(dateKey);
+    this.removeDayImages(dateKey);
     return existed;
   }
 
@@ -304,6 +393,7 @@ class Store {
       if (dateKey < cutoffKey) {
         this.records.delete(dateKey);
         this.removeDayFile(dateKey);
+        this.removeDayImages(dateKey);
         purged++;
       }
     }
@@ -318,6 +408,7 @@ class Store {
     const arr = this.records.get(dateKey);
     if (!arr || !arr.length) {
       this.removeDayFile(dateKey);
+      this.removeDayImages(dateKey);
       this.records.delete(dateKey);
       return;
     }
@@ -345,6 +436,41 @@ class Store {
     }
   }
 
+  /* ------------------------------ image files --------------------------- */
+
+  writeImageFile(dateKey, id, ext, data) {
+    const dir = path.join(this.imagesRoot, dateKey);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${id}.${ext}`), data);
+  }
+
+  removeImageFile(rec) {
+    if (!rec || rec.type !== "image" || !rec.file) return;
+    try {
+      fs.unlinkSync(path.join(this.root, rec.file));
+    } catch {
+      /* not found is fine */
+    }
+  }
+
+  removeDayImages(dateKey) {
+    try {
+      fs.rmSync(path.join(this.imagesRoot, dateKey), { recursive: true, force: true });
+    } catch {
+      /* best effort */
+    }
+  }
+
+  /** Read an image record's binary data, or null when missing. */
+  readImageData(rec) {
+    if (!rec || rec.type !== "image" || !rec.file) return null;
+    try {
+      return fs.readFileSync(path.join(this.root, rec.file));
+    } catch {
+      return null;
+    }
+  }
+
   /* ------------------------------ serving ------------------------------- */
 
   /** Days sorted dateKey DESC, items sorted capturedAt DESC, non-empty days only. */
@@ -356,17 +482,54 @@ class Store {
       if (!arr || !arr.length) continue;
       const items = [...arr]
         .sort((a, b) => (a.capturedAt < b.capturedAt ? 1 : a.capturedAt > b.capturedAt ? -1 : 0))
-        .map((r) => ({
-          id: r.id,
-          text: r.text,
-          hash: r.hash,
-          capturedAt: r.capturedAt,
-          truncated: r.truncated,
-        }));
+        .map((r) => this.toListItem(r));
       days.push({ dateKey, items });
     }
     return days;
   }
+
+  toListItem(r) {
+    if (r.type === "image") {
+      return {
+        id: r.id,
+        type: "image",
+        imageDataUrl: this.imageDataUrl(r),
+        width: r.width,
+        height: r.height,
+        sizeBytes: r.sizeBytes,
+        capturedAt: r.capturedAt,
+      };
+    }
+    return {
+      id: r.id,
+      type: "text",
+      text: r.text,
+      capturedAt: r.capturedAt,
+      truncated: r.truncated,
+    };
+  }
+
+  /**
+   * data:image/<format>;base64,... only when the image is <= 2 MiB, else
+   * null (the renderer shows a placeholder instead of a thumbnail).
+   */
+  imageDataUrl(r) {
+    if (r.type !== "image" || !r.file) return null;
+    if (typeof r.sizeBytes === "number" && r.sizeBytes > MAX_IMAGE_DATA_URL_BYTES) return null;
+    try {
+      const buf = fs.readFileSync(path.join(this.root, r.file));
+      if (buf.byteLength > MAX_IMAGE_DATA_URL_BYTES) return null;
+      return `data:image/${r.format};base64,${buf.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  }
 }
 
-module.exports = { Store, MAX_TEXT_BYTES, DAY_CAP_BYTES, RETENTION_DAYS };
+module.exports = {
+  Store,
+  MAX_TEXT_BYTES,
+  DAY_CAP_BYTES,
+  RETENTION_DAYS,
+  MAX_IMAGE_DATA_URL_BYTES,
+};
