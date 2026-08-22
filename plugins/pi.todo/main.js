@@ -19,10 +19,17 @@
  *   （ui.showNativeNotification 原生系统通知、ui.notify 应用内 toast、
  *   ui.getNotificationPermission 权限查询；渲染端调用，宿主在
  *   invokePanelBridge 中校验该权限）
+ * - background.service：托管常驻后台服务 due-reminder —— 面板关闭时
+ *   由插件进程主线程按最近到期时间调度检查，到期任务经
+ *   pi.ui.showNativeNotification 发原生系统通知（无窗口状态限制，
+ *   宿主 ADR 0074），与渲染端共用 reminded 字段去重，不重复提醒。
  * - agent.tool.register：注册 agent 工具 todo_manage（AI 管理待办）
  */
 
 const TODO_ACTIONS = ["list", "add", "split", "complete", "uncomplete", "delete", "clear_done", "clear_overdue", "extend"];
+
+/** setTimeout 上限（约 24.8 天）；到期任务比这更远时按上限分次重排 */
+const REMINDER_MAX_TIMEOUT_MS = 2147483647;
 
 async function loadTodos() {
   try {
@@ -236,6 +243,92 @@ async function runTodoAction(args) {
   }
 }
 
+/* ------------------------- 后台提醒服务（due-reminder） -------------------------
+ *
+ * 宿主通过 contributes.services + background.service 权限托管该服务：
+ * onLoad 完成后自动调用 start()，面板关闭进程仍常驻；崩溃由宿主退避重启；
+ * unload 前自动调用 stop()（宿主 ADR 0040 / plugin-runtime.ts）。
+ *
+ * 与渲染端共享同一份 settings.json 与 reminded 字段：
+ * - 主进程与渲染端都只提醒 `!done && !reminded && due <= now` 的任务；
+ * - 任一端提醒成功后都会把 reminded 置位并写回权威数据源，
+ *   另一端读取时即跳过——天然去重，不重复通知。
+ * - 渲染端负责面板打开期间的即时提醒；本服务兜底面板关闭期间的到期提醒，
+ *   经 pi.ui.showNativeNotification 发原生系统通知（无窗口状态限制，
+ *   宿主 ADR 0074），权限 manifest 已声明 notify。
+ */
+
+let reminderTimer = null;
+
+/** 单一定时器调度：按最近未提醒的到期时间触发一次 → 触发后重排 */
+async function scheduleNextReminder(log) {
+  if (reminderTimer) {
+    clearTimeout(reminderTimer);
+    reminderTimer = null;
+  }
+  let todos = [];
+  try {
+    todos = await loadTodos();
+  } catch (e) {
+    return;
+  }
+  let next = null;
+  for (const t of todos) {
+    if (t.done || t.reminded || !t.due) continue;
+    if (next === null || t.due < next) next = t.due;
+  }
+  if (next === null) return; // 没有待提醒任务：完全空闲，零开销
+  const delay = Math.max(0, Math.min(next - Date.now(), REMINDER_MAX_TIMEOUT_MS));
+  reminderTimer = setTimeout(() => {
+    reminderTimer = null;
+    void fireDueReminders(log).then(() => scheduleNextReminder(log));
+  }, delay + 50);
+}
+
+/** 找出已到期且未提醒的任务 → 标记 reminded 写回 → 发原生通知（含降级） */
+async function fireDueReminders(log) {
+  let todos = [];
+  try {
+    todos = await loadTodos();
+  } catch (e) {
+    return;
+  }
+  const now = Date.now();
+  const due = todos.filter((t) => !t.done && !t.reminded && t.due && t.due <= now);
+  if (!due.length) return;
+  due.forEach((t) => { t.reminded = true; });
+  try {
+    await saveTodos(todos); // 先写回再通知，重启/崩溃不重复提醒
+  } catch (e) {
+    return;
+  }
+  const names = due.slice(0, 3).map((t) => t.text).join("、");
+  // 通知文案跟随宿主语言（与渲染端 i18n 风格一致）；查询失败默认中文
+  let zh = true;
+  try {
+    const locale = String(await pi.app.getLocale() || "").toLowerCase();
+    zh = locale.startsWith("zh");
+  } catch (e) { /* 保持默认中文 */ }
+  const title = zh
+    ? (due.length > 1 ? (names + " 等 " + due.length + " 项到期") : (names + " 到期了"))
+    : (due.length > 1 ? (names + " and " + due.length + " more due") : (names + " is due"));
+  try {
+    const res = await pi.ui.showNativeNotification({ title, body: zh ? "小清新待办" : "Todo List" });
+    if (!res || !res.shown) {
+      await pi.ui.notify({ title, body: zh ? "小清新待办" : "Todo List" }).catch(() => {});
+    }
+  } catch (e) {
+    try { await pi.ui.notify({ title, body: zh ? "小清新待办" : "Todo List" }).catch(() => {}); } catch (e2) { /* 忽略 */ }
+  }
+}
+
+function stopReminderService() {
+  if (reminderTimer) {
+    clearTimeout(reminderTimer);
+    reminderTimer = null;
+  }
+}
+
 async function onLoad() {
   await pi.commands.register({
     id: "todo.open",
@@ -281,6 +374,21 @@ async function onLoad() {
     },
     execute: async (args) => runTodoAction(args || {}),
   });
+
+  // 托管常驻后台服务：面板关闭时由宿主保持插件进程运行并驱动 start/stop
+  // （contributes.services + background.service 权限）。到期提醒靠该服务
+  // 兜底——面板未打开也能发原生系统通知；渲染端打开时继续负责即时提醒，
+  // 双方共用 reminded 字段去重。
+  pi.services.register({
+    id: "due-reminder",
+    start: ({ log }) => {
+      log("due-reminder service started");
+      scheduleNextReminder(log).catch(() => {});
+    },
+    stop: () => {
+      stopReminderService();
+    },
+  });
 }
 
 /**
@@ -296,6 +404,10 @@ async function onPanelInvoke(channel, payload) {
 }
 
 async function onUnload() {
+  stopReminderService();
+  try {
+    await pi.services.unregister("due-reminder");
+  } catch (e) { /* 宿主已在 unload 前置停服务，注销失败可忽略 */ }
   await pi.commands.unregister("todo.open");
   await pi.agent.unregisterTool("todo_manage");
 }
