@@ -74,3 +74,5 @@ input, textarea, select {
   main[class*="ml-["] > div { padding-inline: 14px !important; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+/* v3 chrome: the first content row keeps the host window-control capsule (96px + 8px margin) clear. */
+.view-head { padding-right: 104px !important; }
