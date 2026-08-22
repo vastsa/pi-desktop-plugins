@@ -1,0 +1,16 @@
+/* Keep the dense analytics surface, but make the controls settle consistently
+   with the host shell at narrow widths and with keyboard focus. */
+html, body { scrollbar-gutter: stable; }
+button, input, select { -webkit-font-smoothing: antialiased; }
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--ds-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+.scroll { scrollbar-gutter: stable; }
+@media (max-width: 560px) {
+  :root { --gutter: 12px; }
+  .titlebar { padding-inline: 12px; }
+  .filterbar { padding-inline: 12px; }
+  .hero { padding: 18px; }
+  .block { padding: 14px; }
+}

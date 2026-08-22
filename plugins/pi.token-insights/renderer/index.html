@@ -7,8 +7,17 @@
     content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'none'; form-action 'none'; base-uri 'none'"
   />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    PI-Desktop owns exactly a 46px drag band and a minimal three-button
+    window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
+    paint through the 46px band, while host-generated holes keep controls
+    clickable and empty space draggable. Fixed or sticky panel surfaces use
+    var(--pi-plugin-titlebar-height, 46px).
+  -->
+  <meta name="pi-plugin-chrome" content="v3" />
   <title>Token Insights</title>
   <link rel="stylesheet" href="panel.css" />
+  <link rel="stylesheet" href="panel-polish.css" />
   <!--
     boot.js runs before the body is parsed and re-applies the appearance this
     panel last saw, so a reopen never flashes the wrong palette. Every visible

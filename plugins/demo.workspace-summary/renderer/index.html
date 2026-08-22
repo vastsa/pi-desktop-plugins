@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    PI-Desktop owns exactly a 46px drag band and a minimal three-button
+    window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
+    paint through the 46px band, while host-generated holes keep controls
+    clickable and empty space draggable. Fixed or sticky panel surfaces use
+    var(--pi-plugin-titlebar-height, 46px).
+  -->
+  <meta name="pi-plugin-chrome" content="v3" />
   <title>Workspace Summary</title>
   <script>window.__APPEARANCE_CACHE_KEY = "demo.workspace-summary.appearance.v1";</script>
   <script src="./appearance-boot.js"></script>
@@ -79,6 +87,7 @@
     }
     .stat b { display: block; font-size: 16px; margin-top: 4px; }
   </style>
+  <link rel="stylesheet" href="./panel-polish.css" />
 </head>
 <body>
   <h1 id="title">Workspace Summary</h1>

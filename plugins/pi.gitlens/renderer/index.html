@@ -1,12 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-booting="true">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      PI-Desktop owns exactly a 46px drag band and a minimal three-button
+      window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
+      paint through the 46px band, while host-generated holes keep controls
+      clickable and empty space draggable. Fixed or sticky panel surfaces use
+      var(--pi-plugin-titlebar-height, 46px).
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'none';" />
     <title>Git Lens</title>
     <script>window.__APPEARANCE_CACHE_KEY = "pi.gitlens.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>
     <link rel="stylesheet" href="panel.css" />
+    <link rel="stylesheet" href="panel-polish.css" />
   </head>
   <body>
     <div class="app">

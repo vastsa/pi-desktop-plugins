@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      PI-Desktop owns exactly a 46px drag band and a minimal three-button
+      window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
+      paint through the 46px band, while host-generated holes keep controls
+      clickable and empty space draggable. Fixed or sticky panel surfaces use
+      var(--pi-plugin-titlebar-height, 46px).
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
     <title>Hello Plugin</title>
     <script>window.__APPEARANCE_CACHE_KEY = "demo.hello.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>
@@ -29,6 +37,7 @@
       .card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--card); }
       button { margin-top: 12px; border: 0; border-radius: 8px; padding: 8px 12px; background: var(--accent); color: var(--accent-text); cursor: pointer; }
     </style>
+    <link rel="stylesheet" href="./panel-polish.css" />
   </head>
   <body>
     <div class="card">

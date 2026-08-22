@@ -1,0 +1,18 @@
+/* Small finishing pass on the app-aligned Git Lens surface. */
+html, body { scrollbar-gutter: stable; }
+.content { min-width: 0; }
+.button, .icon-button, .input, select, textarea {
+  min-height: 32px;
+  transition: background-color 150ms var(--motion-ease-out), border-color 150ms var(--motion-ease-out), color 150ms var(--motion-ease-out), box-shadow 150ms var(--motion-ease-out);
+}
+.button:focus-visible, .icon-button:focus-visible, .input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--ds-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+.view { min-width: 0; }
+@media (max-width: 600px) {
+  .sidebar { width: 152px; }
+  .content { min-width: 0; }
+  .toolbar { align-items: stretch; }
+  .toolbar .input { min-width: 0; width: 100%; }
+}

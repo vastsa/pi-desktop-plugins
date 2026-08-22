@@ -54,6 +54,16 @@ plugins/<id>/
   "name": "My Plugin",
   "version": "0.1.0",
   "description": "What it does",
+  "i18n": {
+    "en": {
+      "name": "My Plugin",
+      "description": "What it does"
+    },
+    "zh-CN": {
+      "name": "我的插件",
+      "description": "插件功能简介"
+    }
+  },
   "author": "your-name",
   "main": "main.js",
   "permissions": ["ui.panel"],
@@ -61,9 +71,16 @@ plugins/<id>/
 }
 ```
 
+Use BCP-47 locale keys in `i18n`. The marketplace discovers available locale
+options from these keys, so additional locales do not require a website code
+change. The website falls back to English when its own UI copy is not yet
+translated, while plugin metadata falls back to English, Simplified Chinese,
+then the base manifest fields.
+
 ### Recommended fields for marketplace quality
 
 - `categories`: e.g. `["productivity", "official"]`
+- `i18n`: localized `name`, `description`, `safetyNotes` and optional `readmeMarkdown`
 - `changelog`: short release notes for the current version
 - `safetyNotes`: plain-language risk summary
 - `ui.panel`: isolated panel html entry
@@ -88,10 +105,15 @@ follow the active application language:
 
 Do not hard-code a replacement title when opening the panel from a command. Use
 `pi.ui.openPanel()` without a `title` option so the host can resolve the
-localized manifest title. PI-Desktop owns the panel titlebar and adapts its
-background and foreground to the page appearance; plugin content should start
-below that host-owned chrome and should not implement a second draggable window
-titlebar.
+localized manifest title. PI-Desktop reserves exactly a 46px transparent drag
+band at the top of every panel and renders a minimal three-button window-control
+capsule in the top-right corner. The band is intentionally not clickable; the
+host may show a development hint for it. Normal-flow plugin content is offset
+below the band automatically. Plugins own every other visible part of the
+panel, and must not implement a second draggable window titlebar. A plugin
+element that is fixed or sticky to the window edge must begin at
+`top: var(--pi-plugin-titlebar-height, 46px)`; sticky elements inside their own
+scrollable views can keep their local `top: 0` behavior.
 
 ## Local verification in PI-Desktop
 

@@ -1,0 +1,1308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- PI-Desktop owns exactly a 46px drag band and a minimal three-button
+         window-control capsule. This panel uses pi-plugin-chrome=v3: the page
+         can paint through the band, while host-generated holes keep controls
+         clickable and empty space draggable. Fixed or sticky panel surfaces
+         use var(--pi-plugin-titlebar-height, 46px). -->
+    <meta name="pi-plugin-chrome" content="v3" />
+    <title>Clipboard History</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        /* Mirror the host's neutral ramp; plugin pages cannot inherit renderer
+           CSS, so these values intentionally track the host token palette. */
+        --bg: #181818;
+        --surface: #212121;
+        --surface-hover: color-mix(in oklab, #ffffff 6%, transparent);
+        --surface-active: color-mix(in oklab, #ffffff 10%, transparent);
+        --fg: #ffffff;
+        --secondary: color-mix(in oklab, #ffffff 70%, transparent);
+        --muted: color-mix(in oklab, #ffffff 52%, transparent);
+        --faint: color-mix(in oklab, #ffffff 38%, transparent);
+        --border: color-mix(in oklab, #ffffff 5%, transparent);
+        --border-strong: color-mix(in oklab, #ffffff 14%, transparent);
+        --accent: #ffffff;
+        --danger: #ff6764;
+        --danger-soft: color-mix(in oklab, #ff6764 13%, transparent);
+        --warn: #d9a13b;
+        --warn-soft: color-mix(in oklab, #d9a13b 12%, transparent);
+        font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      }
+      :root[data-base="light"] {
+        color-scheme: light;
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --surface-hover: color-mix(in oklab, #1a1c1f 5%, transparent);
+        --surface-active: color-mix(in oklab, #1a1c1f 8%, transparent);
+        --fg: #1a1c1f;
+        --secondary: color-mix(in oklab, #1a1c1f 74%, transparent);
+        --muted: #5d5d5d;
+        --faint: #afafaf;
+        --border: color-mix(in oklab, #1a1c1f 5%, transparent);
+        --border-strong: color-mix(in oklab, #1a1c1f 12%, transparent);
+        --accent: #1a1c1f;
+        --danger: #e02e2a;
+        --danger-soft: color-mix(in oklab, #e02e2a 10%, transparent);
+        --warn: #8a5d00;
+        --warn-soft: color-mix(in oklab, #8a5d00 10%, transparent);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      button {
+        font: inherit;
+      }
+      select {
+        font: inherit;
+      }
+      button:focus-visible,
+      select:focus-visible {
+        outline: 2px solid color-mix(in oklab, var(--accent) 58%, transparent);
+        outline-offset: -2px;
+      }
+      .app {
+        display: flex;
+        height: 100%;
+        min-height: 0;
+        flex-direction: column;
+      }
+
+      /* ---------- toolbar ---------- */
+      /* Detached panel: keep the chrome band full-width (border + bg span the
+         window) but align its content to the centered 640px reading column so
+         title and controls line up with the list. Falls back to 10px on
+         narrow windows. */
+      .toolbar {
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        gap: 6px;
+        padding: 7px max(10px, calc((100% - 640px) / 2)) 8px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+      }
+      .toolbar-title-row {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 7px;
+      }
+      .toolbar-icon {
+        display: inline-flex;
+        width: 15px;
+        height: 15px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+      }
+      .toolbar-title {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--fg);
+        font-size: 12.5px;
+        font-weight: 550;
+        letter-spacing: -0.01em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .toolbar-controls {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .pause-toggle {
+        display: inline-flex;
+        min-width: 0;
+        height: 26px;
+        flex: 1 1 auto;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 0 9px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--secondary);
+        cursor: pointer;
+        font-size: 12px;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .pause-toggle:hover {
+        background: var(--surface-hover);
+        color: var(--fg);
+      }
+      .pause-toggle:active {
+        background: var(--surface-active);
+      }
+      .pause-toggle:disabled {
+        cursor: default;
+        opacity: 0.5;
+      }
+      .pause-toggle .btn-icon {
+        display: inline-flex;
+        width: 13px;
+        height: 13px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+      }
+      .select-wrap {
+        position: relative;
+        display: inline-flex;
+        flex: 0 0 auto;
+      }
+      .select-wrap .select-chevron {
+        position: absolute;
+        top: 50%;
+        right: 6px;
+        display: inline-flex;
+        width: 10px;
+        height: 10px;
+        transform: translateY(-50%);
+        color: var(--faint);
+        pointer-events: none;
+      }
+      .interval-select {
+        height: 26px;
+        padding: 0 22px 0 8px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--secondary);
+        cursor: pointer;
+        font-size: 12px;
+        appearance: none;
+        -webkit-appearance: none;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .interval-select:hover {
+        background: var(--surface-hover);
+        color: var(--fg);
+      }
+      .clear-all {
+        display: inline-flex;
+        height: 26px;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 5px;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 12px;
+        white-space: nowrap;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .clear-all:hover,
+      .clear-all.armed {
+        border-color: color-mix(in oklab, var(--danger) 32%, transparent);
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+      .save-images-toggle {
+        position: relative;
+        display: inline-flex;
+        height: 26px;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+        padding: 0 8px;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--secondary);
+        cursor: pointer;
+        font-size: 12px;
+        user-select: none;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .save-images-toggle:hover {
+        background: var(--surface-hover);
+        color: var(--fg);
+      }
+      .save-images-toggle input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .toggle-track {
+        position: relative;
+        display: inline-block;
+        width: 26px;
+        height: 14px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--border-strong);
+        transition: background 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .toggle-thumb {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--faint);
+        transition:
+          transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .save-images-toggle input:checked + .toggle-track {
+        background: color-mix(in oklab, var(--accent) 34%, transparent);
+      }
+      .save-images-toggle input:checked + .toggle-track .toggle-thumb {
+        transform: translateX(12px);
+        background: var(--accent);
+      }
+      .save-images-toggle input:focus-visible + .toggle-track {
+        outline: 2px solid color-mix(in oklab, var(--accent) 58%, transparent);
+        outline-offset: 2px;
+      }
+      .save-images-toggle:has(input:disabled) {
+        cursor: default;
+        opacity: 0.5;
+      }
+      .toggle-label {
+        white-space: nowrap;
+      }
+
+      /* ---------- paused banner ---------- */
+      .banner {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: flex-start;
+        gap: 7px;
+        padding: 6px max(10px, calc((100% - 640px) / 2));
+        border-bottom: 1px solid color-mix(in oklab, var(--warn) 26%, transparent);
+        background: var(--warn-soft);
+        color: var(--warn);
+        font-size: 11.5px;
+        line-height: 1.45;
+      }
+      .banner .banner-icon {
+        display: inline-flex;
+        width: 13px;
+        height: 13px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+      }
+
+      /* ---------- content / states ---------- */
+      .content {
+        position: relative;
+        min-height: 0;
+        flex: 1;
+      }
+      .state-page {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 28px 26px;
+        text-align: center;
+      }
+      .state-icon {
+        display: inline-flex;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 4px;
+        border-radius: 50%;
+        background: color-mix(in oklab, var(--fg) 7%, transparent);
+        color: var(--secondary);
+      }
+      .state-icon.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+      .state-title {
+        color: var(--fg);
+        font-size: 14px;
+        font-weight: 550;
+        letter-spacing: -0.01em;
+      }
+      .state-copy {
+        max-width: 32ch;
+        color: var(--muted);
+        font-size: 12.5px;
+        line-height: 1.55;
+      }
+      .state-spinner {
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--border-strong);
+        border-top-color: var(--secondary);
+        border-radius: 50%;
+        animation: spin 800ms linear infinite;
+      }
+
+      /* ---------- list ---------- */
+      #list {
+        position: absolute;
+        inset: 0;
+        overflow: auto;
+        padding: 2px 10px 16px;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-strong) transparent;
+      }
+      #list::-webkit-scrollbar {
+        width: 8px;
+      }
+      #list::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #list::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: 4px;
+      }
+      #list::-webkit-scrollbar-thumb:hover {
+        background: var(--faint);
+      }
+      /* Day groups sit in a centered ~640px reading column inside the
+         full-width scroll container, so cards don't stretch awkwardly across
+         a wide panel while the scrollbar stays at the window edge. */
+      .day {
+        max-width: 640px;
+        margin: 0 auto 2px;
+      }
+      .day-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 2px 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .day-label {
+        white-space: nowrap;
+      }
+      .day-count {
+        color: var(--faint);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
+      }
+      .day-clear {
+        margin-left: auto;
+        padding: 2px 5px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--faint);
+        cursor: pointer;
+        font-size: 11px;
+        opacity: 0;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          opacity 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .day-head:hover .day-clear,
+      .day-clear:focus-visible,
+      .day-clear.armed {
+        opacity: 1;
+      }
+      .day-clear:hover,
+      .day-clear.armed {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      /* ---------- cards ---------- */
+      .card {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+      .card-main {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        flex-direction: column;
+        gap: 5px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--secondary);
+        cursor: pointer;
+        text-align: left;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .card-main:hover {
+        border-color: var(--border-strong);
+        background: var(--surface-hover);
+        color: var(--fg);
+      }
+      .card-main:active {
+        background: var(--surface-active);
+      }
+      .card-text {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        color: inherit;
+        font-size: 12.5px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+      .card-foot {
+        display: flex;
+        min-height: 14px;
+        align-items: center;
+        gap: 6px;
+      }
+      .card-trunc {
+        padding: 1px 5px;
+        border-radius: 5px;
+        background: var(--warn-soft);
+        color: var(--warn);
+        font-size: 9.5px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .card-time {
+        margin-left: auto;
+        color: var(--faint);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .card-delete {
+        display: inline-flex;
+        width: 26px;
+        height: 26px;
+        flex: 0 0 auto;
+        align-self: center;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--faint);
+        cursor: pointer;
+        opacity: 0;
+        white-space: nowrap;
+        transition:
+          background 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          color 150ms cubic-bezier(0.22, 1, 0.36, 1),
+          opacity 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .card:hover .card-delete,
+      .card-delete:focus-visible,
+      .card-delete.armed {
+        opacity: 1;
+      }
+      .card-delete:hover,
+      .card-delete.armed {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+      .card-delete.armed {
+        width: auto;
+        padding: 0 8px;
+        font-size: 11px;
+      }
+      .card-image {
+        display: block;
+        width: 100%;
+        max-height: 120px;
+        object-fit: contain;
+        border-radius: 6px;
+        background-image: repeating-conic-gradient(
+          color-mix(in oklab, var(--fg) 5%, transparent) 0% 25%,
+          color-mix(in oklab, var(--fg) 2%, transparent) 0% 50%
+        );
+        background-size: 12px 12px;
+      }
+      .card-image-placeholder {
+        display: flex;
+        min-height: 84px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 16px 10px;
+        border-radius: 6px;
+        background: var(--surface-active);
+        color: var(--muted);
+      }
+      .card-image-placeholder .ph-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--secondary);
+      }
+      .card-image-size {
+        color: var(--faint);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      @media (min-width: 560px) {
+        .toolbar {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .toolbar-controls {
+          justify-content: flex-end;
+        }
+        .pause-toggle {
+          flex: 0 0 auto;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .state-spinner {
+          animation: none;
+        }
+        .toolbar button,
+        .interval-select,
+        .day-clear,
+        .card-main,
+        .card-delete {
+          transition: none;
+        }
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="toolbar">
+        <div class="toolbar-title-row">
+          <span class="toolbar-icon" id="toolbar-icon" aria-hidden="true"></span>
+          <span class="toolbar-title" id="toolbar-title">Clipboard History</span>
+        </div>
+        <div class="toolbar-controls">
+          <button class="pause-toggle" id="pause-btn" type="button">
+            <span class="btn-icon" aria-hidden="true"></span>
+            <span class="btn-label"></span>
+          </button>
+          <span class="select-wrap">
+            <select class="interval-select" id="interval-select" aria-label="Capture interval"></select>
+            <span class="select-chevron" aria-hidden="true"></span>
+          </span>
+          <label class="save-images-toggle" id="save-images-toggle">
+            <input type="checkbox" id="save-images" />
+            <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label" id="save-images-label"></span>
+          </label>
+          <button class="clear-all" id="clear-all" type="button"></button>
+        </div>
+      </header>
+
+      <div class="banner" id="banner" role="status" hidden>
+        <span class="banner-icon" aria-hidden="true"></span>
+        <span id="banner-text"></span>
+      </div>
+
+      <main class="content">
+        <div class="state-page" id="loading" role="status">
+          <span class="state-spinner" aria-hidden="true"></span>
+          <span class="state-copy" id="loading-text"></span>
+        </div>
+        <div class="state-page" id="permission" role="alert">
+          <span class="state-icon warn" aria-hidden="true"></span>
+          <span class="state-title" id="permission-title"></span>
+          <span class="state-copy" id="permission-copy"></span>
+        </div>
+        <div class="state-page" id="empty">
+          <span class="state-icon" aria-hidden="true"></span>
+          <span class="state-title" id="empty-title"></span>
+          <span class="state-copy" id="empty-copy"></span>
+        </div>
+        <div id="list" role="list" aria-label="Clipboard history"></div>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        const bridge = window.pluginBridge;
+
+        const toolbarTitle = document.getElementById("toolbar-title");
+        const toolbarIcon = document.getElementById("toolbar-icon");
+        const pauseBtn = document.getElementById("pause-btn");
+        const pauseIcon = pauseBtn.querySelector(".btn-icon");
+        const pauseLabel = pauseBtn.querySelector(".btn-label");
+        const intervalSelect = document.getElementById("interval-select");
+        const selectChevron = document.querySelector(".select-chevron");
+        const saveImagesInput = document.getElementById("save-images");
+        const saveImagesLabel = document.getElementById("save-images-label");
+        const clearAllBtn = document.getElementById("clear-all");
+        const banner = document.getElementById("banner");
+        const bannerText = document.getElementById("banner-text");
+        const bannerIcon = banner.querySelector(".banner-icon");
+        const loadingEl = document.getElementById("loading");
+        const loadingText = document.getElementById("loading-text");
+        const permissionEl = document.getElementById("permission");
+        const permissionTitle = document.getElementById("permission-title");
+        const permissionCopy = document.getElementById("permission-copy");
+        const emptyEl = document.getElementById("empty");
+        const emptyTitle = document.getElementById("empty-title");
+        const emptyCopy = document.getElementById("empty-copy");
+        const listEl = document.getElementById("list");
+
+        const POLL_MS = 2000;
+        const CONFIRM_MS = 3000;
+        const INTERVAL_OPTIONS = [1000, 2000, 3000, 5000, 10000];
+
+        let locale = "en";
+        let loaded = false;
+        let armSeq = 0;
+        let lastIntervalMs = -1;
+        let lastSignature = "";
+        const armed = new Map();
+        const state = {
+          paused: false,
+          pollIntervalMs: POLL_MS,
+          permissionDenied: false,
+          saveImages: false,
+          groups: [],
+        };
+
+        const copy = {
+          en: {
+            title: "Clipboard History",
+            pause: "Pause capture",
+            resume: "Resume capture",
+            intervalLabel: "Capture interval",
+            clearAll: "Clear all",
+            saveImages: "Save images",
+            saveImagesError: "Could not update image capture",
+            imageCopyUnsupported: "Image restore is not supported by this host",
+            pausedBanner: "Capture paused — new clipboard content is not being recorded.",
+            permissionTitle: "Clipboard access denied",
+            permissionCopy:
+              'Grant the "Read clipboard" permission in your system or plugin settings to resume.',
+            emptyTitle: "No clipboard history",
+            emptyCopy: "Copy any text and it will show up here.",
+            loading: "Loading…",
+            today: "Today",
+            yesterday: "Yesterday",
+            clearDay: "Clear",
+            truncated: "Truncated",
+            delete: "Delete",
+            deleteConfirm: "Delete?",
+            clearConfirm: "Clear?",
+            copyAria: "Copy to clipboard",
+            copied: "Copied",
+            removed: "Removed",
+            cleared: "Cleared",
+            clearedAll: "Cleared all",
+            copyError: "Could not copy",
+            removeError: "Could not delete",
+            clearError: "Could not clear",
+            loadError: "Could not load history",
+            pauseError: "Could not update capture",
+            intervalError: "Could not update interval",
+            noBridge: "This view requires the PI-Desktop host.",
+          },
+          zh: {
+            title: "剪贴板历史",
+            pause: "暂停采集",
+            resume: "恢复采集",
+            intervalLabel: "采集间隔",
+            clearAll: "清空全部",
+            saveImages: "保存图片",
+            saveImagesError: "更新图片采集失败",
+            imageCopyUnsupported: "当前宿主不支持图片恢复",
+            pausedBanner: "已暂停采集，期间不会记录新的剪贴板内容",
+            permissionTitle: "无法读取剪贴板",
+            permissionCopy: "在系统或插件的权限设置中允许“读取剪贴板”后自动恢复采集",
+            emptyTitle: "暂无剪贴板记录",
+            emptyCopy: "复制任意文本，它会出现在这里",
+            loading: "加载中…",
+            today: "今天",
+            yesterday: "昨天",
+            clearDay: "清空",
+            truncated: "已截断",
+            delete: "删除",
+            deleteConfirm: "确认删除?",
+            clearConfirm: "确认清空?",
+            copyAria: "复制到剪贴板",
+            copied: "已复制",
+            removed: "已删除",
+            cleared: "已清空",
+            clearedAll: "已清空全部",
+            copyError: "复制失败",
+            removeError: "删除失败",
+            clearError: "清空失败",
+            loadError: "加载历史失败",
+            pauseError: "更新采集状态失败",
+            intervalError: "更新采集间隔失败",
+            noBridge: "此视图需要 PI-Desktop 宿主环境。",
+          },
+        };
+
+        const t = (key, values = {}) => {
+          const text = copy[locale]?.[key] ?? copy.en[key] ?? key;
+          return text.replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? ""));
+        };
+
+        const svg = {
+          clipboard:
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.5" width="14" height="16" rx="2"/><path d="M9 4.5V3.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h4"/></svg>',
+          pause:
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+          play:
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6a.6.6 0 0 0 .92.5l10.4-6.8a.6.6 0 0 0 0-1L8.92 4.7a.6.6 0 0 0-.92.5z"/></svg>',
+          trash:
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12"/><path d="M10 11v5.5M14 11v5.5"/></svg>',
+          shield:
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l7 2.8v5.2c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6.3z"/><path d="M12 8.5v4"/><path d="M12 16h.01"/></svg>',
+          chevron:
+            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+          image:
+            '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 4.5-4.5 3 3L16 13l3 3"/></svg>',
+        };
+
+        // ---------- theming / i18n ----------
+        const applyI18n = () => {
+          toolbarTitle.textContent = t("title");
+          toolbarIcon.innerHTML = svg.clipboard;
+          bannerIcon.innerHTML = svg.pause;
+          bannerText.textContent = t("pausedBanner");
+          banner.setAttribute("aria-label", t("pausedBanner"));
+          selectChevron.innerHTML = svg.chevron;
+          loadingText.textContent = t("loading");
+          permissionTitle.textContent = t("permissionTitle");
+          permissionCopy.textContent = t("permissionCopy");
+          permissionEl.querySelector(".state-icon").innerHTML = svg.shield;
+          emptyTitle.textContent = t("emptyTitle");
+          emptyCopy.textContent = t("emptyCopy");
+          emptyEl.querySelector(".state-icon").innerHTML = svg.clipboard;
+          listEl.setAttribute("aria-label", t("title"));
+          updateToolbar();
+          render();
+        };
+
+        const setBaseTheme = (appearance) => {
+          const base = appearance && appearance.base;
+          document.documentElement.dataset.base =
+            base === "light" || base === "dark"
+              ? base
+              : window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          const nextLocale = String((appearance && appearance.locale) || navigator.language).toLowerCase();
+          locale = nextLocale.startsWith("zh") ? "zh" : "en";
+          document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+          applyI18n();
+        };
+
+        // ---------- helpers ----------
+        const pad2 = (n) => String(n).padStart(2, "0");
+        const localDateKey = (d) =>
+          `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        const parseDateKey = (key) => {
+          const parts = String(key).split("-").map(Number);
+          return new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+        };
+        const formatDayLabel = (dateKey) => {
+          const d = parseDateKey(dateKey);
+          const now = new Date();
+          const today = localDateKey(now);
+          const yesterday = localDateKey(
+            new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+          );
+          if (dateKey === today) return t("today");
+          if (dateKey === yesterday) return t("yesterday");
+          const sameYear = d.getFullYear() === now.getFullYear();
+          if (locale === "zh") {
+            const day = `${d.getMonth() + 1}月${d.getDate()}日`;
+            return sameYear ? day : `${d.getFullYear()}年${day}`;
+          }
+          const base = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          return sameYear ? base : `${base}, ${d.getFullYear()}`;
+        };
+        const formatTime = (iso) => {
+          const d = new Date(iso);
+          if (Number.isNaN(d.getTime())) return "";
+          return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+        };
+        const previewText = (text) => String(text ?? "").replace(/\r\n|\r|\n/g, " ").trim();
+        const formatSize = (bytes) => {
+          const n = Number(bytes);
+          if (!Number.isFinite(n) || n < 0) return "";
+          if (n < 1024) return `${n} B`;
+          if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+          return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+        };
+        const signature = (s) =>
+          JSON.stringify([
+            s.permissionDenied,
+            s.groups.map((g) => [
+              g.dateKey,
+              g.items.map((i) =>
+                i.type === "image"
+                  ? [i.id, i.type, i.sizeBytes, i.capturedAt]
+                  : [i.id, i.type, i.hash, i.truncated, i.capturedAt]
+              ),
+            ]),
+          ]);
+
+        const toast = (message, level = "info") => {
+          bridge.invoke("ui.showToast", { message, level }).catch(() => {});
+        };
+
+        // ---------- toolbar ----------
+        const setPauseButton = () => {
+          const paused = state.paused;
+          pauseIcon.innerHTML = paused ? svg.play : svg.pause;
+          pauseLabel.textContent = t(paused ? "resume" : "pause");
+          pauseBtn.title = t(paused ? "resume" : "pause");
+          pauseBtn.setAttribute("aria-label", t(paused ? "resume" : "pause"));
+          pauseBtn.setAttribute("aria-pressed", String(paused));
+        };
+
+        const syncIntervalSelect = (force = false) => {
+          const ms = state.pollIntervalMs;
+          if (!force && ms === lastIntervalMs) return;
+          lastIntervalMs = ms;
+          intervalSelect.replaceChildren();
+          let chosen = null;
+          for (const v of INTERVAL_OPTIONS) {
+            const opt = document.createElement("option");
+            opt.value = String(v);
+            opt.textContent = v >= 1000 ? `${v / 1000}s` : `${v}ms`;
+            intervalSelect.append(opt);
+            if (v === ms) chosen = opt;
+          }
+          if (!chosen) {
+            const opt = document.createElement("option");
+            opt.value = String(ms);
+            opt.textContent = ms >= 1000 ? `${ms / 1000}s` : `${ms}ms`;
+            intervalSelect.append(opt);
+            chosen = opt;
+          }
+          intervalSelect.value = chosen.value;
+        };
+
+        const updateToolbar = () => {
+          setPauseButton();
+          syncIntervalSelect();
+          intervalSelect.setAttribute("aria-label", t("intervalLabel"));
+          saveImagesLabel.textContent = t("saveImages");
+          saveImagesInput.checked = state.saveImages;
+          if (clearAllBtn.dataset.armed !== "true") {
+            clearAllBtn.textContent = t("clearAll");
+            clearAllBtn.title = t("clearAll");
+            clearAllBtn.setAttribute("aria-label", t("clearAll"));
+          }
+        };
+
+        // ---------- two-step confirm ----------
+        const disarm = (btn) => {
+          if (btn.dataset.armed !== "true") return;
+          const timer = armed.get(btn.dataset.armKey);
+          if (timer) clearTimeout(timer);
+          armed.delete(btn.dataset.armKey);
+          btn.dataset.armed = "false";
+          btn.classList.remove("armed");
+          if (btn.dataset.prevHtml !== undefined) btn.innerHTML = btn.dataset.prevHtml;
+        };
+
+        const clearArmed = () => {
+          for (const timer of armed.values()) clearTimeout(timer);
+          armed.clear();
+          document.querySelectorAll("[data-armed='true']").forEach((btn) => {
+            btn.dataset.armed = "false";
+            btn.classList.remove("armed");
+            if (btn.dataset.prevHtml !== undefined) btn.innerHTML = btn.dataset.prevHtml;
+          });
+        };
+
+        const armConfirm = (btn, confirmKey, action) => {
+          if (btn.dataset.armed === "true") {
+            disarm(btn);
+            action();
+            return;
+          }
+          if (!btn.dataset.armKey) btn.dataset.armKey = `arm-${armSeq++}`;
+          btn.dataset.prevHtml = btn.innerHTML;
+          btn.dataset.armed = "true";
+          btn.classList.add("armed");
+          btn.innerHTML = t(confirmKey);
+          const timer = window.setTimeout(() => disarm(btn), CONFIRM_MS);
+          armed.set(btn.dataset.armKey, timer);
+        };
+
+        // ---------- actions ----------
+        const copyItem = async (id) => {
+          try {
+            await bridge.invoke("history.copy", { id });
+            toast(t("copied"), "info");
+          } catch (error) {
+            if (error && error.code === "UNSUPPORTED") {
+              toast(t("imageCopyUnsupported"), "error");
+            } else {
+              toast(t("copyError"), "error");
+            }
+          }
+        };
+
+        const removeItem = async (id) => {
+          try {
+            await bridge.invoke("history.remove", { id });
+            toast(t("removed"), "info");
+            void refresh();
+          } catch {
+            toast(t("removeError"), "error");
+          }
+        };
+
+        const clearDay = async (dateKey) => {
+          try {
+            await bridge.invoke("history.clearDay", { dateKey });
+            toast(t("cleared"), "info");
+            void refresh();
+          } catch {
+            toast(t("clearError"), "error");
+          }
+        };
+
+        const clearAll = async () => {
+          try {
+            await bridge.invoke("history.clearAll", {});
+            toast(t("clearedAll"), "info");
+            void refresh();
+          } catch {
+            toast(t("clearError"), "error");
+          }
+        };
+
+        const togglePause = async () => {
+          const next = !state.paused;
+          pauseBtn.disabled = true;
+          try {
+            const res = await bridge.invoke("history.setPaused", { paused: next });
+            state.paused = res && res.paused !== undefined ? Boolean(res.paused) : next;
+            updateToolbar();
+            banner.hidden = !state.paused || state.permissionDenied;
+          } catch {
+            toast(t("pauseError"), "error");
+          } finally {
+            pauseBtn.disabled = false;
+          }
+        };
+
+        const toggleSaveImages = async () => {
+          const next = !state.saveImages;
+          saveImagesInput.disabled = true;
+          try {
+            const res = await bridge.invoke("history.setSaveImages", { enabled: next });
+            state.saveImages =
+              res && res.saveImages !== undefined ? Boolean(res.saveImages) : next;
+            updateToolbar();
+          } catch {
+            toast(t("saveImagesError"), "error");
+            updateToolbar();
+          } finally {
+            saveImagesInput.disabled = false;
+          }
+        };
+
+        const setIntervalMs = async (ms) => {
+          try {
+            const res = await bridge.invoke("history.setInterval", { ms });
+            const next = Number(res && res.pollIntervalMs);
+            if (next > 0) state.pollIntervalMs = next;
+            syncIntervalSelect(true);
+          } catch {
+            toast(t("intervalError"), "error");
+            syncIntervalSelect(true);
+          }
+        };
+
+        // ---------- rendering ----------
+        const makeCard = (item) => {
+          const card = document.createElement("article");
+          card.className = "card";
+          card.dataset.id = item.id;
+          card.setAttribute("role", "listitem");
+
+          const main = document.createElement("button");
+          main.type = "button";
+          main.className = "card-main";
+          main.setAttribute("aria-label", t("copyAria"));
+          main.title =
+            item.type === "image"
+              ? formatSize(item.sizeBytes) || t("copyAria")
+              : previewText(item.text);
+          main.addEventListener("click", () => void copyItem(item.id));
+
+          if (item.type === "image") {
+            if (item.imageDataUrl) {
+              const img = document.createElement("img");
+              img.className = "card-image";
+              img.src = item.imageDataUrl;
+              img.alt = "";
+              img.draggable = false;
+              img.loading = "lazy";
+              main.append(img);
+            } else {
+              const placeholder = document.createElement("span");
+              placeholder.className = "card-image-placeholder";
+              const icon = document.createElement("span");
+              icon.className = "ph-icon";
+              icon.innerHTML = svg.image;
+              const size = document.createElement("span");
+              size.className = "card-image-size";
+              size.textContent = formatSize(item.sizeBytes);
+              placeholder.append(icon, size);
+              main.append(placeholder);
+            }
+          } else {
+            const text = document.createElement("span");
+            text.className = "card-text";
+            text.textContent = previewText(item.text);
+            main.append(text);
+          }
+
+          const foot = document.createElement("span");
+          foot.className = "card-foot";
+          if (item.type === "text" && item.truncated) {
+            const badge = document.createElement("span");
+            badge.className = "card-trunc";
+            badge.textContent = t("truncated");
+            foot.append(badge);
+          }
+          const time = document.createElement("time");
+          time.className = "card-time";
+          time.dateTime = item.capturedAt || "";
+          time.textContent = formatTime(item.capturedAt);
+          foot.append(time);
+
+          main.append(foot);
+
+          const del = document.createElement("button");
+          del.type = "button";
+          del.className = "card-delete";
+          del.innerHTML = svg.trash;
+          del.setAttribute("aria-label", t("delete"));
+          del.title = t("delete");
+          del.addEventListener("click", () =>
+            armConfirm(del, "deleteConfirm", () => void removeItem(item.id))
+          );
+
+          card.append(main, del);
+          return card;
+        };
+
+        const makeDay = (group) => {
+          const day = document.createElement("section");
+          day.className = "day";
+          day.dataset.dateKey = group.dateKey;
+
+          const head = document.createElement("div");
+          head.className = "day-head";
+          const label = document.createElement("span");
+          label.className = "day-label";
+          label.textContent = formatDayLabel(group.dateKey);
+          const count = document.createElement("span");
+          count.className = "day-count";
+          count.textContent = String(group.items.length);
+          const clear = document.createElement("button");
+          clear.type = "button";
+          clear.className = "day-clear";
+          clear.textContent = t("clearDay");
+          clear.setAttribute("aria-label", t("clearDay"));
+          clear.addEventListener("click", () =>
+            armConfirm(clear, "clearConfirm", () => void clearDay(group.dateKey))
+          );
+          head.append(label, count, clear);
+          day.append(head);
+
+          for (const item of group.items) day.append(makeCard(item));
+          return day;
+        };
+
+        const captureScrollAnchor = () => {
+          const top = listEl.scrollTop;
+          if (top <= 0) return null;
+          const cards = listEl.querySelectorAll(".card");
+          let anchor = null;
+          for (const c of cards) {
+            if (c.offsetTop + c.offsetHeight > top) {
+              anchor = { id: c.dataset.id, offset: top - c.offsetTop };
+              break;
+            }
+          }
+          if (!anchor && cards.length) {
+            const last = cards[cards.length - 1];
+            anchor = { id: last.dataset.id, offset: top - last.offsetTop };
+          }
+          return anchor;
+        };
+
+        const restoreScrollAnchor = (anchor) => {
+          if (!anchor) return;
+          const el =
+            anchor.id && listEl.querySelector(`[data-id="${CSS.escape(anchor.id)}"]`);
+          if (el) listEl.scrollTop = el.offsetTop + anchor.offset;
+        };
+
+        const renderList = () => {
+          clearArmed();
+          const anchor = captureScrollAnchor();
+          const fragment = document.createDocumentFragment();
+          for (const group of state.groups) fragment.append(makeDay(group));
+          listEl.replaceChildren(fragment);
+          restoreScrollAnchor(anchor);
+        };
+
+        const render = () => {
+          if (!loaded) {
+            loadingEl.hidden = false;
+            permissionEl.hidden = true;
+            emptyEl.hidden = true;
+            listEl.hidden = true;
+            banner.hidden = true;
+            return;
+          }
+          loadingEl.hidden = true;
+          const perm = state.permissionDenied;
+          permissionEl.hidden = !perm;
+          listEl.hidden = perm || state.groups.length === 0;
+          emptyEl.hidden = perm || state.groups.length > 0;
+          banner.hidden = !state.paused || perm;
+          if (!perm && state.groups.length > 0) renderList();
+        };
+
+        // ---------- data ----------
+        const applyList = (res) => {
+          const next = {
+            paused: Boolean(res && res.paused),
+            pollIntervalMs: Number(res && res.pollIntervalMs) || state.pollIntervalMs,
+            permissionDenied: Boolean(res && res.permissionDenied),
+            saveImages: Boolean(res && res.saveImages),
+            groups: Array.isArray(res && res.groups) ? res.groups : [],
+          };
+          const sig = signature(next);
+          state.paused = next.paused;
+          state.pollIntervalMs = next.pollIntervalMs;
+          state.permissionDenied = next.permissionDenied;
+          state.saveImages = next.saveImages;
+          updateToolbar();
+          if (!loaded || sig !== lastSignature) {
+            lastSignature = sig;
+            state.groups = next.groups;
+            loaded = true;
+            render();
+          } else {
+            banner.hidden = !state.paused || state.permissionDenied;
+          }
+        };
+
+        const refresh = async () => {
+          try {
+            const res = await bridge.invoke("history.list", {});
+            applyList(res);
+          } catch {
+            toast(t("loadError"), "error");
+          }
+        };
+
+        // ---------- events ----------
+        pauseBtn.addEventListener("click", () => void togglePause());
+        intervalSelect.addEventListener("change", () => {
+          const ms = Number(intervalSelect.value);
+          if (ms > 0) void setIntervalMs(ms);
+        });
+        saveImagesInput.addEventListener("change", () => void toggleSaveImages());
+        clearAllBtn.addEventListener("click", () =>
+          armConfirm(clearAllBtn, "clearConfirm", () => void clearAll())
+        );
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) void refresh();
+        });
+
+        // ---------- boot ----------
+        if (!bridge) {
+          document.documentElement.dataset.base = window.matchMedia(
+            "(prefers-color-scheme: light)"
+          ).matches
+            ? "light"
+            : "dark";
+          loaded = true;
+          loadingEl.hidden = true;
+          permissionEl.hidden = true;
+          listEl.hidden = true;
+          emptyEl.hidden = false;
+          emptyTitle.textContent = "Clipboard History";
+          emptyCopy.textContent = t("noBridge");
+          emptyEl.querySelector(".state-icon").innerHTML = svg.clipboard;
+          return;
+        }
+
+        bridge.on("appearance:changed", setBaseTheme);
+        bridge
+          .invoke("app.getAppearance")
+          .then(setBaseTheme)
+          .catch(() => setBaseTheme(null));
+        void refresh();
+        window.setInterval(() => {
+          if (!document.hidden) void refresh();
+        }, POLL_MS);
+      })();
+    </script>
+  </body>
+</html>

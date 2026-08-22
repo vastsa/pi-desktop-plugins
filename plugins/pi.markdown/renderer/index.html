@@ -3,12 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      PI-Desktop owns exactly a 46px drag band and a minimal three-button
+      window-control capsule. The pi-plugin-chrome=v3 marker below opts this
+      page into paint-through chrome: the host leaves holes for controls while
+      retaining draggable blank space. The page remains full-bleed and uses
+      var(--pi-plugin-titlebar-height, 46px) for fixed or sticky editor
+      surfaces.
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
     <title>Pi Markdown 笔记</title>
     <!-- 外观预绘：在任何 CSS 生效前从缓存回放 data-theme/data-lang，避免闪屏 -->
     <script>window.__APPEARANCE_CACHE_KEY = "pi-markdown.appearance.v1";</script>
     <script src="./appearance-boot.js"></script>
+    <!-- 应用自身主题：在首帧绘制前同步恢复上次渲染的主题（settings.theme 的本地
+         镜像，由 bundle 的主题 effect 写入）。宿主在 DOMContentLoaded 时会对页面
+         颜色做一次快照来给窗口控制胶囊上色，若此刻 data-theme 还是旧值/回放值，
+         胶囊会按错误的墨色绘制而在深色背景下不可见。无记录时保持 boot 回放值。 -->
+    <script>
+      try {
+        var __pimdTheme = localStorage.getItem("pimd.theme.v1");
+        if (__pimdTheme === "dark" || __pimdTheme === "light") {
+          document.documentElement.dataset.theme = __pimdTheme;
+        }
+      } catch (e) {}
+    </script>
     <!-- 静态入口：file:// 协议下普通 <script>/<link> 可正常加载（module 会被 CORS 阻止） -->
     <link rel="stylesheet" href="./assets/app.css" />
+    <link rel="stylesheet" href="./panel-polish.css" />
   </head>
   <body>
     <div id="root"></div>
@@ -19,21 +41,89 @@
          时还会按 settings.theme 写一次 data-theme，二者在 main.js 同步下一致。 -->
     <script src="./appearance.js"></script>
     <script>
+      // 外观运行时初始化：跟随宿主（app.getAppearance + appearance:changed）。
+      // 注：宿主没有 "appearance.sync" 通道，settings.theme 由 main.js 在
+      // onLoad 时收敛为宿主 base，这里不再重复同步。
+      //
+      // 宿主驱动的主题变更不经过 React（bundle 不监听外观通道）：data-theme
+      // 被外观运行时直接改写，而 state.theme 与下方 pimd.theme.v1 镜像都不
+      // 更新，于是下次打开按过期主题首绘，宿主在 DOMContentLoaded 对页面
+      // 颜色做的一次性快照（窗口控制胶囊取色）拿到错误墨色，胶囊在深色背景
+      // 上近乎不可见。这里在每次实际应用的主题变化时把真实主题写回镜像，
+      // 使镜像与首帧永远一致。
+      if (window.__appearance) {
+        window.__appearance.onThemeChange(function (base) {
+          try {
+            localStorage.setItem("pimd.theme.v1", base);
+          } catch (e) {}
+        });
+        window.__appearance.init(window.pluginBridge);
+      }
+    </script>
+    <script>
+      // 窗口控制胶囊实时重上色。
+      //
+      // 宿主给胶囊取色的方式是：读取 body 计算后的 background/color 写到
+      // <pi-plugin-panel-chrome> 元素的内联样式变量
+      // （--pi-plugin-panel-page-background / --pi-plugin-panel-page-foreground），
+      // 且只在 DOMContentLoaded 与宿主自身的外观广播（appearance:changed）时
+      // 重采样。面板内的「米白/黑夜」切换不经过宿主——胶囊墨色于是停留在旧
+      // 主题上，亮色页面配浅色墨几乎不可见。
+      //
+      // 该胶囊元素挂在 documentElement 上（closed shadow root 只封闭其内部，
+      // 元素本身可查询），两个取色变量继承自它的内联样式——这里监听
+      // data-theme 变化（无论来自宿主通道还是面板内按钮），主动用当前主题的
+      // 调色板覆写这两个变量，任何来源的切换胶囊都立即换到正确墨色。
+      // 变量值优先读应用调色板（--c-bg / --c-ink，空格三元组），保证与页面
+      // 完全一致；读不到时退回与主题匹配的常量。
       (function () {
-        var bridge = window.pluginBridge;
-        var appearance = window.__appearance;
-        // 让 main.js 把 settings.theme 收敛为宿主 base（未手动覆盖时），
-        // 使 bundle 下次挂载/同步拿到一致的主题。
-        function syncHostTheme() {
-          if (!bridge || typeof bridge.invoke !== "function") return;
-          bridge.invoke("appearance.sync", {}).catch(function () {});
+        function paletteColor(name, lightFallback, darkFallback) {
+          try {
+            var raw = window
+              .getComputedStyle(document.documentElement)
+              .getPropertyValue(name)
+              .trim();
+            if (/^\d+(?:\.\d+)?(?:\s+\d+(?:\.\d+)?){2}$/.test(raw)) {
+              return "rgb(" + raw + ")";
+            }
+          } catch (e) {}
+          return document.documentElement.dataset.theme === "dark"
+            ? darkFallback
+            : lightFallback;
         }
-        if (appearance) {
-          appearance.onThemeChange(syncHostTheme);
-          appearance.init(bridge);
+        function retint() {
+          var capsuleHost = document.querySelector("pi-plugin-panel-chrome");
+          if (!capsuleHost) return;
+          capsuleHost.style.setProperty(
+            "--pi-plugin-panel-page-background",
+            paletteColor("--c-bg", "#f7f5f1", "#161616")
+          );
+          capsuleHost.style.setProperty(
+            "--pi-plugin-panel-page-foreground",
+            paletteColor("--c-ink", "#2e2c29", "#f2f2f2")
+          );
         }
-        // 打开面板即同步一次：插件进程 onLoad 的同步可能发生在宿主切换外观之前。
-        syncHostTheme();
+        var scheduled = 0;
+        function schedule() {
+          if (scheduled) return;
+          scheduled = window.setTimeout(function () {
+            scheduled = 0;
+            retint();
+          }, 0);
+        }
+        // childList：捕获宿主在 DOMContentLoaded 插入胶囊元素的时机；
+        // attributes：捕获任何来源（宿主通道 / 面板内按钮）的主题切换。
+        if (typeof MutationObserver !== "undefined") {
+          new MutationObserver(schedule).observe(document.documentElement, {
+            childList: true,
+            attributeFilter: ["data-theme"],
+          });
+        }
+        if (document.readyState === "loading") {
+          window.addEventListener("DOMContentLoaded", schedule, { once: true });
+        } else {
+          schedule();
+        }
       })();
     </script>
   </body>

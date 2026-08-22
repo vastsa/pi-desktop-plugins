@@ -46,21 +46,21 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.3.1");
+  assert.equal(manifest.version, "0.4.5");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
-  assert.equal(manifest.engines.piDesktop, ">=0.2.0");
+  assert.equal(manifest.engines.piDesktop, ">=0.2.9");
   assert.deepEqual(
     manifest.contributes.agentTools[0].schema.properties.groupBy.enum,
     ["model", "provider", "source", "day", "session"],
   );
   assert.doesNotMatch(JSON.stringify(manifest), /usage\.read|project rankings|price table/i);
-  assert.match(panelSource, /const MILLION = 1_000_000;/);
-  assert.match(panelSource, /Tool sources/);
-  assert.match(panelSource, /工具来源/);
-  assert.match(panelSource, /applyTheme/);
-  assert.match(panelSource, /t: STRINGS\.zh/);
+  assert.match(panelSource, /function compact\(value\)/);
+  assert.match(panelSource, /sourcesTitle: "Tools"/);
+  assert.match(panelSource, /sourcesTitle: "工具"/);
+  assert.match(panelSource, /function applyAppearance\(reveal\)/);
+  assert.match(panelSource, /STRINGS\[resolved\.locale\] \|\| STRINGS\.en/);
   assert.match(panelSource, /tileReasoning/);
-  assert.match(panelSource, /"app\.getLocale"\)\.catch\(\(\) => "zh-CN"\)/);
+  assert.match(panelSource, /state\.locale === "zh" \? "zh-CN" : "en-US"/);
   assert.match(panelCss, /:root\[data-theme="dark"\]/);
   assert.match(panelCss, /:root\[data-theme="light"\]/);
 });
@@ -166,7 +166,9 @@ test("adapters normalize Claude Code, Codex, and OpenCode without cumulative Cod
     assert.equal(codexResult.events.reduce((sum, item) => sum + item.tokens.total, 0), 20);
     assert.equal(claudeResult.events[0].sourceId, "claude-code");
     assert.equal(openCodeResult.events[0].sourceId, "opencode");
-    const summary = plugin.__test.summarize(events, plugin.__test.makeRange(null, null), events, Date.now());
+    const facts = plugin.__test.buildFacts(events, { generatedAt: Date.now() });
+    const summary = plugin.__test.aggregate(facts, {});
+    assert.equal(summary.totals.total, 49);
     assert.doesNotMatch(JSON.stringify(summary), /private-id|not retained|content/i);
   } finally {
     fixture.cleanup();
@@ -196,28 +198,30 @@ test("summary groups models, providers, sessions, time buckets, and streaks", ()
       tokens: { input: 4, output: 6, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 10 },
     },
   ];
-  const summary = plugin.__test.summarize(events, plugin.__test.makeRange(null, null), events, Date.now(), {
-    filesScanned: 2,
-    malformedLines: 1,
-    usageMessages: 2,
+  const facts = plugin.__test.buildFacts(events, {
+    generatedAt: Date.now(),
+    diagnostics: { filesScanned: 2, malformedLines: 1, usageMessages: 2 },
   });
+  const summary = plugin.__test.aggregate(facts, {}, { now: Date.now() });
 
   assert.equal(summary.totals.total, 31);
   assert.equal(summary.totals.sessions, 2);
+  assert.equal(summary.totals.activeDays, 2);
   assert.equal(summary.models.length, 2);
   assert.equal(summary.providers.length, 2);
   assert.equal(summary.sources.length, 2);
-  assert.equal(summary.topSessions[0].title, "PI-Desktop · Session 12345678");
+  assert.equal(summary.sessions[0].label, "12345678");
   assert.equal(summary.hourly[9].total, 31);
   assert.equal(summary.weekday.reduce((sum, slot) => sum + slot.total, 0), 31);
-  assert.deepEqual(summary.streak, { current: 2, longest: 2 });
-  assert.equal(summary.scannedFiles, 2);
-  assert.equal(summary.malformedLines, 1);
+  assert.equal(summary.streak.current, 2);
+  assert.equal(summary.streak.longest, 2);
+  assert.equal(facts.diagnostics.filesScanned, 2);
+  assert.equal(facts.diagnostics.malformedLines, 1);
 });
 
 test("on-load writes a snapshot before opening the panel and the tool groups by provider", async () => {
   const fixture = createFixture();
-  const calls = { registered: [], unregistered: [], timeline: [], snapshots: [] };
+  const calls = { registered: [], unregistered: [], timeline: [], facts: [] };
   const previousPi = globalThis.pi;
   try {
     mkdirSync(fixture.dataPath, { recursive: true });
@@ -241,7 +245,7 @@ test("on-load writes a snapshot before opening the panel and the tool groups by 
         getSettings: async () => ({}),
         setSettings: async (value) => {
           calls.timeline.push("settings");
-          calls.snapshots.push(value.usageSnapshot);
+          if (value.usageFacts) calls.facts.push(value.usageFacts);
         },
       },
       commands: {
@@ -265,8 +269,11 @@ test("on-load writes a snapshot before opening the panel and the tool groups by 
     calls.timeline.length = 0;
     await command.run();
 
-    assert.deepEqual(calls.timeline, ["settings", "panel"]);
-    assert.equal(calls.snapshots.at(-1).all.totals.total, 15);
+    // The appearance publish is fingerprint-deduped (onLoad already published
+    // the same appearance), so the command itself only opens the panel;
+    // refreshFacts' initial scanState write lands synchronously right behind it.
+    assert.deepEqual(calls.timeline, ["panel", "settings"]);
+    assert.equal(plugin.__test.aggregate(calls.facts.at(-1), {}).totals.total, 15);
     const report = await tool.execute({ groupBy: "provider", limit: 1 });
     assert.equal(report.groupBy, "provider");
     assert.equal(report.ranking[0].key, "openai");
@@ -278,6 +285,10 @@ test("on-load writes a snapshot before opening the panel and the tool groups by 
       { type: "tool", value: "token_usage_summary" },
     ]);
   } finally {
+    // Always unload, even when an assertion above threw: the appearance/source
+    // watchers keep interval timers alive and would fire after the test with
+    // globalThis.pi already restored, producing unhandled rejections.
+    await plugin.onUnload().catch(() => undefined);
     plugin.__test.setScanRoots(null);
     globalThis.pi = previousPi;
     fixture.cleanup();

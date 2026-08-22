@@ -2,12 +2,24 @@
   "schemaVersion": 1,
   "id": "demo.workspace-summary",
   "name": "Workspace Summary",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
+  "i18n": {
+    "en": {
+      "name": "Workspace Summary",
+      "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
+      "safetyNotes": "Reads the current project only. No network or write access."
+    },
+    "zh-CN": {
+      "name": "工作区摘要",
+      "description": "实用的插件模板：扫描当前工作区、总结关键文件，并提供 Agent 工具和隔离面板。",
+      "safetyNotes": "只读取当前项目，不访问网络，也不会写入文件。"
+    }
+  },
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": ["productivity", "template", "official"],
-  "changelog": "Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
+  "changelog": "Release 0.2.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.2.1: refreshes the summary panel hierarchy, cards, controls, and narrow-window layout. Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
   "safetyNotes": "Reads the current project only. No network or write access.",
   "ui": {
     "panel": "renderer/index.html",

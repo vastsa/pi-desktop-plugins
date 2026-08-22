@@ -283,7 +283,6 @@ function startAppearanceWatch(root) {
 function stopAppearanceWatch() {
   if (appearanceTimer) clearInterval(appearanceTimer);
   appearanceTimer = null;
-  appearanceFingerprint = null;
 }
 
 /* -------------------------------------------------------------- agent tool */

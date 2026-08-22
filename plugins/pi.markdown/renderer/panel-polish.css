@@ -1,0 +1,107 @@
+/* The editor keeps its warm paper identity; the surrounding chrome follows
+   the compact PI-Desktop rhythm and remains readable on small panels. */
+html, body { scrollbar-gutter: stable; }
+body {
+  font-size: 13.5px !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Paint the body itself so the host's one-shot capsule color sample
+     (body computed background/color at DOMContentLoaded) always matches the
+     visible page, in both themes and after in-panel theme toggles. */
+  background: rgb(var(--c-bg));
+  color: rgb(var(--c-ink));
+}
+#root {
+  background: rgb(var(--c-bg));
+  /* v3 paints through the transparent host overlay; keep the root full-height
+     so the host chrome is not mirrored as an empty strip at the bottom. */
+  height: 100%;
+}
+
+button, input, textarea, select { min-height: 32px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid rgb(var(--c-accent) / 0.28);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* --- v3 chrome: paint-through layout under the host drag map ---------------
+   This page opts in with <meta name="pi-plugin-chrome" content="v3">. The
+   host keeps only the capsule above the page and lets the page draw in the
+   former 46px band. The editor and sidebar own their first visible rows, while
+   standard controls remain clickable through host-generated drag gaps. */
+
+:root {
+  --pimd-titlebar-h: var(--pi-plugin-titlebar-height, 46px);
+  /* Deterministic row metrics for the offsets below (pad + control + pad). */
+  --pimd-sidebar-header-h: 43px;  /* 8 + 28 (search input) + 6 + 1 border */
+  --pimd-tabs-h: 30px;
+  --pimd-title-row-h: 45px;       /* 8 + 32 (title input) + 4 + 1 border  */
+}
+
+/* Sidebar: the search row now paints into the former host band. */
+.sidebar-container {
+  padding-top: 0;
+  background: rgb(var(--c-sidebar-header));
+}
+.sidebar-container > .sidebar-header {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--pimd-sidebar-header-h);
+  padding-top: 8px;
+  padding-bottom: 6px;
+}
+.sidebar-container > .sidebar-header input { min-height: 28px; }
+.sidebar-container .tab-button { min-height: 27px; }
+.sidebar-container > .sidebar-tabs {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--pimd-tabs-h);
+  align-items: center;
+}
+
+/* Editor pane: the note title row paints into the former host band; reserve
+   only that row before the document begins and keep the capsule clear. */
+.editor-pane > .editor-title-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  box-sizing: border-box;
+  height: var(--pimd-title-row-h);
+  padding-top: 8px;
+  padding-bottom: 4px;
+  padding-right: 116px;
+  background: rgb(var(--c-bg));
+}
+.editor-pane > .pi-md-scroll {
+  padding-top: var(--pimd-title-row-h);
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+.milkdown .milkdown-top-bar {
+  position: sticky;
+  top: var(--pimd-title-row-h);
+  min-height: 36px;
+}
+
+/* --- Editor rhythm ----------------------------------------------------------
+   Crepe's vendored theme ships `.milkdown .ProseMirror { padding: 60px 120px }`
+   LATER in the cascade than the app's own override, so its 60px top padding
+   silently won and text started ~190px below the window top (band spacer +
+   title row + Crepe padding + first-heading margin). This sheet loads last:
+   re-assert compact padding and drop the leading margin of the first block. */
+.milkdown .ProseMirror {
+  max-width: 900px;
+  margin-inline: auto;
+  padding: 12px clamp(20px, 6vw, 72px) 40vh;
+}
+.milkdown .ProseMirror pre { border-radius: 8px; }
+.milkdown .ProseMirror img { border-radius: 8px; }
+.milkdown .ProseMirror > :first-child { margin-top: 0; }
+@media (max-width: 720px) {
+  .milkdown .ProseMirror { padding-inline: 20px; }
+}
