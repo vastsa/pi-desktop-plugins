@@ -43,3 +43,5 @@ body { padding: 16px 20px !important; -webkit-font-smoothing: antialiased; text-
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 700px) { body { padding: 12px !important; } .drafts-panel { width: auto !important; padding-left: 0 !important; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+/* v3 chrome: the drafts header row sits under the host window-control capsule (96px + 8px margin); keep it clear. */
+.drafts-panel > .drafts-head { padding-right: 104px; }
