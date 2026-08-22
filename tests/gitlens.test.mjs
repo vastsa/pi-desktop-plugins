@@ -97,6 +97,8 @@ test("v3 panel chrome keeps the header clear and follows palette changes", () =>
   assert.match(panelPolishSource, /\.view > \.toolbar:first-child\s*\{\s*padding-right:\s*104px;\s*\}/);
   assert.match(capsuleRetintSource, /--pi-plugin-panel-page-background/);
   assert.match(capsuleRetintSource, /--pi-plugin-panel-page-foreground/);
+  assert.match(capsuleRetintSource, /lastBackground/);
+  assert.match(capsuleRetintSource, /lastForeground/);
   assert.match(capsuleRetintSource, /attributeFilter: \["data-theme", "data-base", "style"\]/);
 });
 

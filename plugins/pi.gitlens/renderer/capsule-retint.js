@@ -5,6 +5,9 @@
     return value && value !== "transparent" && value !== "rgba(0, 0, 0, 0)";
   }
 
+  var lastBackground = "";
+  var lastForeground = "";
+
   function retint() {
     var host = document.querySelector("pi-plugin-panel-chrome");
     if (!host) return;
@@ -14,8 +17,14 @@
     var foreground = bodyStyle && bodyStyle.color;
     if (!paintable(background)) background = rootStyle.backgroundColor;
     if (!paintable(foreground)) foreground = rootStyle.color;
-    if (paintable(background)) host.style.setProperty("--pi-plugin-panel-page-background", background);
-    if (paintable(foreground)) host.style.setProperty("--pi-plugin-panel-page-foreground", foreground);
+    if (paintable(background) && background !== lastBackground) {
+      lastBackground = background;
+      host.style.setProperty("--pi-plugin-panel-page-background", background);
+    }
+    if (paintable(foreground) && foreground !== lastForeground) {
+      lastForeground = foreground;
+      host.style.setProperty("--pi-plugin-panel-page-foreground", foreground);
+    }
   }
 
   var scheduled = false;
