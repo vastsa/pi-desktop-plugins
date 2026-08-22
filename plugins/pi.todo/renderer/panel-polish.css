@@ -46,3 +46,5 @@ header { padding-bottom: 12px !important; }
 button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 640px) { .app { padding: 14px 12px 10px !important; } .title-wrap h1 { font-size: 19px !important; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; } }
+/* v3 chrome: first header row keeps the host window-control capsule (96px + 8px margin) clear. */
+.app > header { padding-right: 104px !important; }
