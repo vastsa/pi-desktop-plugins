@@ -26,6 +26,18 @@ const panelSource = require("node:fs").readFileSync(
   join(here, "../plugins/pi.gitlens/renderer/panel.js"),
   "utf8",
 );
+const panelHtml = require("node:fs").readFileSync(
+  join(here, "../plugins/pi.gitlens/renderer/index.html"),
+  "utf8",
+);
+const panelPolishSource = require("node:fs").readFileSync(
+  join(here, "../plugins/pi.gitlens/renderer/panel-polish.css"),
+  "utf8",
+);
+const capsuleRetintSource = require("node:fs").readFileSync(
+  join(here, "../plugins/pi.gitlens/renderer/capsule-retint.js"),
+  "utf8",
+);
 
 let hasGit = true;
 try {
@@ -50,7 +62,7 @@ function createTempRepo() {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.gitlens");
-  assert.equal(manifest.version, "0.1.3");
+  assert.equal(manifest.version, "0.1.4");
   assert.match(manifest.engines.piDesktop, /^>=/);
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register", "agent.prompt.inject"]);
   assert.equal(typeof manifest.ui.title.en, "string");
@@ -77,6 +89,15 @@ test("manifest declares the expected identity, permissions and contributions", (
   assert.deepEqual(medium, ["git_branch", "git_commit", "git_stash"]);
   assert.ok(!JSON.stringify(manifest).includes('"fs."'), "no file permissions requested");
   assert.ok(!JSON.stringify(manifest).includes("net.fetch"), "no network permission requested");
+});
+
+test("v3 panel chrome keeps the header clear and follows palette changes", () => {
+  assert.match(panelHtml, /<meta\s+name="pi-plugin-chrome"\s+content="v3"\s*\/>/);
+  assert.match(panelHtml, /<script src="\.\/capsule-retint\.js"><\/script>/);
+  assert.match(panelPolishSource, /\.view > \.toolbar:first-child\s*\{\s*padding-right:\s*104px;\s*\}/);
+  assert.match(capsuleRetintSource, /--pi-plugin-panel-page-background/);
+  assert.match(capsuleRetintSource, /--pi-plugin-panel-page-foreground/);
+  assert.match(capsuleRetintSource, /attributeFilter: \["data-theme", "data-base", "style"\]/);
 });
 
 test("main.js registers every tool and command it declares, and routes panel channels", () => {

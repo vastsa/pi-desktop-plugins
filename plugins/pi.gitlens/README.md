@@ -53,6 +53,10 @@ project's git state.
   branch names are validated against a safe charset.
 - The panel runs in the host's isolated, context-isolated window and talks to
   the plugin process only through the host bridge.
+- The panel opts into PI-Desktop's v3 paint-through chrome. The first view
+  toolbar leaves the host window-control capsule's 104px top-right area clear,
+  while the rest of the empty band remains draggable. The capsule is re-tinted
+  from the panel surface and text colors whenever the palette changes.
 
 ## Permissions
 
@@ -94,6 +98,11 @@ Install the packed `.piplug` via **Plugins → Install plugin package**, or load
 the folder as a development plugin.
 
 ## Changelog
+
+### 0.1.4
+
+Keeps the first view toolbar clear of the host window-control capsule and
+re-tints the capsule when the panel palette changes.
 
 ### 0.1.1
 
