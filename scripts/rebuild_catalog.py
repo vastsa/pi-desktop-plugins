@@ -53,6 +53,7 @@ def main() -> int:
                         "url": f"packages/{package.name}",
                         "sizeBytes": package.stat().st_size,
                         "permissions": manifest.get("permissions") or [],
+                        "fs": manifest.get("fs") or {},
                     }
                 ],
             }
