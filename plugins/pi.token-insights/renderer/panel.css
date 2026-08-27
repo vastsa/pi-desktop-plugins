@@ -35,6 +35,14 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --chrome-height: 46px;
+  /*
+    This panel paints through the host's 46px band (pi-plugin-chrome=v3), but
+    the host's three-button window-control capsule still floats above the
+    top-right corner. Anything the panel puts in that corner would sit under it
+    and stop being clickable, so the width of the capsule plus its margin is
+    reserved once here and consumed by every surface that reaches the corner.
+  */
+  --capsule-reserve: 104px;
   --gutter: 20px;
   --heat-cell: 11px;
   --heat-gap: 3px;
@@ -177,13 +185,18 @@ svg {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  /* Right side keeps the host window-control capsule's corner clear. */
+  padding: 0 var(--capsule-reserve) 0 12px;
   border-bottom: 1px solid var(--ds-border-subtle);
   background: var(--ds-bg-secondary);
 }
 
 .titlebar-title {
   position: relative;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -228,12 +241,17 @@ svg {
 
 /* ------------------------------------------------------------------- menu */
 
+/*
+  Absolute offsets resolve against the titlebar's padding box, so the reserve
+  above does not move this menu — it is applied again here to keep the menu's
+  right edge flush with the action buttons that opened it.
+*/
 .menu {
   position: absolute;
   top: calc(var(--chrome-height) - 4px);
-  right: 12px;
+  right: var(--capsule-reserve);
   z-index: 40;
-  width: min(300px, calc(100vw - 24px));
+  width: min(300px, calc(100vw - 12px - var(--capsule-reserve)));
   padding: 12px;
   border: 1px solid var(--ds-border-default);
   border-radius: var(--radius-md);

@@ -49,6 +49,12 @@ If the appearance cannot be read (older runtime, moved data directory), the
 panel follows your system colour scheme and the theme/language switches in its
 own appearance menu — never a blank page.
 
+The panel opts into PI-Desktop's v3 paint-through chrome, so its own titlebar
+draws inside the host's 46px band. The host window-control capsule keeps
+floating over the top-right corner, so the titlebar reserves that 104px corner:
+the appearance and refresh buttons stay clear of the capsule and clickable, and
+the empty band beside them still drags the window.
+
 ## The agent tool
 
 `token_usage_summary` answers from the same aggregation the dashboard renders,

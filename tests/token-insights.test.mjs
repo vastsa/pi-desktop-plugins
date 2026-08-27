@@ -14,6 +14,10 @@ const manifest = JSON.parse(
 );
 const panelSource = readFileSync(join(here, "../plugins/pi.token-insights/renderer/panel.js"), "utf8");
 const panelCss = readFileSync(join(here, "../plugins/pi.token-insights/renderer/panel.css"), "utf8");
+const panelPolishCss = readFileSync(
+  join(here, "../plugins/pi.token-insights/renderer/panel-polish.css"),
+  "utf8",
+);
 
 function createFixture() {
   const root = mkdtempSync(join(tmpdir(), "token-insights-"));
@@ -46,7 +50,7 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.4.5");
+  assert.equal(manifest.version, "0.4.6");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.9");
   assert.deepEqual(
@@ -63,6 +67,26 @@ test("manifest declares the independent scanner and minimal host permissions", (
   assert.match(panelSource, /state\.locale === "zh" \? "zh-CN" : "en-US"/);
   assert.match(panelCss, /:root\[data-theme="dark"\]/);
   assert.match(panelCss, /:root\[data-theme="light"\]/);
+});
+
+test("the titlebar reserves the host window-control capsule's corner", () => {
+  // The reserve is declared once and consumed everywhere that reaches the
+  // top-right corner, so the capsule can never cover the panel's own buttons.
+  assert.match(panelCss, /--capsule-reserve:\s*104px;/);
+  assert.match(panelCss, /\.titlebar \{[\s\S]*?padding: 0 var\(--capsule-reserve\) 0 12px;[\s\S]*?\}/);
+
+  // An absolute offset resolves against the padding box, so the menu has to
+  // apply the reserve itself to stay under the buttons that open it.
+  assert.match(panelCss, /\.menu \{[\s\S]*?right: var\(--capsule-reserve\);[\s\S]*?\}/);
+  assert.match(panelCss, /width: min\(300px, calc\(100vw - 12px - var\(--capsule-reserve\)\)\);/);
+
+  // The narrow-width gutter override tightens the left side only: a two-value
+  // padding-inline here would otherwise reset the right side back to 12px.
+  assert.match(panelPolishCss, /\.titlebar \{ padding-inline: 12px var\(--capsule-reserve\); \}/);
+  assert.doesNotMatch(panelPolishCss, /\.titlebar \{ padding-inline: 12px; \}/);
+
+  // A long localized title truncates instead of running under the reserve.
+  assert.match(panelCss, /\.titlebar-title \{[\s\S]*?text-overflow: ellipsis;[\s\S]*?\}/);
 });
 
 test("scanner aggregates usage metadata, excludes revisions, and drops transcript content", async () => {
