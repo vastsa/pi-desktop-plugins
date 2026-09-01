@@ -55,6 +55,10 @@ floating over the top-right corner, so the titlebar reserves that 104px corner:
 the appearance and refresh buttons stay clear of the capsule and clickable, and
 the empty band beside them still drags the window.
 
+On Windows, the stable scrollbar gutter is kept inside the dashboard's content
+scroller. The root viewport does not reserve a second classic scrollbar gutter,
+so the dashboard surface reaches the right edge without an empty side rail.
+
 ## The agent tool
 
 `token_usage_summary` answers from the same aggregation the dashboard renders,

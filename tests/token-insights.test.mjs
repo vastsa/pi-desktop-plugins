@@ -50,7 +50,7 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.4.6");
+  assert.equal(manifest.version, "0.4.7");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.9");
   assert.deepEqual(
@@ -87,6 +87,20 @@ test("the titlebar reserves the host window-control capsule's corner", () => {
 
   // A long localized title truncates instead of running under the reserve.
   assert.match(panelCss, /\.titlebar-title \{[\s\S]*?text-overflow: ellipsis;[\s\S]*?\}/);
+});
+
+test("Windows keeps the scrollbar gutter inside the content scroller", () => {
+  // Classic Windows scrollbars turn a root-level stable gutter into a visible
+  // second right-hand rail. Only the page's scroll container needs the
+  // reservation, so the panel surface reaches the window edge.
+  assert.doesNotMatch(
+    panelPolishCss,
+    /html\s*,\s*body\s*\{[^}]*scrollbar-gutter\s*:/,
+  );
+  assert.match(
+    panelPolishCss,
+    /\.scroll\s*\{\s*scrollbar-gutter\s*:\s*stable\s*;/,
+  );
 });
 
 test("scanner aggregates usage metadata, excludes revisions, and drops transcript content", async () => {
