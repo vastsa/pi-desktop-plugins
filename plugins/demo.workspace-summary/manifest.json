@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "demo.workspace-summary",
   "name": "Workspace Summary",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Practical template plugin: scan the current workspace, summarize key files, and expose an agent tool plus isolated panel.",
   "i18n": {
     "en": {
@@ -19,7 +19,7 @@
   "author": "PI-Desktop",
   "main": "main.js",
   "categories": ["productivity", "template", "official"],
-  "changelog": "Release 0.2.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.2.1: refreshes the summary panel hierarchy, cards, controls, and narrow-window layout. Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
+  "changelog": "Release 0.2.3: lets the summary output fill the remaining panel height, keeps its internal scroll local, and synchronizes the host capsule with theme changes. Release 0.2.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.2.1: refreshes the summary panel hierarchy, cards, controls, and narrow-window layout. Initial practical template: workspace inventory, README preview, copy summary, agent tool.",
   "safetyNotes": "Reads the current project only. No network or write access.",
   "ui": {
     "panel": "renderer/index.html",

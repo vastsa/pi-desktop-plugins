@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en" data-booting="true">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      PI-Desktop owns exactly a transparent 46px drag band and the three-button
+      window-control capsule. The
+      v3 marker lets the panel paint through that band without adding a second
+      title bar or trapping interactive controls under the host chrome.
+      Fixed or sticky surfaces must start at var(--pi-plugin-titlebar-height, 46px).
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'none';" />
+    <title>SSH Manager</title>
+    <script>window.__APPEARANCE_CACHE_KEY = "pi.ssh-manager.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
+    <link rel="stylesheet" href="panel.css" />
+    <link rel="stylesheet" href="panel-polish.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="SSH hosts">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z" />
+            <path d="m8 10 3 2-3 2M13 14h3" />
+          </svg>
+          <div>
+            <div class="brand-name" data-i18n="appName">SSH Manager</div>
+            <div class="brand-kicker" data-i18n="localFirst">LOCAL FIRST</div>
+          </div>
+        </div>
+
+        <div class="sidebar-heading">
+          <span data-i18n="hosts">Hosts</span>
+          <span class="count-badge" id="hostCount">0</span>
+        </div>
+        <div class="host-list" id="hostList" role="list"></div>
+        <button class="button button-primary add-host" id="addHost" type="button">
+          <span class="button-icon" aria-hidden="true">+</span>
+          <span data-i18n="addHost">Add host</span>
+        </button>
+
+        <div class="sidebar-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v5c0 5 3.4 8.8 8 10 4.6-1.2 8-5 8-10V6z" /><path d="M9 12.5 11 15l4-5" /></svg>
+          <span data-i18n="credentialNote">Credentials stay with OpenSSH. This panel stores metadata only.</span>
+        </div>
+      </aside>
+
+      <main class="content" id="content">
+        <header class="page-header">
+          <div>
+            <div class="eyebrow" data-i18n="workspace">REMOTE WORKSPACE</div>
+            <h1 id="pageTitle">SSH hosts</h1>
+            <p id="pageSubtitle" data-i18n="pageSubtitle">Connect to a configured host, then run a bounded command.</p>
+          </div>
+          <div class="header-actions">
+            <span class="host-status" id="globalStatus"><span class="status-dot"></span><span data-i18n="ready">Ready</span></span>
+            <button class="button button-secondary" id="refresh" type="button" title="Refresh">
+              <span class="button-icon" aria-hidden="true">↻</span>
+              <span data-i18n="refresh">Refresh</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+        <section class="detail" id="detail" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="profileModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div>
+            <div class="eyebrow" data-i18n="hostProfile">HOST PROFILE</div>
+            <h2 id="modalTitle">Add host</h2>
+          </div>
+          <button class="icon-button" id="closeModal" type="button" aria-label="Close">×</button>
+        </div>
+        <form id="profileForm" class="profile-form">
+          <input id="profileId" type="hidden" />
+          <label>
+            <span data-i18n="profileName">Display name</span>
+            <input id="profileName" name="name" required maxlength="80" autocomplete="off" placeholder="Production" />
+          </label>
+          <div class="form-grid form-grid-three">
+            <label>
+              <span data-i18n="host">Host</span>
+              <input id="profileHost" name="host" required maxlength="253" autocomplete="off" placeholder="server.example.com" />
+            </label>
+            <label>
+              <span data-i18n="port">Port</span>
+              <input id="profilePort" name="port" type="number" min="1" max="65535" value="22" required />
+            </label>
+            <label>
+              <span data-i18n="username">Username</span>
+              <input id="profileUsername" name="username" required maxlength="128" autocomplete="off" placeholder="deploy" />
+            </label>
+          </div>
+          <label>
+            <span data-i18n="identityFile">Identity file path <em>(optional)</em></span>
+            <input id="profileIdentity" name="identityFile" maxlength="1024" autocomplete="off" placeholder="~/.ssh/id_ed25519" />
+          </label>
+          <label>
+            <span data-i18n="agentSocket">SSH agent socket <em>(optional)</em></span>
+            <input id="profileAgent" name="agentSocket" maxlength="1024" autocomplete="off" placeholder="Uses SSH_AUTH_SOCK when available" />
+          </label>
+          <label>
+            <span data-i18n="password">Password <em>(not saved)</em></span>
+            <input id="profilePassword" name="password" type="password" maxlength="4096" autocomplete="new-password" placeholder="Enter only on this device" />
+          </label>
+          <label class="checkbox-label modal-checkbox">
+            <input id="clearPassword" name="clearPassword" type="checkbox" />
+            <span data-i18n="clearPassword">Clear the in-memory password</span>
+          </label>
+          <label>
+            <span data-i18n="hostKeyPolicy">Host-key policy</span>
+            <select id="profileHostKey" name="strictHostKeyChecking">
+              <option value="yes" data-i18n="verifyStrict">Strict — verify known hosts</option>
+              <option value="accept-new" data-i18n="verifyNew">Accept new — add unseen keys</option>
+            </select>
+          </label>
+          <p class="form-help" data-i18n="formHelp">Passwords are held in memory only and private-key contents are never read. Use OpenSSH config, ssh-agent, or an identity-file path.</p>
+          <div class="modal-actions">
+            <button class="button button-secondary" id="cancelModal" type="button" data-i18n="cancel">Cancel</button>
+            <button class="button button-primary" type="submit" data-i18n="saveHost">Save host</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <script src="./appearance.js"></script>
+    <script src="./panel.js"></script>
+    <script src="./capsule-retint.js"></script>
+  </body>
+</html>

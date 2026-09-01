@@ -24,17 +24,27 @@
   --pi-focus: rgba(242, 243, 245, 0.24);
   --pi-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
-html { min-height: 100%; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; min-height: 100%; }
 body {
+  display: flex;
+  min-width: 0;
   min-height: 100%;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  flex-direction: column;
+  gap: 12px;
   background: var(--pi-surface) !important;
   color: var(--pi-text) !important;
   font-size: 13px !important;
   -webkit-font-smoothing: antialiased;
 }
-.meta { color: var(--pi-muted) !important; letter-spacing: 0.01em; }
+.meta { flex: 0 0 auto; margin: 0 !important; color: var(--pi-muted) !important; letter-spacing: 0.01em; }
 textarea {
-  min-height: 220px !important;
+  min-height: 180px !important;
+  flex: 1 1 auto;
+  resize: vertical;
   border-color: var(--pi-border) !important;
   border-radius: 10px !important;
   background: var(--pi-panel) !important;
@@ -43,6 +53,7 @@ textarea {
   line-height: 1.6;
 }
 textarea:focus { border-color: var(--pi-text) !important; box-shadow: 0 0 0 3px var(--pi-focus); outline: none; }
+.row { flex: 0 0 auto; margin-top: 0 !important; }
 button {
   min-height: 32px;
   border: 1px solid var(--pi-border) !important;
@@ -55,5 +66,5 @@ button {
 button:hover { opacity: 0.86; }
 button.secondary { background: transparent !important; color: var(--pi-text) !important; }
 button:focus-visible { outline: 2px solid var(--pi-focus); outline-offset: 2px; }
-@media (max-width: 560px) { body { padding: 12px !important; } textarea { min-height: 180px !important; } }
+@media (max-width: 560px) { body { padding: 10px !important; } textarea { min-height: 160px !important; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.001ms !important; } }
