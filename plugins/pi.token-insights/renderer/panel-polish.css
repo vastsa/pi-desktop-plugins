@@ -1,6 +1,10 @@
 /* Keep the dense analytics surface, but make the controls settle consistently
    with the host shell at narrow widths and with keyboard focus. */
-html, body { scrollbar-gutter: stable; }
+/*
+  Keep the stable gutter on the actual content scroller only. Windows uses
+  classic scrollbars, so putting the same reservation on html/body creates a
+  second permanent right-hand gutter outside the panel content.
+*/
 button, input, select { -webkit-font-smoothing: antialiased; }
 button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid color-mix(in oklab, var(--ds-accent) 70%, transparent);
