@@ -6,8 +6,6 @@
  * Plugin id : pi.gitlens
  * Commands  : gitlens.open / gitlens.openHistory / gitlens.openChanges /
  *             gitlens.openBranches / gitlens.openBlame
- * Agent tools: git_status, git_log, git_show, git_diff, git_blame, git_branch,
- *             git_commit, git_stash, git_open_panel
  * Panel channels: git.state / git.status / git.log / git.show / git.diff /
  *             git.blame / git.branch / git.commit / git.stash
  *
@@ -17,16 +15,11 @@
  * - The repository root is always resolved from pi.workspace.get() via
  *   `git rev-parse --show-toplevel`, so the plugin can never run git against a
  *   directory the user did not open.
- * - Agent tools and the panel share the same handlers; panel requests arrive
- *   through onPanelInvoke and are forwarded to the same functions.
- * - Read-only tools are risk "low"; tools that mutate repository state
- *   (branch / commit / stash) are risk "medium" and go through the normal
- *   Agent permission policy.
+ * - Handlers are for the work-panel view only. Nothing is registered as an
+ *   agent tool; the AI does not get git_status / git_commit / etc.
  *
  * Permissions
  * - ui.view: the work-panel view (contributes.views, no detached window)
- * - agent.tool.register: register the nine agent tools
- * - agent.prompt.inject: load the git-workflow skill
  */
 
 const {
@@ -87,7 +80,7 @@ function viewLabel(view, locale) {
   return table[view] || view;
 }
 
-/** Where the AI asked the panel to land; consumed by the panel via git.state. */
+/** Where a command asked the panel to land; consumed by the panel via git.state. */
 let panelState = null;
 
 // ---------------------------------------------------------------------------
@@ -191,7 +184,7 @@ async function stashListFor(root) {
 }
 
 // ---------------------------------------------------------------------------
-// agent tools (shared with the panel)
+// panel git handlers
 // ---------------------------------------------------------------------------
 
 async function toolStatus(args) {
@@ -489,12 +482,6 @@ async function openPanelView(view, extra = {}) {
   };
 }
 
-async function toolOpenPanel(args) {
-  const view = String(args?.view || "overview");
-  const extra = { path: args?.path, ref: args?.ref };
-  return openPanelView(view, extra);
-}
-
 // ---------------------------------------------------------------------------
 // panel bridge (onPanelInvoke)
 // ---------------------------------------------------------------------------
@@ -571,172 +558,8 @@ async function registerCommands() {
   });
 }
 
-async function registerTools() {
-  const tools = [
-    {
-      name: "git_status",
-      description:
-        "Show the git status of the current project's repository: current branch, upstream, ahead/behind counts, and the working tree grouped into staged, unstaged, untracked and conflict entries (porcelain XY codes, rename pairs included). Read-only.",
-      risk: "low",
-      schema: {
-        type: "object",
-        properties: {
-          path: { type: "string", description: "Optional repository-relative path to limit the status to." },
-        },
-      },
-      execute: (args) => toolStatus(args || {}),
-    },
-    {
-      name: "git_log",
-      description:
-        "Show recent commit history of the current project's repository. Supports an optional repo-relative path, free-text grep over subjects, an author filter and a result count. Returns sha, short sha, author, dates, subject, body and ref decorations for each commit. Read-only.",
-      risk: "low",
-      schema: {
-        type: "object",
-        properties: {
-          path: { type: "string", description: "Optional repository-relative path to show history for (file or directory)." },
-          query: { type: "string", description: "Optional free-text matched against commit subjects (case-insensitive grep)." },
-          author: { type: "string", description: "Optional author name/email substring filter (case-insensitive)." },
-          count: { type: "integer", minimum: 1, maximum: 100, description: "Maximum number of commits to return (default 20)." },
-        },
-      },
-      execute: (args) => toolLog(args || {}),
-    },
-    {
-      name: "git_show",
-      description:
-        "Show a single commit of the current project's repository: message, author, dates, changed files with add/delete counts, and optionally the full patch. Use a sha, HEAD or any ref expression as ref. Read-only.",
-      risk: "low",
-      schema: {
-        type: "object",
-        properties: {
-          ref: { type: "string", description: "Commit to show. Defaults to HEAD." },
-          path: { type: "string", description: "Optional repository-relative path to limit the shown files." },
-          patch: { type: "boolean", description: "Include the unified diff patch (default false; large patches are truncated)." },
-          stat: { type: "boolean", description: "Include per-file add/delete counts (default true)." },
-        },
-      },
-      execute: (args) => toolShow(args || {}),
-    },
-    {
-      name: "git_diff",
-      description:
-        "Show the diff of the current project's repository: between a base ref and the working tree (default), or between two refs. Returns changed files with add/delete counts and optionally the unified patch. Read-only.",
-      risk: "low",
-      schema: {
-        type: "object",
-        properties: {
-          base: { type: "string", description: "Base ref for the diff. Defaults to HEAD." },
-          target: { type: "string", description: "Optional second ref. When omitted the working tree is compared against base." },
-          path: { type: "string", description: "Optional repository-relative path to limit the diff to." },
-          patch: { type: "boolean", description: "Include the unified diff patch (default false; large patches are truncated)." },
-          stat: { type: "boolean", description: "Include per-file add/delete counts (default true)." },
-        },
-      },
-      execute: (args) => toolDiff(args || {}),
-    },
-    {
-      name: "git_blame",
-      description:
-        "Blame a file in the current project's repository (GitLens-style line attribution): for every line, the originating commit sha, author, author time and commit subject. Path is required; an optional line range limits the output. Read-only.",
-      risk: "low",
-      schema: {
-        type: "object",
-        properties: {
-          path: { type: "string", description: "Repository-relative path of the file to blame." },
-          startLine: { type: "integer", minimum: 1, description: "Optional first line of the blame range (1-based, inclusive)." },
-          endLine: { type: "integer", minimum: 1, description: "Optional last line of the blame range (1-based, inclusive)." },
-          limit: { type: "integer", minimum: 1, maximum: 5000, description: "Maximum number of blamed lines to return (default 2000; set higher for large files)." },
-        },
-        required: ["path"],
-      },
-      execute: (args) => toolBlame(args || {}),
-    },
-    {
-      name: "git_branch",
-      description:
-        "Manage local branches of the current project's repository. Actions: list (default, includes current branch, upstream and last commit), create (new branch from an optional start point), switch (checkout an existing local branch), delete (safe delete; fails on unmerged branches unless force is set).",
-      risk: "medium",
-      schema: {
-        type: "object",
-        properties: {
-          action: { type: "string", enum: ["list", "create", "switch", "delete"], description: "Branch operation to perform (default list)." },
-          name: { type: "string", description: "Branch name for create/switch/delete. Must be a safe git ref name." },
-          startPoint: { type: "string", description: "Optional ref the new branch starts from (create only)." },
-          force: { type: "boolean", description: "For delete: force delete even if unmerged. For create: reset an existing branch to the start point." },
-        },
-      },
-      execute: (args) => toolBranch(args || {}),
-    },
-    {
-      name: "git_commit",
-      description:
-        "Stage changes and create a commit in the current project's repository. stage can be 'all' (git add -A), 'tracked' (git add -u) or an array of repo-relative paths. Respects repository hooks and never skips verification. Returns the new commit sha and subject.",
-      risk: "medium",
-      schema: {
-        type: "object",
-        properties: {
-          message: { type: "string", description: "Commit message (required)." },
-          stage: {
-            oneOf: [
-              { type: "string", enum: ["all", "tracked"] },
-              { type: "array", items: { type: "string" }, description: "Repository-relative paths to stage." },
-            ],
-            description: "What to stage before committing (default 'all').",
-          },
-          amend: { type: "boolean", description: "Amend the last commit instead of creating a new one (default false)." },
-        },
-        required: ["message"],
-      },
-      execute: (args) => toolCommit(args || {}),
-    },
-    {
-      name: "git_stash",
-      description:
-        "Manage the stash of the current project's repository. Actions: list (default), push (stash the working tree with an optional message; includeUntracked adds -u), pop (restore the newest stash or the one at index), drop (delete the newest stash or the one at index).",
-      risk: "medium",
-      schema: {
-        type: "object",
-        properties: {
-          action: { type: "string", enum: ["list", "push", "pop", "drop"], description: "Stash operation to perform (default list)." },
-          message: { type: "string", description: "Optional stash message (push only)." },
-          includeUntracked: { type: "boolean", description: "Include untracked files when pushing (default false)." },
-          index: { type: "integer", minimum: 0, description: "Zero-based stash index for pop/drop (default 0)." },
-        },
-      },
-      execute: (args) => toolStash(args || {}),
-    },
-    {
-      name: "git_open_panel",
-      description:
-        "Focus Git Lens in PI-Desktop's right work panel on a specific page (overview, history, diff, branches or blame). Git Lens has no separate window — it only docks in the work panel. Use this when the user asks to see git information visually, wants a dashboard of the repository, or asks to 'open' git history/changes/branches/blame. Optionally preselect a path (blame/diff/history) or a ref. If the view is not already visible, tell the user to open the work panel (Mod+J) and choose Git Lens.",
-      risk: "low",
-      schema: {
-        type: "object",
-        properties: {
-          view: { type: "string", enum: VIEWS, description: "Panel page to open (default overview)." },
-          path: { type: "string", description: "Optional repository-relative path to preselect on the page." },
-          ref: { type: "string", description: "Optional ref to focus (e.g. a commit sha) where the page supports it." },
-        },
-      },
-      execute: (args) => toolOpenPanel(args || {}),
-    },
-  ];
-
-  for (const tool of tools) {
-    await pi.agent.registerTool({
-      name: tool.name,
-      description: tool.description,
-      risk: tool.risk,
-      schema: tool.schema,
-      execute: tool.execute,
-    });
-  }
-}
-
 async function onLoad() {
   await registerCommands();
-  await registerTools();
 }
 
 async function onUnload() {
@@ -747,21 +570,7 @@ async function onUnload() {
     "gitlens.openBranches",
     "gitlens.openBlame",
   ];
-  const tools = [
-    "git_status",
-    "git_log",
-    "git_show",
-    "git_diff",
-    "git_blame",
-    "git_branch",
-    "git_commit",
-    "git_stash",
-    "git_open_panel",
-  ];
-  await Promise.all([
-    ...commands.map((id) => pi.commands.unregister(id).catch(() => {})),
-    ...tools.map((name) => pi.agent.unregisterTool(name).catch(() => {})),
-  ]);
+  await Promise.all(commands.map((id) => pi.commands.unregister(id).catch(() => {})));
 }
 
 module.exports = { onLoad, onUnload, onPanelInvoke };

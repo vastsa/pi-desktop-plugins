@@ -62,9 +62,9 @@ function createTempRepo() {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.gitlens");
-  assert.equal(manifest.version, "0.2.4");
+  assert.equal(manifest.version, "0.2.5");
   assert.equal(manifest.engines.piDesktop, ">=0.8.0");
-  assert.deepEqual(manifest.permissions, ["ui.view", "agent.tool.register", "agent.prompt.inject"]);
+  assert.deepEqual(manifest.permissions, ["ui.view"]);
   assert.equal(manifest.ui, undefined);
   assert.equal(manifest.contributes.views.length, 1);
   assert.equal(manifest.contributes.views[0].id, "git");
@@ -74,24 +74,9 @@ test("manifest declares the expected identity, permissions and contributions", (
   assert.equal(typeof manifest.contributes.views[0].title["zh-CN"], "string");
   assert.ok(manifest.contributes.views[0].title.en.length > 0 && manifest.contributes.views[0].title["zh-CN"].length > 0);
   assert.equal(manifest.contributes.commands.length, 5);
-  assert.equal(manifest.contributes.agentTools.length, 9);
-  assert.deepEqual(manifest.contributes.skills, ["skills/git-workflow.md"]);
-  const toolNames = manifest.contributes.agentTools.map((tool) => tool.name);
-  assert.deepEqual(toolNames, [
-    "git_status",
-    "git_log",
-    "git_show",
-    "git_diff",
-    "git_blame",
-    "git_branch",
-    "git_commit",
-    "git_stash",
-    "git_open_panel",
-  ]);
-  const low = manifest.contributes.agentTools.filter((tool) => tool.risk === "low").map((tool) => tool.name);
-  const medium = manifest.contributes.agentTools.filter((tool) => tool.risk === "medium").map((tool) => tool.name);
-  assert.deepEqual(low, ["git_status", "git_log", "git_show", "git_diff", "git_blame", "git_open_panel"]);
-  assert.deepEqual(medium, ["git_branch", "git_commit", "git_stash"]);
+  assert.equal(manifest.contributes.agentTools, undefined);
+  assert.equal(manifest.contributes.skills, undefined);
+  assert.doesNotMatch(JSON.stringify(manifest), /agent\.tool\.register|agent\.prompt\.inject|git_open_panel/);
   assert.ok(!JSON.stringify(manifest).includes('"fs."'), "no file permissions requested");
   assert.ok(!JSON.stringify(manifest).includes("net.fetch"), "no network permission requested");
 });
@@ -156,14 +141,10 @@ test("follows the host locale for panel copy, commands and toasts", () => {
   assert.doesNotMatch(mainSource, /Git Lens（\$\{target\}）/);
 });
 
-test("main.js registers every tool and command it declares, and routes panel channels", () => {
-  for (const tool of manifest.contributes.agentTools) {
-    assert.match(mainSource, new RegExp(`name: "${tool.name}"`), `tool ${tool.name} registered`);
-  }
-  const unregisterList = mainSource.match(/const tools = \[([\s\S]*?)\];/)?.[1] || "";
-  for (const tool of manifest.contributes.agentTools) {
-    assert.match(unregisterList, new RegExp(`"${tool.name}"`), `tool ${tool.name} unregistered`);
-  }
+test("main.js registers commands only, and routes panel channels without agent tools", () => {
+  assert.doesNotMatch(mainSource, /registerTool/);
+  assert.doesNotMatch(mainSource, /unregisterTool/);
+  assert.doesNotMatch(mainSource, /git_open_panel/);
   for (const command of manifest.contributes.commands) {
     assert.match(mainSource, new RegExp(`id: "${command.id}"`), `command ${command.id} registered`);
   }
@@ -361,7 +342,7 @@ test("integration: resolve, status, log, diff and blame against a real repo", { 
 });
 
 
-test("agent tool handlers run end-to-end against a real repository", { skip: !hasGit }, async () => {
+test("panel handlers run end-to-end against a real repository", { skip: !hasGit }, async () => {
   const repo = createTempRepo();
   try {
     repo.run(["config", "commit.gpgsign", "false"]);

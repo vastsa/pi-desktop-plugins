@@ -2,8 +2,8 @@
 
 A [GitLens](https://www.gitkraken.com/gitlens)-inspired local Git management
 plugin for PI-Desktop. It turns the current workspace's repository into a
-visual dashboard, and gives the AI nine agent tools to inspect and manage the
-project's git state.
+visual dashboard in the right work panel. Human UI only — it does not register
+agent tools.
 
 ## Features
 
@@ -21,29 +21,6 @@ project's git state.
   - **Blame** — GitLens-style per-line attribution for any repo-relative file.
 - **Commands** — `Git Lens: Open`, `Open History`, `Open Changes`,
   `Open Branches`, `Open Blame` from the command palette.
-- **Agent tools** — the AI can inspect and manage git directly:
-
-| Tool | Risk | Purpose |
-| --- | --- | --- |
-| `git_status` | low | Branch, ahead/behind, staged/unstaged/untracked/conflicts |
-| `git_log` | low | Commit history with path / query / author filters |
-| `git_show` | low | One commit: message, files, stats, optional patch |
-| `git_diff` | low | Working tree or ref-to-ref diff, optional patch |
-| `git_blame` | low | Per-line attribution of a file |
-| `git_branch` | medium | List / create / switch / safe delete branches |
-| `git_commit` | medium | Stage and commit (respects hooks, no force) |
-| `git_stash` | medium | List / push / pop / drop stashes |
-| `git_open_panel` | low | **Focus any Git Lens page** in the work panel |
-
-  The AI-callable `git_open_panel` is the bridge between conversation and UI:
-  ask the agent to "open git history" or "show the repo dashboard" and it
-  focuses that page in the work panel, optionally preselecting a path or ref.
-  If Git Lens is not already visible, open the work panel (`Mod+J`) and choose
-  Git Lens.
-
-- **Skill** — `Git workflow` teaches the agent when to use each tool:
-  inspect first, mutate deliberately, never push/pull/force without an
-  explicit request.
 
 ## How it works
 
@@ -52,7 +29,7 @@ project's git state.
 - Git is executed through `execFile` with argument arrays — no shell, no
   string interpolation — so paths and refs cannot become commands.
 - `GIT_TERMINAL_PROMPT=0` is set, so git never blocks waiting for
-  credentials; the tools cannot push, pull or fetch.
+  credentials; the UI cannot push, pull or fetch.
 - Paths must be repo-relative (no absolute paths, no `..` escapes); refs and
   branch names are validated against a safe charset.
 - The UI is a `contributes.views` surface docked in the work panel. It talks
@@ -65,12 +42,10 @@ project's git state.
 | Permission | Why |
 | --- | --- |
 | `ui.view` | Dock Git Lens in the right work panel |
-| `agent.tool.register` | Register the nine agent tools |
-| `agent.prompt.inject` | Load the `Git workflow` skill |
 
-No `fs.*`, `net.fetch`, clipboard, shell or notify permissions are requested.
-All repository access happens through the system `git` binary inside the
-plugin process.
+No `fs.*`, `net.fetch`, clipboard, shell, notify or agent-tool permissions
+are requested. All repository access happens through the system `git` binary
+inside the plugin process.
 
 ## Commands
 
@@ -101,6 +76,12 @@ the folder as a development plugin.
 
 ## Changelog
 
+### 0.2.5
+
+Drop agent tools and the Git workflow skill. Git Lens is a human work-panel
+UI only — the AI does not get `git_status` / `git_commit` / `git_open_panel`.
+去掉 AI 工具和 Git workflow skill，Git Lens 只给人用。
+
 ### 0.2.4
 
 Command palette titles, work-panel copy and toasts follow the app language
@@ -128,9 +109,9 @@ colored tiles, and the host's neutral gray accent (no purple).
 ### 0.2.0
 
 Docks only in the right work panel (`contributes.views` + `ui.view`) and no
-longer opens a separate window. Commands and `git_open_panel` still switch the
-live page; if the view is not visible, a toast points at the work-panel
-switcher (`Mod+J`). Requires PI-Desktop `>= 0.8.0`.
+longer opens a separate window. Commands still switch the live page; if the
+view is not visible, a toast points at the work-panel switcher (`Mod+J`).
+Requires PI-Desktop `>= 0.8.0`.
 
 ### 0.1.4
 
@@ -148,7 +129,6 @@ shell. No behavior, tool, command or permission changes.
 ### 0.1.0
 
 First release: multi-view panel (Overview / History / Changes / Branches /
-Blame) with app language & theme following, five palette commands, nine agent
-tools including the AI-callable `git_open_panel`, and the `Git workflow`
-skill. All git operations run through the system git binary against the
-resolved repository root of the current workspace.
+Blame) with app language & theme following and five palette commands. All git
+operations run through the system git binary against the resolved repository
+root of the current workspace.
