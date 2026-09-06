@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Rebuild catalog.json from plugins/*/manifest.json + packages/*.piplug."""
+"""Local/offline catalog rebuild from plugins/*/manifest.json + packages/*.piplug.
+
+Production catalog.json is mirrored from https://plugins.aiuo.net by
+scripts/sync_catalog.py (GitHub Actions hourly). Do not use this script to
+publish the official marketplace; it only exists for local fixtures.
+"""
 from __future__ import annotations
 
 import hashlib

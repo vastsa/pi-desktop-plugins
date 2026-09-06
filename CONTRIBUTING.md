@@ -1,38 +1,38 @@
-# Contributing plugins to PI-Desktop
+# Contributing
 
-This repository is the **official plugin marketplace warehouse** for [PI-Desktop](https://github.com/vastsa/PI-Desktop).
+The **live marketplace** is [plugins.aiuo.net](https://plugins.aiuo.net), not this GitHub repository.
 
-PI-Desktop reads:
+This repo holds:
 
-```text
-https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json
-```
+- official plugin **source** under `plugins/`
+- a **fail-closed GitHub raw mirror** of `catalog.json` + `packages/*.piplug`
 
-and installs the `.piplug` packages referenced by that catalog.
+Do **not** open PRs whose only purpose is to add a plugin to `catalog.json`. That file is overwritten by CI from the backend.
 
-## Quick start
+## Publish a third-party plugin
+
+1. Sign in at `https://plugins.aiuo.net` with GitHub.
+2. Create a publisher slug and a CLI token (`pipt_…`).
+3. Pack and upload:
 
 ```bash
-# 1) fork + clone
-git clone https://github.com/<you>/pi-desktop-plugins.git
-cd pi-desktop-plugins
-
-# 2) copy the practical template
-cp -R plugins/demo.workspace-summary plugins/my.plugin-id
-
-# 3) edit manifest + code
-#    - change id/name/version/description
-#    - implement main.js
-#    - optional renderer/index.html
-
-# 4) pack
-python3 scripts/pack_plugin.py plugins/my.plugin-id
-
-# 5) rebuild catalog
-python3 scripts/rebuild_catalog.py
-
-# 6) open a PR to vastsa/pi-desktop-plugins
+pi-plugin pack
+pi-plugin publish --registry https://plugins.aiuo.net --token "$PI_PLUGIN_TOKEN"
 ```
+
+The first version goes to review. Later versions of a trusted publisher may auto-publish when there is no permission escalation.
+
+## Official plugins in this repo
+
+```bash
+# edit plugins/<id>/, bump manifest.version
+node --test tests/<name>.test.mjs
+# PI-Desktop → Load dev plugin → plugins/<id>
+python3 scripts/pack_plugin.py plugins/<id>
+pi-plugin publish --registry https://plugins.aiuo.net
+```
+
+`python3 scripts/rebuild_catalog.py` is a local fixture helper only.
 
 ## Plugin layout
 
@@ -41,7 +41,7 @@ plugins/<id>/
   manifest.json      # required
   main.js            # required entry
   renderer/          # optional isolated panel UI
-  README.md          # shown in marketplace detail
+  README.md
   skills/            # optional
 ```
 
@@ -55,14 +55,8 @@ plugins/<id>/
   "version": "0.1.0",
   "description": "What it does",
   "i18n": {
-    "en": {
-      "name": "My Plugin",
-      "description": "What it does"
-    },
-    "zh-CN": {
-      "name": "我的插件",
-      "description": "插件功能简介"
-    }
+    "en": { "name": "My Plugin", "description": "What it does" },
+    "zh-CN": { "name": "我的插件", "description": "插件功能简介" }
   },
   "author": "your-name",
   "main": "main.js",
@@ -71,119 +65,27 @@ plugins/<id>/
 }
 ```
 
-Use BCP-47 locale keys in `i18n`. The marketplace discovers available locale
-options from these keys, so additional locales do not require a website code
-change. The website falls back to English when its own UI copy is not yet
-translated, while plugin metadata falls back to English, Simplified Chinese,
-then the base manifest fields.
-
-### Recommended fields for marketplace quality
-
-- `categories`: e.g. `["productivity", "official"]`
-- `i18n`: localized `name`, `description`, `safetyNotes` and optional `readmeMarkdown`
-- `changelog`: short release notes for the current version
-- `safetyNotes`: plain-language risk summary
-- `ui.panel`: isolated panel html entry
-- `contributes.commands` / `contributes.agentTools` / `contributes.settings`
-
-### Panel title and host chrome compatibility
-
-Panel titles must provide both English and Simplified Chinese so PI-Desktop can
-follow the active application language:
-
-```json
-{
-  "ui": {
-    "panel": "renderer/index.html",
-    "title": {
-      "en": "My Plugin",
-      "zh-CN": "我的插件"
-    }
-  }
-}
-```
-
-Do not hard-code a replacement title when opening the panel from a command. Use
-`pi.ui.openPanel()` without a `title` option so the host can resolve the
-localized manifest title. PI-Desktop reserves exactly a 46px transparent drag
-band at the top of every panel and renders a minimal three-button window-control
-capsule in the top-right corner. The band is intentionally not clickable; the
-host may show a development hint for it. Normal-flow plugin content is offset
-below the band automatically. Plugins own every other visible part of the
-panel, and must not implement a second draggable window titlebar. A plugin
-element that is fixed or sticky to the window edge must begin at
-`top: var(--pi-plugin-titlebar-height, 46px)`; sticky elements inside their own
-scrollable views can keep their local `top: 0` behavior.
-
-## Local verification in PI-Desktop
-
-Before opening a PR:
-
-1. Open PI-Desktop → **Plugins**
-2. Use **Load dev plugin** and choose `plugins/<id>`
-3. Confirm:
-   - command palette entry works
-   - panel opens (if declared)
-   - agent tool appears with forced prefix `plugin_<id_safe>_<tool>`
-   - undeclared permissions fail cleanly
-
-Or install the packed artifact:
-
-1. `python3 scripts/pack_plugin.py plugins/<id>`
-2. PI-Desktop → **Install .piplug**
-3. Review permissions carefully
+Panel titles must be bilingual (`ui.title.en` / `ui.title.zh-CN`). Call `pi.ui.openPanel()` without a `title` option. Do not draw a second window titlebar; host chrome occupies the top 46px (`var(--pi-plugin-titlebar-height, 46px)`).
 
 ## Packaging rules
 
 - Root of the package must contain `manifest.json`
-- No symlinks
-- No path traversal
-- Prefer store-compressed `.piplug`
-- Max package size: 50MB
-- Do not expect host-side `npm install` at install time; bundle dependencies yourself
+- No symlinks, no path traversal
+- Store-compressed `.piplug`, max 50MB
+- Bundle your own dependencies (no host-side `npm install`)
 
 ## Permission policy
 
-Request the minimum set:
+Request the minimum set. High-risk permissions (`fs.write`, `net.fetch`, `shell.openExternal`, `agent.prompt.inject`, …) force review. Auto-update will not silently expand permissions.
 
-| Permission | Use |
-|---|---|
-| `ui.panel` | Open isolated panel |
-| `fs.read.workspace` | Read project files |
-| `fs.write.workspace` | Modify project files |
-| `clipboard.read` / `clipboard.write` | Clipboard access |
-| `notify` | Local notifications |
-| `net.fetch` | Outbound network |
-| `shell.openExternal` | Open external links |
-| `agent.tool.register` | Expose tools to the agent |
-| `usage.read` | Read aggregate local token usage without message content |
+## PR checklist (source changes only)
 
-High-risk permissions are reviewed in the install UI. Auto-update will not silently expand permissions.
+- [ ] Unique `id`, semantic `version`
+- [ ] README explains what / why / permissions
+- [ ] Tests updated (`node --test tests/…`)
+- [ ] Loaded as a dev plugin in PI-Desktop
+- [ ] **Not** editing `catalog.json` by hand
 
-## PR checklist
+## Mirror
 
-- [ ] Unique `id`
-- [ ] Semantic `version`
-- [ ] README explains what/why/permissions
-- [ ] `python3 scripts/pack_plugin.py ...` succeeds
-- [ ] `python3 scripts/rebuild_catalog.py` updated `catalog.json`
-- [ ] Package sha256 in catalog matches the `.piplug`
-- [ ] Tested via Load dev plugin and/or Install .piplug
-- [ ] No secrets in source or package
-
-## After merge
-
-Once merged to `main`:
-
-1. GitHub raw catalog updates
-2. In PI-Desktop open **Plugins → Marketplace**
-3. Click **Refresh from repo**
-4. Your plugin becomes installable
-
-## Template recommendation
-
-Start from:
-
-- `plugins/demo.workspace-summary` for a real productivity plugin
-- `plugins/demo.hello` for the smallest command/panel/tool sample
-- `plugins/demo.workspace-notes` for high-risk capability demos
+Hourly GitHub Action: `scripts/sync_catalog.py` pulls `https://plugins.aiuo.net/catalog.json` and artifacts, rewrites URLs to `packages/<id>-<version>.piplug`, and commits only on success. A failed fetch leaves the previous mirror in place.

@@ -12,14 +12,11 @@ pnpm dev
 
 Open <http://localhost:3000>.
 
-The site reads the official catalog from:
-
-```text
-https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json
-```
+The site reads the live catalog from `https://plugins.aiuo.net/catalog.json`
+and falls back to GitHub raw if the origin is unreachable.
 
 Catalog responses are revalidated every five minutes. Set `CATALOG_URL` to
-use a different catalog provider during preview or development.
+pin a single provider during preview or development.
 
 The site defaults to English and uses `?lang=<locale>` for language selection.
 When no explicit language is present, it matches the browser's

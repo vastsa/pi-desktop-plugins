@@ -1,142 +1,72 @@
 # PI-Desktop Plugins
 
-Official plugin marketplace repository for [PI-Desktop](https://github.com/vastsa/PI-Desktop).
+Official **plugin source** and **GitHub raw fallback mirror** for [PI-Desktop](https://github.com/vastsa/PI-Desktop).
 
-PI-Desktop 是一个现代化、AI 驱动的桌面环境，本仓库是其**官方插件市场仓库**，包含插件源码、可安装的 `.piplug` 包以及市场目录索引。
+官方市场已经迁到 **[plugins.aiuo.net](https://plugins.aiuo.net)**（`pi-backend`）。本仓库不再是发布入口：
 
-## 📦 仓库内容
+| 角色 | 地址 |
+| --- | --- |
+| 官方 Catalog（客户端默认） | `https://plugins.aiuo.net/catalog.json` |
+| GitHub 回退镜像 | `https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json` |
+| 源码与测试 | 本仓库 `plugins/`、`tests/` |
 
-| 路径 | 说明 |
-|------|------|
-| `catalog.json` | 市场目录索引，由 PI-Desktop 客户端读取，展示可安装的插件列表 |
-| `packages/*.piplug` | 打包好的插件安装包，用户安装时下载的就是这些文件 |
-| `plugins/<id>/` | 插件源码目录，每个插件一个文件夹 |
-| `scripts/` | 开发辅助脚本（打包、重建目录等） |
+CI 每小时从官方源拉取 `catalog.json` 和 `.piplug`。**拉取失败不会覆盖**上次成功的文件，所以 GitHub raw 始终是一份可安装的完整镜像（相对路径 `packages/*.piplug`，不带 `artifactBaseUrl`，客户端不会在回退时打回已宕的源站）。
 
-## 🎯 可用插件
+发布、审核、yank、权限升级一律走插件中心，不要再向本仓库提「把插件加进 catalog」的 PR。
 
-### 官方插件（PI-Desktop 团队维护）
+## 安装插件
 
-| 插件 | 说明 | 作者 |
-|------|------|------|
-| **pi.todo** | 小清新待办：四象限矩阵 + 简单列表双布局，支持到期提醒与 AI 工具集成 | PI-Desktop |
-| **pi.token-insights** | Token 用量分析仪表盘：追踪 PI-Desktop、Claude Code、Codex 等工具的 Token 消耗 | PI-Desktop |
-| **pi.ssh-manager** | 本地优先的 SSH 主机管理与 AI 远程命令工具，支持面板临时密码且不持久化凭据 | PI-Desktop |
-| **pi.terminal** | 受 Otty 启发的交互式终端，只停靠在右侧工作面板；多标签、跨平台 shell | PI-Desktop |
+1. 打开 PI-Desktop → **插件** → **市场**
+2. 官方源指向 `https://plugins.aiuo.net/catalog.json`（开发可用 `PI_DESKTOP_PLUGIN_MARKET_URL`）
+3. 无法访问官方源时，客户端可切到本仓库 GitHub raw 镜像
 
-### 社区插件
+## 发布插件（外部开发者）
 
-| 插件 | 说明 | 作者 |
-|------|------|------|
-| **pi.scratch-calc** | 草稿计算器：多行演算、历史记录、百分比/乘方/π/e 支持，暗色模式 | Tioit-Wang |
-| **pi.super-domain-man** | 超级域名侠：多平台 DNS 记录管理与 SSL 证书监控/申请工具 | Tioit-Wang |
+1. 在 `https://plugins.aiuo.net` 用 GitHub 登录，申请 publisher slug。
+2. 生成本地 CLI token（`pipt_…`）。
+3. 用 `plugin-devkit`：`pi-plugin pack` → `pi-plugin publish --registry https://plugins.aiuo.net`。
+4. 首个版本进入审核；通过后进入官方 catalog，并在一小时内同步到本镜像。
 
-### 示例插件（学习参考）
+## 官方插件源码
 
-| 插件 | 说明 |
-|------|------|
-| **demo.hello** | 最小示例：面板 + 命令 + 工具注册 |
-| **demo.workspace-summary** | 实用模板：扫描工作区并生成摘要 |
-| **demo.workspace-notes** | 高风险能力演示：文件读写 + 网络请求 |
-
-## 🚀 安装插件
-
-1. 打开 PI-Desktop → **插件**
-2. 进入 **市场** 页面
-3. 点击 **从仓库刷新** 加载最新目录
-4. 浏览并安装插件
-
-## 🛠️ 开发自己的插件
-
-### 快速开始
+`plugins/<id>/` 仍是 PI-Desktop 团队维护的源码。改官方插件：
 
 ```bash
-# 1) Fork + 克隆仓库
-git clone https://github.com/<you>/pi-desktop-plugins.git
-cd pi-desktop-plugins
+# 1) 改代码、bump manifest.version
+# 2) 本地验证
+node --test tests/<name>.test.mjs
+# 在 PI-Desktop 里「加载开发插件」指向 plugins/<id>
 
-# 2) 复制模板开始开发
-cp -R plugins/demo.workspace-summary plugins/my.plugin-id
+# 3) 打包（可选，本地安装用）
+python3 scripts/pack_plugin.py plugins/<id>
 
-# 3) 修改插件内容
-#    - 更新 manifest.json 中的 id/name/version/description
-#    - 实现 main.js 逻辑
-#    - 创建 renderer/index.html（可选，用于面板 UI）
-
-# 4) 打包插件
-python3 scripts/pack_plugin.py plugins/my.plugin-id
-
-# 5) 重建市场目录
-python3 scripts/rebuild_catalog.py
-
-# 6) 在 PI-Desktop 中测试
-#    - 使用「加载开发插件」功能
-#    - 或直接安装生成的 .piplug 文件
+# 4) 发布到插件中心（不要再跑 rebuild_catalog.py）
+pi-plugin publish --registry https://plugins.aiuo.net
 ```
 
-### 目录结构
+`python3 scripts/rebuild_catalog.py` 只用于本地/离线夹具，**不会**更新线上市场。
 
-```
-plugins/<id>/
-├── manifest.json      # 必需：插件元信息
-├── main.js            # 必需：插件入口
-├── renderer/          # 可选：面板 UI
-│   ├── index.html
-│   ├── style.css
-│   └── script.js
-├── README.md          # 推荐：插件说明文档
-└── skills/            # 可选：AI Agent 工具定义
+## 镜像同步（维护者）
+
+```bash
+python3 scripts/sync_catalog.py --dry-run
+python3 scripts/sync_catalog.py --source https://plugins.aiuo.net/catalog.json
+python3 -m unittest tests/test_sync_catalog.py
 ```
 
-### manifest.json 关键字段
+GitHub Actions：`.github/workflows/sync-catalog.yml`（每小时 + 手动）。
 
-```json
-{
-  "schemaVersion": 1,
-  "id": "my.plugin-id",
-  "name": "My Plugin",
-  "version": "0.1.0",
-  "description": "插件功能描述",
-  "author": "your-name",
-  "main": "main.js",
-  "categories": ["productivity"],
-  "permissions": ["ui.panel"],
-  "engines": { "piDesktop": ">=0.2.0" }
-}
-```
+## 仓库内容
 
-### 常用权限
+| 路径 | 说明 |
+| --- | --- |
+| `catalog.json` | 从官方源镜像的市场目录（失败不覆盖） |
+| `packages/*.piplug` | 镜像下来的安装包 |
+| `plugins/<id>/` | 官方插件源码 |
+| `scripts/sync_catalog.py` | 镜像同步 |
+| `scripts/pack_plugin.py` | 本地打包 |
+| `website/` | 市场介绍站（优先读官方 catalog，失败回退 GitHub raw） |
 
-| 权限 | 用途 |
-|------|------|
-| `ui.panel` | 打开隔离面板 |
-| `fs.read.workspace` | 读取工作区文件 |
-| `fs.write.workspace` | 修改工作区文件 |
-| `clipboard.read` / `clipboard.write` | 剪贴板读写 |
-| `notify` | 本地通知 |
-| `net.fetch` | 外部网络请求 |
-| `shell.openExternal` | 打开外部链接 |
-| `agent.tool.register` | 注册 AI Agent 工具 |
-
-> **提示**：只申请所需的最小权限集。高风险权限会在安装时提示用户确认。
-
-## 📋 贡献流程
-
-1. Fork 本仓库
-2. 从示例模板创建你的插件
-3. 在 PI-Desktop 中充分测试
-4. 提交 Pull Request（确保 `id` 唯一、使用语义化版本号、文档清晰）
-
-详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-## 📦 打包约束
-
-- 包根目录必须包含 `manifest.json`
-- 不允许符号链接或路径穿越
-- 使用 store-compressed zip 格式打包为 `.piplug`
-- 最大包体积 50MB
-- 不要期望宿主端 `npm install`，请自行打包依赖
-
-## 📄 License
+## License
 
 MIT
