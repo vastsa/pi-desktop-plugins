@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.gitlens",
   "name": "Git Lens",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Docks in the right work panel (no separate window). Human UI only — no agent tools.",
   "i18n": {
     "en": {
@@ -22,7 +22,7 @@
     "productivity",
     "official"
   ],
-  "changelog": "Release 0.2.5: drop agent tools and the Git workflow skill — Git Lens is a human work-panel UI only. Release 0.2.5：去掉 AI 工具和 Git workflow skill，Git Lens 只给人用。 Release 0.2.4: command palette, toasts and the work-panel UI follow the app language (en / zh-CN) from the first paint. Release 0.2.3: compact work-panel UI — overview is a single count row; file/commit diffs open as a full-page sheet with Back. Release 0.2.0: docks only in the right work panel.",
+  "changelog": "Release 0.2.6: follows the app light/dark mode live in the work-panel view (views have no appearance:changed push, so the plugin proxies and polls the host). Release 0.2.5: drop agent tools and the Git workflow skill — Git Lens is a human work-panel UI only. Release 0.2.5：去掉 AI 工具和 Git workflow skill，Git Lens 只给人用。 Release 0.2.4: command palette, toasts and the work-panel UI follow the app language (en / zh-CN) from the first paint. Release 0.2.3: compact work-panel UI — overview is a single count row; file/commit diffs open as a full-page sheet with Back. Release 0.2.0: docks only in the right work panel.",
   "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials. Commits, branch switches/deletes and stash operations are local git operations that respect repository hooks; the UI cannot push, pull, fetch or force anything beyond explicit branch deletion (git branch -D only when the caller asks for force). The UI is an isolated, context-isolated work-panel view that talks to the plugin process through the host bridge only. No agent tools are registered.",
   "main": "main.js",
   "contributes": {

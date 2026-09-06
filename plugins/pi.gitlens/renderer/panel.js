@@ -929,11 +929,18 @@ function applyRequestedState(state) {
   return true;
 }
 
+function applyHostAppearance(appearance) {
+  if (!appearance || typeof appearance !== "object") return;
+  const adapter = window.__appearance;
+  if (adapter && typeof adapter.apply === "function") adapter.apply(appearance);
+}
+
 async function syncHostState() {
   const state = await bridge("git.state");
   const repoChanged = repoRoot !== state.repoRoot;
   repoRoot = state.repoRoot;
   workspace = state.workspace;
+  applyHostAppearance(state.appearance);
   const switched = applyRequestedState(state.state);
   if (repoChanged && !switched) renderCurrentView();
   if (repoChanged || switched) updateStatus();
@@ -971,6 +978,7 @@ async function init() {
     const state = await bridge("git.state");
     repoRoot = state.repoRoot;
     workspace = state.workspace;
+    applyHostAppearance(state.appearance);
     if (!applyRequestedState(state.state)) activateView("overview");
     updateStatus();
   } catch (error) {

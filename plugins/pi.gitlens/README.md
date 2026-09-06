@@ -9,8 +9,9 @@ agent tools.
 
 - **Work panel view** (`pi.gitlens`): docks in the app's right work panel
   (no separate window). Open the work panel (`Mod+J`) and choose **Git Lens**.
-  The dashboard follows the app language (en / zh-CN) and color mode from the
-  first paint (command palette titles and toasts too):
+  The dashboard follows the app language (en / zh-CN) and color mode live,
+  including light/dark switches while the view stays open (command palette
+  titles and toasts too):
   - **Overview** — compact staged / unstaged / untracked / conflict counts
     plus recent commits (click a commit to open it).
   - **History** — searchable commit log; click a commit to open a full-page
@@ -75,6 +76,12 @@ Install the packed `.piplug` via **Plugins → Install plugin package**, or load
 the folder as a development plugin.
 
 ## Changelog
+
+### 0.2.6
+
+Follows the app light/dark mode live in the work-panel view. Views have no
+`appearance:changed` push, so Git Lens proxies `pi.app.getAppearance()` and
+the renderer polls it. 工作面板内实时跟随应用亮暗模式。
 
 ### 0.2.5
 

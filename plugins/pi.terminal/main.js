@@ -43,6 +43,52 @@ async function appLocale() {
   }
 }
 
+function appearanceBase(appearance) {
+  if (!appearance || typeof appearance !== "object") return "system";
+  if (appearance.base === "light" || appearance.base === "dark") return appearance.base;
+  if (appearance.theme === "light" || appearance.theme === "dark") return appearance.theme;
+  return "system";
+}
+
+function flattenAppearance(appearance, locale) {
+  const pluginTheme =
+    appearance && appearance.pluginTheme && typeof appearance.pluginTheme === "object"
+      ? appearance.pluginTheme
+      : null;
+  const base = appearanceBase(appearance);
+  return {
+    theme: (appearance && appearance.theme) || base,
+    base,
+    locale: (appearance && appearance.locale) || locale || "en",
+    pluginTheme,
+    pluginThemeCss:
+      (appearance && appearance.pluginThemeCss) || (pluginTheme && pluginTheme.css) || null,
+  };
+}
+
+/**
+ * Work-panel views have no host push channel (`appearance:changed` never
+ * arrives). The renderer therefore pulls this snapshot on boot and polls it.
+ */
+async function readAppearance() {
+  const locale = await appLocale();
+  try {
+    if (typeof pi.app?.getAppearance === "function") {
+      const appearance = await pi.app.getAppearance();
+      if (appearance && typeof appearance === "object") {
+        return flattenAppearance(appearance, locale);
+      }
+    }
+  } catch {
+    /* older hosts: fall through to locale-only */
+  }
+  return flattenAppearance({ theme: "system", base: "system" }, locale);
+}
+
+function colorFgBg(appearance) {
+  return appearanceBase(appearance) === "light" ? "0;15" : "15;0";
+}
+
 function loginEnv() {
   if (!loginEnvPromise) {
     loginEnvPromise = (async () => {
@@ -119,9 +165,11 @@ async function onPanelInvoke(channel, payload = {}) {
       const config = await loadConfig();
       const userEnv = await loginEnv();
       const scope = await currentScope();
+      const appearance = await readAppearance();
       return {
         ok: true,
         ...config,
+        appearance,
         sessions: host.list({ workspace: scope.key }),
         workspace: scope.workspace,
         workspaceKey: scope.key,
@@ -132,6 +180,10 @@ async function onPanelInvoke(channel, payload = {}) {
           .slice(0, 6),
       };
     }
+    case "pty.appearance":
+      return { ok: true, ...(await readAppearance()) };
+    case "app.getAppearance":
+      return readAppearance();
     case "pty.list": {
       const scope = await currentScope();
       return {
@@ -147,6 +199,7 @@ async function onPanelInvoke(channel, payload = {}) {
         config.profiles.find((item) => item.id === (args.profileId || "default")) || config.profiles[0];
       if (!profile) return { ok: false, error: "no shell profile available" };
       const userEnv = await loginEnv();
+      const appearance = await readAppearance();
       const cwd = args.cwd || profile.cwd;
       const scope = await currentScope();
       const resolvedCwd = (() => {
@@ -162,7 +215,11 @@ async function onPanelInvoke(channel, payload = {}) {
         shell: profile.shell,
         args: profile.args,
         argv0: profile.argv0 || env.loginArgv0(profile.shell),
-        env: { ...userEnv, ...(profile.env || {}) },
+        env: {
+          ...userEnv,
+          ...(profile.env || {}),
+          COLORFGBG: colorFgBg(appearance),
+        },
         cwd: resolvedCwd,
         workspace: scope.workspace,
         cols: args.cols,
@@ -228,5 +285,14 @@ module.exports = {
   onLoad,
   onUnload,
   onPanelInvoke,
-  __test: { host, loadConfig, COMMAND_ID, SERVICE_ID },
+  __test: {
+    host,
+    loadConfig,
+    readAppearance,
+    flattenAppearance,
+    appearanceBase,
+    colorFgBg,
+    COMMAND_ID,
+    SERVICE_ID,
+  },
 };

@@ -76,7 +76,7 @@ function waitFor(fn, timeoutMs = 1500) {
 test("manifest declares terminal identity, views, permissions and no agent tools", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.terminal");
-  assert.equal(manifest.version, "0.1.3");
+  assert.equal(manifest.version, "0.1.4");
   assert.equal(manifest.ui, undefined);
   assert.deepEqual(manifest.permissions, [
     "ui.view",
@@ -102,6 +102,9 @@ test("manifest declares terminal identity, views, permissions and no agent tools
   assert.match(mainSource, /loginArgv0/);
   assert.match(mainSource, /workspaceKey/);
   assert.match(mainSource, /host\.list\(\{ workspace: scope\.key \}\)/);
+  assert.match(mainSource, /pty\.appearance/);
+  assert.match(mainSource, /pi\.app\.getAppearance/);
+  assert.match(mainSource, /COLORFGBG/);
 });
 
 test("docks in the work panel with v3 chrome and no detached window", () => {
@@ -114,7 +117,13 @@ test("docks in the work panel with v3 chrome and no detached window", () => {
   assert.doesNotMatch(panelCss, /body\.detached/);
   assert.match(panelCss, /data-theme="dark"/);
   assert.match(panelCss, /data-theme="light"/);
+  assert.match(panelCss, /--term-bg/);
+  assert.match(panelCss, /background-color:\s*var\(--term-bg\)/);
   assert.match(panelJs, /pty\.drain/);
+  assert.match(panelJs, /function pullHostAppearance/);
+  assert.match(panelJs, /pty\.appearance/);
+  assert.match(panelJs, /MutationObserver/);
+  assert.match(panelJs, /term\.refresh/);
   assert.match(panelJs, /clipboard\.writeText/);
   assert.match(panelJs, /Ctrl\+Shift\+C|ctrl && shift/);
   assert.match(panelJs, /profileItems = state\.profiles\.map/);
@@ -399,4 +408,26 @@ test("login env dump is parsed and PATH is augmented", async () => {
   });
   assert.equal(winCalls, 0);
   assert.equal(win.TERM, "xterm-256color");
+});
+
+test("flattens host appearance for the renderer adapter", () => {
+  const { appearanceBase, flattenAppearance, colorFgBg } = require("../plugins/pi.terminal/main.js").__test;
+  assert.equal(appearanceBase({ base: "dark" }), "dark");
+  assert.equal(appearanceBase({ theme: "light" }), "light");
+  assert.equal(colorFgBg({ base: "light" }), "0;15");
+  assert.equal(colorFgBg({ base: "dark" }), "15;0");
+  const flat = flattenAppearance(
+    {
+      theme: "plugin:x:y",
+      base: "dark",
+      locale: "zh-CN",
+      pluginTheme: { id: "x", css: "body{}" },
+    },
+    "en",
+  );
+  assert.equal(flat.pluginThemeCss, "body{}");
+  assert.equal(flat.locale, "zh-CN");
+  const appearanceJs = readFileSync(join(pluginRoot, "renderer/appearance.js"), "utf8");
+  assert.match(appearanceJs, /POLL_MS/);
+  assert.match(appearanceJs, /startPoll/);
 });

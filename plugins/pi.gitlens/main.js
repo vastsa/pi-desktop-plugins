@@ -75,6 +75,48 @@ async function hostLocale() {
   return "en";
 }
 
+function appearanceBase(appearance) {
+  if (!appearance || typeof appearance !== "object") return "system";
+  if (appearance.base === "light" || appearance.base === "dark") return appearance.base;
+  if (appearance.theme === "light" || appearance.theme === "dark") return appearance.theme;
+  return "system";
+}
+
+function flattenAppearance(appearance, locale) {
+  const pluginTheme =
+    appearance && appearance.pluginTheme && typeof appearance.pluginTheme === "object"
+      ? appearance.pluginTheme
+      : null;
+  const base = appearanceBase(appearance);
+  return {
+    theme: (appearance && appearance.theme) || base,
+    base,
+    locale: (appearance && appearance.locale) || locale || "en",
+    pluginTheme,
+    pluginThemeCss:
+      (appearance && appearance.pluginThemeCss) || (pluginTheme && pluginTheme.css) || null,
+  };
+}
+
+/**
+ * Work-panel views have no host push channel (`appearance:changed` never
+ * arrives). The renderer adapter polls `app.getAppearance`, which lands here.
+ */
+async function readAppearance() {
+  const locale = await hostLocale();
+  try {
+    if (typeof pi.app?.getAppearance === "function") {
+      const appearance = await pi.app.getAppearance();
+      if (appearance && typeof appearance === "object") {
+        return flattenAppearance(appearance, locale);
+      }
+    }
+  } catch {
+    /* older hosts: fall through to locale-only */
+  }
+  return flattenAppearance({ theme: "system", base: "system" }, locale);
+}
+
 function viewLabel(view, locale) {
   const table = isZhLocale(locale) ? VIEW_LABELS["zh-CN"] : VIEW_LABELS.en;
   return table[view] || view;
@@ -496,8 +538,11 @@ async function onPanelInvoke(channel, payload) {
         state: panelState,
         workspace: context ? { path: context.workspace.path, name: context.workspace.name } : null,
         repoRoot: context ? context.root : null,
+        appearance: await readAppearance(),
       };
     }
+    case "app.getAppearance":
+      return readAppearance();
     case "git.status":
       return toolStatus(args);
     case "git.log":
@@ -573,4 +618,9 @@ async function onUnload() {
   await Promise.all(commands.map((id) => pi.commands.unregister(id).catch(() => {})));
 }
 
-module.exports = { onLoad, onUnload, onPanelInvoke };
+module.exports = {
+  onLoad,
+  onUnload,
+  onPanelInvoke,
+  __test: { readAppearance, flattenAppearance, appearanceBase },
+};

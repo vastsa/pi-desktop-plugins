@@ -145,17 +145,38 @@ function decodeBase64(value) {
   return bytes;
 }
 
+function cssVar(name, fallback) {
+  try {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function xtermTheme(base) {
-  return base === "light" ? LIGHT_THEME : DARK_THEME;
+  const preset = base === "light" ? LIGHT_THEME : DARK_THEME;
+  return {
+    ...preset,
+    background: cssVar("--term-bg", preset.background),
+    foreground: cssVar("--term-fg", preset.foreground),
+    cursor: cssVar("--term-cursor", preset.cursor),
+    cursorAccent: cssVar("--term-bg", preset.cursorAccent),
+    selectionBackground: cssVar("--term-selection", preset.selectionBackground),
+  };
 }
 
 function currentBase() {
+  const attr =
+    document.documentElement.getAttribute("data-theme") ||
+    document.documentElement.getAttribute("data-base");
+  if (attr === "light" || attr === "dark") return attr;
   const appearance = window.__appearance;
   if (appearance && appearance.current) {
     const now = appearance.current();
     if (now && (now.base === "light" || now.base === "dark")) return now.base;
   }
-  return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  return "dark";
 }
 
 function FitCtor() {
@@ -750,11 +771,59 @@ function applyLocale(locale) {
   renderTabs();
 }
 
+let appearanceFingerprint = "";
+
 function applyTheme(base) {
-  const theme = xtermTheme(base === "light" ? "light" : "dark");
+  const resolved = base === "light" || base === "dark" ? base : currentBase();
+  const theme = xtermTheme(resolved);
   for (const tab of state.tabs.values()) {
     tab.term.options.theme = theme;
+    try {
+      if (typeof tab.term.refresh === "function") tab.term.refresh(0, Math.max(0, tab.term.rows - 1));
+    } catch {
+      /* theme still applied via options */
+    }
   }
+}
+
+function applyHostAppearance(appearance, force) {
+  if (!appearance || typeof appearance !== "object") {
+    if (force) applyTheme(currentBase());
+    return;
+  }
+  const fingerprint = [
+    appearance.base,
+    appearance.theme,
+    appearance.locale,
+    appearance.pluginThemeCss ? String(appearance.pluginThemeCss).length : 0,
+    appearance.pluginTheme && appearance.pluginTheme.id,
+  ].join("|");
+  if (!force && fingerprint === appearanceFingerprint) return;
+  appearanceFingerprint = fingerprint;
+  const adapter = window.__appearance;
+  if (adapter && typeof adapter.apply === "function") adapter.apply(appearance);
+  applyTheme(currentBase());
+}
+
+async function pullHostAppearance(force) {
+  try {
+    const appearance = await invoke("pty.appearance");
+    if (appearance && appearance.ok !== false) {
+      applyHostAppearance(appearance, force);
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  applyTheme(currentBase());
+}
+
+function watchThemeDom() {
+  if (typeof MutationObserver !== "function") return;
+  new MutationObserver(() => applyTheme(currentBase())).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme", "data-base"],
+  });
 }
 
 async function init() {
@@ -766,7 +835,9 @@ async function init() {
   if (appearance && typeof appearance.onThemeChange === "function") {
     appearance.onThemeChange((base) => applyTheme(base));
   }
+  watchThemeDom();
   applyLocale(appearance && appearance.current ? appearance.current().locale : document.documentElement.getAttribute("data-lang"));
+  applyTheme(currentBase());
 
   $("newTab").addEventListener("click", () => spawnTab());
   $("menuBtn").addEventListener("click", (event) => {
@@ -805,10 +876,14 @@ async function init() {
     state.profiles = boot.profiles || [];
     state.home = boot.home || "";
     state.workspaceKey = boot.workspaceKey == null ? "" : String(boot.workspaceKey);
+    if (boot.appearance) applyHostAppearance(boot.appearance, true);
+    else await pullHostAppearance(true);
     await showWorkspace(boot.sessions);
+    applyTheme(currentBase());
     window.setInterval(() => {
       if (document.hidden) return;
       syncWorkspace().catch(() => {});
+      pullHostAppearance(false).catch(() => {});
     }, 1000);
   } catch (error) {
     showBanner(error.message || t("helperMissing"));

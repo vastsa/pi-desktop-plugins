@@ -12,7 +12,9 @@
     - `base`：解析后的亮暗值（`light` / `dark`；`"system"` 仅在无法解析时出现）
     - `locale`：app 语言标签（`zh-CN` / `en` …）
     - `pluginTheme`：当前激活的插件主题 `{ id, base, css }` 或 `null`
-  - `bridge.on("appearance:changed", fn)`：app 切换主题/语言时实时推送
+  - `bridge.on("appearance:changed", fn)`：app 切换主题/语言时实时推送（**独立面板窗口**）
+  - 工作面板 **view** 没有推送通道：适配器会在页面可见时每秒轮询 `app.getAppearance`
+- 工作面板 view 的 `pluginBridge.invoke` 全部进插件 `onPanelInvoke`。view 插件必须自行处理 `app.getAppearance`（调用 `pi.app.getAppearance()` 并返回上述字段，可附带扁平化的 `pluginThemeCss`）。
 - 旧版宿主没有该通道时优雅降级：面板回退到 localStorage 缓存 → 系统偏好（`prefers-color-scheme`）/ 面板自身处理，不报错。
 
 ## 文件
@@ -20,7 +22,7 @@
 | 文件 | 作用 | 加载位置 |
 | --- | --- | --- |
 | `renderer/appearance-boot.js` | 同步预绘：在首个绘制帧前从 localStorage 回放上次外观（避免闪屏）；无缓存则按系统偏好。设置 `data-theme` / `data-lang` / `lang`，可注入插件主题 CSS。暴露 `window.__appearanceBoot`。 | `<head>` 内、body 之前，**同步** |
-| `renderer/appearance.js` | 运行时：`app.getAppearance` 拉取 + `appearance:changed` 订阅，实时重应用，写回 localStorage 缓存。暴露 `window.__appearance`。 | `<body>` 末尾或 `defer`（必须晚于 boot） |
+| `renderer/appearance.js` | 运行时：`app.getAppearance` 拉取 + `appearance:changed` 订阅 + 可见时轮询，实时重应用，写回 localStorage 缓存。暴露 `window.__appearance`。 | `<body>` 末尾或 `defer`（必须晚于 boot） |
 
 ## 接线步骤
 

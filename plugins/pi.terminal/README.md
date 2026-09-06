@@ -13,7 +13,7 @@ Otty-inspired interactive terminal for PI-Desktop. It docks in the right work pa
   - Linux: `$SHELL` → `/bin/bash` as a real login shell
   - Windows: PowerShell → `cmd.exe`; Git Bash is offered when installed
 - **Login PATH** — GUI apps often see a thin PATH. On load the plugin dumps your interactive login environment and injects it into every PTY, then prepends common tool dirs (pnpm, nvm, bun, cargo, Homebrew) if they exist. `node` / `pnpm` / `brew` should resolve the same way they do in Terminal.app.
-- Follows the app language (`en` / `zh-CN`) and color mode. Copy/paste: macOS `Cmd+C/V`, Windows/Linux `Ctrl+Shift+C/V`. Find: `Cmd/Ctrl+F`. Font size: `Cmd/Ctrl +` / `-`.
+- Follows the app language (`en` / `zh-CN`) and color mode, including live light/dark switches while the view stays open (chrome and xterm canvas). Copy/paste: macOS `Cmd+C/V`, Windows/Linux `Ctrl+Shift+C/V`. Find: `Cmd/Ctrl+F`. Font size: `Cmd/Ctrl +` / `-`.
 
 Not in v0.1: pane splits, Recipes, SSH sessions (use **SSH Manager**), or an agent tool that types into the PTY.
 

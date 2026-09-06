@@ -62,7 +62,7 @@ function createTempRepo() {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.gitlens");
-  assert.equal(manifest.version, "0.2.5");
+  assert.equal(manifest.version, "0.2.6");
   assert.equal(manifest.engines.piDesktop, ">=0.8.0");
   assert.deepEqual(manifest.permissions, ["ui.view"]);
   assert.equal(manifest.ui, undefined);
@@ -153,8 +153,35 @@ test("main.js registers commands only, and routes panel channels without agent t
   }
   assert.match(mainSource, /execFile\("git"/, "runs git through execFile");
   assert.match(gitSource, /GIT_TERMINAL_PROMPT/, "disables terminal prompts");
+  assert.match(mainSource, /app\.getAppearance/, "work-panel view proxies host appearance");
+  assert.match(mainSource, /pi\.app\.getAppearance/);
   assert.match(panelSource, /appearance\.init/, "panel follows app appearance");
+  assert.match(panelSource, /applyHostAppearance/, "applies host appearance from git.state");
   assert.match(panelSource, /textContent/, "panel escapes user content via textContent");
+  const appearanceJs = require("node:fs").readFileSync(
+    join(here, "../plugins/pi.gitlens/renderer/appearance.js"),
+    "utf8",
+  );
+  assert.match(appearanceJs, /POLL_MS/, "appearance adapter polls because views have no push channel");
+});
+
+test("flattens host appearance for the renderer adapter", () => {
+  const { appearanceBase, flattenAppearance } = main.__test;
+  assert.equal(appearanceBase({ base: "dark" }), "dark");
+  assert.equal(appearanceBase({ theme: "light" }), "light");
+  assert.equal(appearanceBase({ theme: "system" }), "system");
+  const flat = flattenAppearance(
+    {
+      theme: "plugin:x:y",
+      base: "dark",
+      locale: "zh-CN",
+      pluginTheme: { id: "x", css: "body{}" },
+    },
+    "en",
+  );
+  assert.equal(flat.base, "dark");
+  assert.equal(flat.locale, "zh-CN");
+  assert.equal(flat.pluginThemeCss, "body{}");
 });
 
 test("parseStatusPorcelain groups entries and parses the branch header", () => {
@@ -413,6 +440,8 @@ test("panel handlers run end-to-end against a real repository", { skip: !hasGit 
       const state = await main.onPanelInvoke("git.state", {});
       assert.equal(state.ok, true);
       assert.equal(state.repoRoot, realpathSync(repo.root));
+      assert.equal(state.appearance.locale, "en");
+      assert.equal(state.appearance.base, "system");
 
       // Path/ref guards reject escapes through the panel channel too.
       await assert.rejects(() => main.onPanelInvoke("git.blame", { path: "../etc/passwd" }));

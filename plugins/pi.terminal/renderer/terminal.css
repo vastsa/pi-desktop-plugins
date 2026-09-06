@@ -26,6 +26,7 @@
   --term-bg: #0d0d0d;
   --term-fg: #d7dadc;
   --term-cursor: #ffffff;
+  --term-selection: #3d4248;
   --chrome-h: 32px;
 }
 
@@ -48,6 +49,7 @@
   --term-bg: #fbfbfa;
   --term-fg: #1a1c1f;
   --term-cursor: #1a1c1f;
+  --term-selection: #d9dde3;
 }
 
 * { box-sizing: border-box; }
@@ -229,7 +231,14 @@ input {
 }
 
 .xterm, .xterm-viewport, .xterm-screen { width: 100%; }
-.xterm-viewport { overflow-y: auto; }
+.xterm-viewport {
+  overflow-y: auto;
+  background-color: var(--term-bg) !important;
+}
+.xterm .composition-view {
+  background: var(--term-bg);
+  color: var(--term-fg);
+}
 .xterm-helper-textarea { opacity: 0; }
 
 .dock {
