@@ -48,7 +48,10 @@ workspace. Tools are exposed to the agent under the forced prefix
    unless the user asks for detail.
 5. When the user wants to *see* git information, call
    `git_open_panel` with the matching `view` (overview / history / diff /
-   branches / blame) instead of dumping long output. The panel opens as a new
-   page in PI-Desktop.
+   branches / blame) instead of dumping long output. Git Lens only docks in
+   the right work panel — it has no separate window. If the view is not
+   already visible, tell the user to open the work panel (`Mod+J`) and choose
+   Git Lens. The panel and command palette follow the app language
+   (en / zh-CN).
 6. If the workspace is not a git repository, the tools fail with a clear
    message — report that rather than working around it.

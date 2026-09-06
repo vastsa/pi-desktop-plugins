@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "id": "pi.gitlens",
   "name": "Git Lens",
-  "version": "0.1.4",
-  "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Ships an isolated multi-view panel, agent tools the AI can call, and an AI-callable tool that opens any panel page on demand.",
+  "version": "0.2.4",
+  "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Docks in the right work panel (no separate window), with agent tools the AI can call and a tool that focuses any Git Lens page on demand.",
   "i18n": {
     "en": {
       "name": "Git Lens",
-      "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Ships an isolated multi-view panel, agent tools the AI can call, and an AI-callable tool that opens any panel page on demand.",
+      "description": "GitLens-inspired local Git management for PI-Desktop: status, history, diff, blame, branches, commits and stashes. Docks in the right work panel (no separate window), with agent tools the AI can call and a tool that focuses any Git Lens page on demand.",
       "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials."
     },
     "zh-CN": {
       "name": "Git Lens",
-      "description": "受 GitLens 启发的 PI-Desktop 本地 Git 管理工具：查看状态、历史、差异、逐行追踪、分支、提交和 Stash。提供隔离的多视图面板、可供 AI 调用的 Git 工具，以及能按需打开指定面板页面的工具。",
+      "description": "受 GitLens 启发的 PI-Desktop 本地 Git 管理工具：查看状态、历史、差异、逐行追踪、分支、提交和 Stash。只在右侧工作面板中打开（无独立窗口），并提供可供 AI 调用的 Git 工具，以及能按需切到指定页面的工具。",
       "safetyNotes": "插件只针对当前工作区解析出的仓库根目录执行系统 git，不访问仓库之外的文件，不拼接 shell 命令，不发起网络请求，也不读取凭据。"
     }
   },
@@ -22,19 +22,22 @@
     "productivity",
     "official"
   ],
-  "changelog": "Release 0.1.4: keeps the first view toolbar clear of the host window-control capsule and retints the capsule when the panel palette changes. Release 0.1.3: migrates the panel to v3 paint-through chrome and restores full viewport height without the legacy 46px double subtraction. Release 0.1.2: tightens responsive spacing, focus treatment, and control sizing on top of the PI-Desktop design system. Release 0.1.1: restyles the panel to mirror the PI-Desktop design system exactly — the purple accent and bespoke palette are replaced by the app's neutral monochrome accent and `--ds-*` tokens (surfaces, text tiers, borders, radii, type ramp), semantic git colors map to the app's success/warning/error tokens, and a contributed app theme now re-skins the panel the same way it re-skins the shell. No behavior, tool, command or permission changes.",
-  "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials. Commits, branch switches/deletes and stash operations are local git operations that respect repository hooks; the tools cannot push, pull, fetch or force anything beyond explicit branch deletion (git branch -D only when the caller asks for force). The panel is an isolated, context-isolated window that talks to the plugin process through the host bridge only.",
+  "changelog": "Release 0.2.4: command palette, toasts and the work-panel UI follow the app language (en / zh-CN) from the first paint. Release 0.2.4：命令面板、提示和工作面板界面从首帧起跟随应用语言（en / zh-CN）。 Release 0.2.3: compact work-panel UI — overview is a single count row; file/commit diffs open as a full-page sheet with Back. Release 0.2.2: iOS segmented control and inset grouped lists. Release 0.2.0: docks only in the right work panel.",
+  "safetyNotes": "Runs the system git binary (git on PATH) against the repository root resolved from the currently open workspace; the plugin never touches files outside that repository, never passes shell strings (execFile with argument arrays, no shell), never sends network requests, and never reads credentials. Commits, branch switches/deletes and stash operations are local git operations that respect repository hooks; the tools cannot push, pull, fetch or force anything beyond explicit branch deletion (git branch -D only when the caller asks for force). The UI is an isolated, context-isolated work-panel view that talks to the plugin process through the host bridge only.",
   "main": "main.js",
-  "ui": {
-    "panel": "renderer/index.html",
-    "title": {
-      "en": "Git Lens",
-      "zh-CN": "Git 透镜"
-    },
-    "width": 1120,
-    "height": 780
-  },
   "contributes": {
+    "views": [
+      {
+        "id": "git",
+        "title": {
+          "en": "Git Lens",
+          "zh-CN": "Git 透镜"
+        },
+        "icon": "branch",
+        "entry": "renderer/index.html",
+        "order": 20
+      }
+    ],
     "commands": [
       {
         "id": "gitlens.open",
@@ -333,7 +336,7 @@
       },
       {
         "name": "git_open_panel",
-        "description": "Open the Git Lens panel in PI-Desktop on a specific page (overview, history, diff, branches or blame). Use this when the user asks to see git information in a visual page, wants a dashboard of the repository, or asks to 'open' git history/changes/branches/blame. Optionally preselect a path (blame/diff/history) or a ref.",
+        "description": "Focus Git Lens in PI-Desktop's right work panel on a specific page (overview, history, diff, branches or blame). Git Lens has no separate window — it only docks in the work panel. Use this when the user asks to see git information visually, wants a dashboard of the repository, or asks to 'open' git history/changes/branches/blame. Optionally preselect a path (blame/diff/history) or a ref. If the view is not already visible, tell the user to open the work panel (Mod+J) and choose Git Lens.",
         "risk": "low",
         "schema": {
           "type": "object",
@@ -366,12 +369,12 @@
     ]
   },
   "permissions": [
-    "ui.panel",
+    "ui.view",
     "agent.tool.register",
     "agent.prompt.inject"
   ],
   "engines": {
-    "piDesktop": ">=0.2.9"
+    "piDesktop": ">=0.8.0"
   },
   "activationEvents": [
     "onCommand:gitlens.open",

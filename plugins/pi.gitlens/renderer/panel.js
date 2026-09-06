@@ -6,12 +6,14 @@
 
 const STRINGS = {
   en: {
-    navOverview: "Overview",
-    navHistory: "History",
-    navChanges: "Changes",
-    navBranches: "Branches",
+    navOverview: "All",
+    navHistory: "Log",
+    navChanges: "Diff",
+    navBranches: "Branch",
     navBlame: "Blame",
+    current: "current",
     refresh: "Refresh",
+    back: "Back",
     staged: "Staged",
     unstaged: "Unstaged",
     untracked: "Untracked",
@@ -70,14 +72,24 @@ const STRINGS = {
     openPanelFailed: "Could not open the Git Lens panel.",
     truncated: "showing first {n}",
     details: "Details",
+    pageTitle: "Git Lens",
+    viewsAria: "Git Lens pages",
+    operationFailed: "operation failed",
+    pageOverview: "Overview",
+    pageHistory: "History",
+    pageChanges: "Changes",
+    pageBranches: "Branches",
+    pageBlame: "Blame",
   },
   "zh-CN": {
     navOverview: "概览",
     navHistory: "历史",
     navChanges: "改动",
     navBranches: "分支",
-    navBlame: "逐行追溯",
+    navBlame: "追溯",
+    current: "当前",
     refresh: "刷新",
+    back: "返回",
     staged: "已暂存",
     unstaged: "未暂存",
     untracked: "未跟踪",
@@ -136,15 +148,23 @@ const STRINGS = {
     openPanelFailed: "无法打开 Git Lens 面板。",
     truncated: "仅显示前 {n} 条",
     details: "详情",
+    pageTitle: "Git Lens",
+    viewsAria: "Git Lens 页面",
+    operationFailed: "操作失败",
+    pageOverview: "概览",
+    pageHistory: "历史",
+    pageChanges: "改动",
+    pageBranches: "分支",
+    pageBlame: "追溯",
   },
 };
 
 const NAV_ITEMS = [
-  { id: "overview", icon: "M3 4h18v16H3z M3 9h18 M9 4v16", label: "navOverview" },
-  { id: "history", icon: "M4 5h16M4 12h16M4 19h10 M15 19l3 3 5-5", label: "navHistory" },
-  { id: "diff", icon: "M12 3v18M4 8l-2 4 2 4M20 8l2 4-2 4", label: "navChanges" },
-  { id: "branches", icon: "M6 3v12M6 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM18 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM6 6h8a4 4 0 0 1 4 4", label: "navBranches" },
-  { id: "blame", icon: "M12 3v18M5 8l-2 4 2 4M19 8l2 4-2 4", label: "navBlame" },
+  { id: "overview", label: "navOverview" },
+  { id: "history", label: "navHistory" },
+  { id: "diff", label: "navChanges" },
+  { id: "branches", label: "navBranches" },
+  { id: "blame", label: "navBlame" },
 ];
 
 let t = STRINGS.en;
@@ -165,10 +185,28 @@ const el = (tag, className, text) => {
   return node;
 };
 
+function resolveLocale(value) {
+  return String(value || "").toLowerCase().startsWith("zh") ? "zh-CN" : "en";
+}
+
+function setLocale(next) {
+  locale = resolveLocale(next);
+  t = STRINGS[locale] || STRINGS.en;
+  document.documentElement.lang = locale;
+  document.title = t.pageTitle;
+  const nav = $("nav");
+  if (nav) nav.setAttribute("aria-label", t.viewsAria);
+  const refreshBtn = $("refreshAll");
+  if (refreshBtn) {
+    refreshBtn.title = t.refresh;
+    refreshBtn.setAttribute("aria-label", t.refresh);
+  }
+}
+
 function bridge(channel, payload) {
   return window.pluginBridge.invoke(channel, payload || {}).then((result) => {
     if (result && typeof result === "object" && result.ok === false) {
-      throw new Error(result.error || "operation failed");
+      throw new Error(result.error || t.operationFailed);
     }
     return result;
   });
@@ -224,11 +262,11 @@ function buildNav() {
   const nav = $("nav");
   nav.textContent = "";
   for (const item of NAV_ITEMS) {
-    const button = el("button", "nav-item");
+    const button = el("button", "tab", t[item.label]);
     button.type = "button";
     button.dataset.view = item.id;
-    button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${item.icon}"/></svg>`;
-    button.appendChild(el("span", "", t[item.label]));
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", item.id === currentView ? "true" : "false");
     button.addEventListener("click", () => activateView(item.id));
     nav.appendChild(button);
   }
@@ -238,7 +276,10 @@ function activateView(view) {
   currentView = view;
   for (const item of NAV_ITEMS) {
     const button = navButton(item.id);
-    if (button) button.classList.toggle("active", item.id === view);
+    if (button) {
+      button.classList.toggle("active", item.id === view);
+      button.setAttribute("aria-selected", item.id === view ? "true" : "false");
+    }
     const section = $(`view-${item.id}`);
     if (section) section.hidden = item.id !== view;
   }
@@ -246,39 +287,60 @@ function activateView(view) {
 }
 
 function navButton(view) {
-  return document.querySelector(`.nav-item[data-view="${view}"]`);
+  return document.querySelector(`.tab[data-view="${view}"]`);
 }
 
 /* ---- rendering helpers -------------------------------------------------- */
 
 function emptyState(text) {
-  const box = el("div", "empty", text);
+  const box = el("div", "empty");
+  box.appendChild(el("p", "empty-body", text));
   return box;
 }
 
+function sectionTitle(label, count) {
+  const title = el("div", "section-title", label);
+  if (count !== undefined && count !== null) {
+    title.appendChild(el("span", "count", String(count)));
+  }
+  return title;
+}
+
+function grouped(nodes) {
+  const group = el("div", "group");
+  for (const node of nodes) group.appendChild(node);
+  return group;
+}
+
 function fileRow(file, onClick) {
-  const row = el("div", "file-row");
-  const badge = el("span", `status-badge ${file.status || "M"}`, file.status || "M");
-  const pathNode = el("span", "file-path", file.path);
+  const row = el(onClick ? "button" : "div", "file-row");
+  if (onClick) row.type = "button";
+  const main = el("div", "cell-main");
+  main.appendChild(el("span", "file-path", file.path));
+  const trail = el("div", "cell-trail");
   const counts = el("span", "counts");
   if (typeof file.additions === "number" || typeof file.deletions === "number") {
     counts.append(
       el("span", "add", typeof file.additions === "number" ? `+${file.additions} ` : ""),
       el("span", "del", typeof file.deletions === "number" ? `-${file.deletions}` : ""),
     );
+    trail.appendChild(counts);
   }
-  row.append(badge, pathNode, counts);
+  trail.appendChild(el("span", `status-badge ${file.status || "M"}`, file.status || "M"));
+  row.append(main, trail);
   if (onClick) row.addEventListener("click", onClick);
   return row;
 }
 
 function commitRow(commit, onClick) {
-  const row = el("div", "commit-row");
-  row.append(
-    el("span", "sha", commit.shortSha),
+  const row = el("button", "commit-row");
+  row.type = "button";
+  const body = el("div", "commit-body");
+  body.append(
     el("span", "subject", commit.subject || "—"),
-    el("span", "meta", `${commit.author} · ${fmtDate(commit.authorDate)}`),
+    el("span", "meta", `${commit.shortSha} · ${commit.author} · ${fmtDate(commit.authorDate)}`),
   );
+  row.appendChild(body);
   if (onClick) row.addEventListener("click", () => onClick(commit));
   return row;
 }
@@ -304,43 +366,163 @@ function renderPatch(container, patch) {
   container.appendChild(box);
 }
 
+/* ---- sheet navigation (list → full-page detail, Back to return) ------ */
+
+function closeSheet(view) {
+  if (!view) return;
+  view.classList.remove("is-sheet");
+  view._sheetStack = [];
+  const sheet = view.querySelector(":scope > .sheet");
+  if (sheet) sheet.remove();
+}
+
+function pushSheet(view, frame) {
+  if (!view._sheetStack) view._sheetStack = [];
+  view._sheetStack.push(frame);
+  view.classList.add("is-sheet");
+  renderSheet(view);
+}
+
+function popSheet(view) {
+  if (!view._sheetStack || !view._sheetStack.length) return;
+  view._sheetStack.pop();
+  if (!view._sheetStack.length) {
+    closeSheet(view);
+    return;
+  }
+  renderSheet(view);
+}
+
+function renderSheet(view) {
+  const frame = view._sheetStack[view._sheetStack.length - 1];
+  let sheet = view.querySelector(":scope > .sheet");
+  if (!sheet) {
+    sheet = el("div", "sheet");
+    view.appendChild(sheet);
+  }
+  sheet.textContent = "";
+  const bar = el("div", "sheet-bar");
+  const back = el("button", "sheet-back", t.back);
+  back.type = "button";
+  back.addEventListener("click", () => popSheet(view));
+  bar.append(back, el("div", "sheet-title", frame.title || ""));
+  const body = el("div", "sheet-body");
+  sheet.append(bar, body);
+  Promise.resolve(frame.fill(body)).catch((error) => {
+    body.textContent = "";
+    body.appendChild(emptyState(error.message || String(error)));
+  });
+}
+
+function openCommitSheet(view, commit) {
+  pushSheet(view, {
+    title: commit.shortSha || t.details,
+    fill: (body) => fillCommitSheet(view, body, commit),
+  });
+}
+
+async function fillCommitSheet(view, body, commit) {
+  const meta = el("div", "detail-meta");
+  meta.append(
+    el("span", "", `${commit.author}${commit.authorEmail ? ` <${commit.authorEmail}>` : ""}`),
+    el("span", "", fmtDate(commit.authorDate)),
+  );
+  if (commit.refs) meta.appendChild(el("span", "", commit.refs));
+  body.appendChild(meta);
+  body.appendChild(el("div", "sheet-subject", commit.subject || "—"));
+  if (commit.body) body.appendChild(el("div", "detail-body", commit.body));
+
+  const filesBox = el("div", "group");
+  body.appendChild(filesBox);
+  try {
+    const detail = await bridge("git.show", { ref: commit.sha, stat: true, patch: false });
+    if (!detail.files.length) {
+      filesBox.appendChild(el("div", "empty", t.noChanges));
+      return;
+    }
+    for (const file of detail.files) {
+      filesBox.appendChild(fileRow(file, () => {
+        pushSheet(view, {
+          title: file.path,
+          fill: async (patchBody) => {
+            const withPatch = await bridge("git.show", {
+              ref: commit.sha,
+              path: file.path,
+              patch: true,
+              stat: false,
+            });
+            renderPatch(patchBody, withPatch.patch);
+            if (!withPatch.patch) patchBody.appendChild(emptyState("—"));
+          },
+        });
+      }));
+    }
+  } catch (error) {
+    filesBox.appendChild(emptyState(error.message || String(error)));
+  }
+}
+
+function openFileSheet(view, file) {
+  pushSheet(view, {
+    title: file.path,
+    fill: async (body) => {
+      try {
+        const result = await bridge("git.diff", { path: file.path, patch: true, stat: false });
+        renderPatch(body, result.patch);
+        if (!result.patch) body.appendChild(emptyState("—"));
+      } catch (error) {
+        body.appendChild(emptyState(error.message || String(error)));
+      }
+    },
+  });
+}
+
 /* ---- view: overview ----------------------------------------------------- */
 
 async function renderOverview() {
   const view = $("view-overview");
+  closeSheet(view);
   view.textContent = "";
+  const listPane = el("div", "list-pane");
   const status = await bridge("git.status");
   const log = await bridge("git.log", { count: 10 });
 
-  const grid = el("div", "tile-grid");
   const stats = [
     { label: t.staged, value: status.staged.length, cls: "staged" },
     { label: t.unstaged, value: status.unstaged.length, cls: "unstaged" },
     { label: t.untracked, value: status.untracked.length, cls: "untracked" },
     { label: t.conflicts, value: status.conflicts.length, cls: "conflicts" },
   ];
+  const bar = el("div", "counts-bar");
   for (const item of stats) {
-    const tile = el("div", "tile");
-    tile.append(el("div", `value ${item.cls}`, String(item.value)), el("div", "label", item.label));
-    grid.appendChild(tile);
+    const chip = el("button", "count-chip");
+    chip.type = "button";
+    const nClass = `n ${item.cls}${item.value === 0 ? " is-zero" : ""}`;
+    chip.append(el("span", nClass, String(item.value)), el("span", "k", item.label));
+    chip.addEventListener("click", () => activateView("diff"));
+    bar.appendChild(chip);
   }
-  view.appendChild(grid);
+  listPane.appendChild(bar);
 
-  view.appendChild(el("div", "section-title", t.recentCommits));
-  const list = el("div", "commit-list");
-  if (!log.commits.length) list.appendChild(emptyState(t.noCommits));
-  for (const commit of log.commits) {
-    list.appendChild(commitRow(commit, () => openCommitDetail("history", commit.sha)));
+  listPane.appendChild(sectionTitle(t.recentCommits, log.commits.length));
+  if (!log.commits.length) {
+    listPane.appendChild(emptyState(t.noCommits));
+  } else {
+    listPane.appendChild(grouped(log.commits.map((commit) => (
+      commitRow(commit, () => openCommitSheet(view, commit))
+    ))));
   }
-  view.appendChild(list);
+  view.appendChild(listPane);
 }
 
 /* ---- view: history ------------------------------------------------------ */
 
 async function renderHistory() {
   const view = $("view-history");
+  closeSheet(view);
   view.textContent = "";
 
+  const listPane = el("div", "list-pane");
   const toolbar = el("div", "toolbar");
   const search = el("input", "input");
   search.placeholder = t.search;
@@ -349,17 +531,13 @@ async function renderHistory() {
   const pathInput = el("input", "input");
   pathInput.placeholder = t.fileFilter;
   pathInput.value = historyCache?.path || "";
-  const go = el("button", "button primary", t.refresh);
-  toolbar.append(search, pathInput, go, el("div", "spacer"), refreshButton());
-  view.appendChild(toolbar);
+  toolbar.append(search, pathInput);
+  const listBox = el("div");
+  listPane.append(toolbar, listBox);
+  view.appendChild(listPane);
 
-  const listBox = el("div", "commit-list");
-  const detailBox = el("div", "detail");
-  detailBox.hidden = true;
-  view.append(listBox, detailBox);
-
-  let current = null;
   const run = async () => {
+    closeSheet(view);
     listBox.textContent = "";
     listBox.appendChild(el("div", "loading", t.loading));
     try {
@@ -367,27 +545,19 @@ async function renderHistory() {
       if (search.value.trim()) payload.query = search.value.trim();
       if (pathInput.value.trim()) payload.path = pathInput.value.trim();
       const log = await bridge("git.log", payload);
+      const focusSha = historyCache?.focusSha || null;
       historyCache = { query: search.value, path: pathInput.value };
       listBox.textContent = "";
       if (!log.commits.length) {
         listBox.appendChild(emptyState(t.noCommits));
         return;
       }
-      for (const commit of log.commits) {
-        listBox.appendChild(commitRow(commit, (c) => {
-          current = c;
-          renderCommitDetail(detailBox, c);
-        }));
-      }
-      let focus = current;
-      if (historyCache && historyCache.focusSha) {
-        focus = log.commits.find((c) => c.sha.startsWith(historyCache.focusSha)) || current;
-        historyCache.focusSha = null;
-      }
-      if (focus) {
-        current = focus;
-        detailBox.hidden = false;
-        renderCommitDetail(detailBox, focus);
+      listBox.appendChild(grouped(log.commits.map((commit) => (
+        commitRow(commit, (c) => openCommitSheet(view, c))
+      ))));
+      if (focusSha) {
+        const focus = log.commits.find((c) => c.sha.startsWith(focusSha));
+        if (focus) openCommitSheet(view, focus);
       }
     } catch (error) {
       listBox.textContent = "";
@@ -395,79 +565,16 @@ async function renderHistory() {
     }
   };
 
-  go.addEventListener("click", run);
   search.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
   pathInput.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
   run();
 }
 
-async function renderCommitDetail(box, commit) {
-  box.hidden = false;
-  box.textContent = "";
-  const head = el("div", "detail-head");
-  head.append(
-    el("span", "sha", commit.shortSha),
-    el("strong", "", commit.subject || ""),
-    el("div", "spacer"),
-    el("button", "button", t.details + " · " + t.showPatch),
-  );
-  const showPatchBtn = head.lastChild;
-  box.appendChild(head);
-
-  const meta = el("div", "detail-meta");
-  meta.append(
-    el("span", "", `${t.author}: ${commit.author} <${commit.authorEmail}>`),
-    el("span", "", `${t.date}: ${fmtDate(commit.authorDate)}`),
-  );
-  if (commit.refs) meta.appendChild(el("span", "", commit.refs));
-  box.appendChild(meta);
-
-  if (commit.body) box.appendChild(el("div", "detail-body", commit.body));
-
-  const filesBox = el("div", "file-list");
-  const patchBox = el("div");
-  patchBox.hidden = true;
-  box.append(filesBox, patchBox);
-
-  try {
-    const detail = await bridge("git.show", { ref: commit.sha, stat: true, patch: false });
-    for (const file of detail.files) {
-      filesBox.appendChild(fileRow(file, async () => {
-        patchBox.textContent = "";
-        const withPatch = await bridge("git.show", { ref: commit.sha, path: file.path, patch: true, stat: false });
-        renderPatch(patchBox, withPatch.patch);
-      }));
-    }
-  } catch (error) {
-    filesBox.appendChild(emptyState(error.message || String(error)));
-  }
-
-  showPatchBtn.addEventListener("click", async () => {
-    if (!patchBox.hidden) {
-      patchBox.hidden = true;
-      showPatchBtn.textContent = t.details + " · " + t.showPatch;
-      return;
-    }
-    patchBox.hidden = false;
-    if (!patchBox.childElementCount) {
-      try {
-        const withPatch = await bridge("git.show", { ref: commit.sha, patch: true, stat: false });
-        renderPatch(patchBox, withPatch.patch);
-      } catch (error) {
-        patchBox.appendChild(emptyState(error.message || String(error)));
-      }
-    }
-    showPatchBtn.textContent = t.details + " · " + t.hidePatch;
-  });
-}
-
 function openCommitDetail(viewName, sha) {
   if (viewName === "history") {
-    activateView("history");
-    const detailBox = document.querySelector("#view-history .detail");
-    // The history view refetches on activate; stash the sha to open after render.
     historyCache = historyCache || {};
     historyCache.focusSha = sha;
+    activateView("history");
   }
 }
 
@@ -475,22 +582,22 @@ function openCommitDetail(viewName, sha) {
 
 async function renderChanges() {
   const view = $("view-diff");
+  closeSheet(view);
   view.textContent = "";
 
+  const listPane = el("div", "list-pane");
   const toolbar = el("div", "toolbar");
   const pathInput = el("input", "input");
   pathInput.placeholder = t.fileFilter;
   pathInput.value = diffCache?.path || "";
-  const go = el("button", "button primary", t.refresh);
-  toolbar.append(pathInput, go, el("div", "spacer"), refreshButton());
-  view.appendChild(toolbar);
-
+  toolbar.append(pathInput);
   const groups = el("div");
-  const detailBox = el("div");
-  detailBox.hidden = true;
-  view.append(groups, detailBox);
+  listPane.append(toolbar, groups);
+  view.appendChild(listPane);
+  renderCommitBox(listPane);
 
   const run = async () => {
+    closeSheet(view);
     groups.textContent = "";
     groups.appendChild(el("div", "loading", t.loading));
     try {
@@ -509,60 +616,36 @@ async function renderChanges() {
       for (const bucket of buckets) {
         if (!bucket.entries.length) continue;
         any = true;
-        groups.appendChild(el("div", "section-title", `${bucket.title} (${bucket.entries.length})`));
-        const list = el("div", "file-list");
-        for (const entry of bucket.entries) {
+        groups.appendChild(sectionTitle(bucket.title, bucket.entries.length));
+        const rows = bucket.entries.map((entry) => {
           const file = {
             path: entry.path,
             origPath: entry.origPath,
             status: entry.x === "?" && entry.y === "?" ? "U" : entry.y !== " " ? entry.y : entry.x,
           };
-          list.appendChild(fileRow(file, () => openFileDiff(detailBox, file, status)));
-        }
-        groups.appendChild(list);
+          return fileRow(file, () => openFileSheet(view, file));
+        });
+        groups.appendChild(grouped(rows));
       }
       if (!any) groups.appendChild(emptyState(t.noChanges));
-
-      renderCommitBox(view, detailBox);
     } catch (error) {
       groups.textContent = "";
       groups.appendChild(emptyState(error.message || String(error)));
     }
   };
 
-  go.addEventListener("click", run);
   pathInput.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
   run();
 }
 
-async function openFileDiff(box, file, status) {
-  box.hidden = false;
-  box.textContent = "";
-  const head = el("div", "detail-head");
-  head.append(el("span", "sha", file.status), el("strong", "", file.path));
-  box.appendChild(head);
-  const patchBox = el("div");
-  box.appendChild(patchBox);
-  try {
-    const result = await bridge("git.diff", { path: file.path, patch: true, stat: false });
-    renderPatch(patchBox, result.patch);
-    if (!result.patch) patchBox.appendChild(emptyState("—"));
-  } catch (error) {
-    patchBox.appendChild(emptyState(error.message || String(error)));
-  }
-}
-
-function renderCommitBox(view, detailBox) {
-  const existing = document.querySelector("#view-diff .commit-box");
+function renderCommitBox(listPane) {
+  const existing = listPane.querySelector(".commit-box");
   if (existing) existing.remove();
 
-  const box = el("div", "card commit-box");
-  const title = el("div", "section-title", t.commit);
+  const box = el("div", "commit-box");
   const textarea = el("textarea", "input");
   textarea.rows = 2;
   textarea.placeholder = t.commitMessage;
-  textarea.style.width = "100%";
-  textarea.style.resize = "vertical";
 
   const row = el("div", "toolbar");
   const stageLabel = el("label", "", "");
@@ -576,8 +659,8 @@ function renderCommitBox(view, detailBox) {
   amendLabel.append(amendCheck, el("span", "", ` ${t.amend}`));
   const commitBtn = el("button", "button primary", t.commit);
   row.append(stageLabel, amendLabel, el("div", "spacer"), commitBtn);
-  box.append(title, textarea, row);
-  view.appendChild(box);
+  box.append(textarea, row);
+  listPane.appendChild(box);
 
   commitBtn.addEventListener("click", async () => {
     const message = textarea.value.trim();
@@ -595,7 +678,6 @@ function renderCommitBox(view, detailBox) {
       toast(`${t.committed} ${result.sha} · ${result.subject}`, "ok");
       textarea.value = "";
       amendCheck.checked = false;
-      detailBox.hidden = true;
       renderChanges();
     } catch (error) {
       const msg = error.message || String(error);
@@ -610,25 +692,22 @@ function renderCommitBox(view, detailBox) {
 
 async function renderBranches() {
   const view = $("view-branches");
+  closeSheet(view);
   view.textContent = "";
 
-  const toolbar = el("div", "toolbar");
-  toolbar.append(el("div", "spacer"), refreshButton());
-  view.appendChild(toolbar);
-
-  const card = el("div", "card");
+  const listPane = el("div", "list-pane");
   const formRow = el("div", "toolbar");
   const nameInput = el("input", "input");
   nameInput.placeholder = t.branchName;
+  nameInput.style.flex = "1";
   const startInput = el("input", "input");
   startInput.placeholder = t.startPoint;
+  startInput.style.flex = "1";
   const createBtn = el("button", "button primary", t.create);
   formRow.append(nameInput, startInput, createBtn);
-  card.append(el("div", "section-title", t.create), formRow);
-  view.appendChild(card);
-
-  const listBox = el("div", "commit-list");
-  view.appendChild(listBox);
+  const listBox = el("div");
+  listPane.append(formRow, listBox);
+  view.appendChild(listPane);
 
   const run = async () => {
     listBox.textContent = "";
@@ -640,10 +719,11 @@ async function renderBranches() {
         listBox.appendChild(emptyState(t.noBranches));
         return;
       }
+      const rows = [];
       for (const branch of result.branches) {
         const row = el("div", "branch-row");
         row.append(el("span", "name", branch.name));
-        if (branch.name === result.current) row.appendChild(el("span", "current-badge", t.branch));
+        if (branch.name === result.current) row.appendChild(el("span", "current-badge", t.current));
         const last = branch.committerDate
           ? `${fmtDate(branch.committerDate)}${branch.subject ? " · " + branch.subject : ""}`
           : "";
@@ -690,8 +770,9 @@ async function renderBranches() {
           actions.appendChild(deleteBtn);
         }
         row.appendChild(actions);
-        listBox.appendChild(row);
+        rows.push(row);
       }
+      listBox.appendChild(grouped(rows));
     } catch (error) {
       listBox.textContent = "";
       listBox.appendChild(emptyState(error.message || String(error)));
@@ -727,19 +808,20 @@ async function renderBranches() {
 
 async function renderBlame() {
   const view = $("view-blame");
+  closeSheet(view);
   view.textContent = "";
 
+  const listPane = el("div", "list-pane");
   const toolbar = el("div", "toolbar");
   const pathInput = el("input", "input");
   pathInput.placeholder = t.blamePath;
   pathInput.value = blameCache?.path || "";
   pathInput.style.flex = "1";
   const go = el("button", "button primary", t.blame);
-  toolbar.append(pathInput, go, el("div", "spacer"), refreshButton());
-  view.appendChild(toolbar);
-
+  toolbar.append(pathInput, go);
   const out = el("div");
-  view.appendChild(out);
+  listPane.append(toolbar, out);
+  view.appendChild(listPane);
 
   const run = async () => {
     const pathValue = pathInput.value.trim();
@@ -804,6 +886,7 @@ function renderCurrentView() {
   };
   showBannerMessage();
   const view = $("view-" + currentView);
+  closeSheet(view);
   view.textContent = "";
   if (!repoRoot) {
     view.appendChild(emptyState(workspace ? t.noRepo : t.noWorkspace));
@@ -822,15 +905,64 @@ function renderCurrentView() {
   });
 }
 
+let lastOpenedAt = null;
+
+function applyRequestedState(state) {
+  if (!state || !state.view) return false;
+  const stamp = state.openedAt || 0;
+  if (stamp === lastOpenedAt) return false;
+  lastOpenedAt = stamp;
+  initialPanelState = state;
+  if (state.path) {
+    if (state.view === "blame") blameCache = { path: state.path };
+    if (state.view === "diff") diffCache = { path: state.path };
+    if (state.view === "history") {
+      historyCache = historyCache || {};
+      historyCache.path = state.path;
+    }
+  }
+  if (state.view === "history" && state.ref) {
+    historyCache = historyCache || {};
+    historyCache.focusSha = state.ref;
+  }
+  activateView(state.view);
+  return true;
+}
+
+async function syncHostState() {
+  const state = await bridge("git.state");
+  const repoChanged = repoRoot !== state.repoRoot;
+  repoRoot = state.repoRoot;
+  workspace = state.workspace;
+  const switched = applyRequestedState(state.state);
+  if (repoChanged && !switched) renderCurrentView();
+  if (repoChanged || switched) updateStatus();
+}
+
 async function init() {
+  setLocale(document.documentElement.lang || document.documentElement.dataset.lang);
   buildNav();
+  const refresh = $("refreshAll");
+  if (refresh) {
+    refresh.title = t.refresh;
+    refresh.setAttribute("aria-label", t.refresh);
+    refresh.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>';
+    refresh.addEventListener("click", () => {
+      updateStatus();
+      renderCurrentView();
+    });
+  }
   const appearance = window.__appearance;
   if (appearance && typeof appearance.init === "function") appearance.init(window.pluginBridge);
+  if (appearance && typeof appearance.current === "function") {
+    const current = appearance.current();
+    if (current && current.locale) setLocale(current.locale);
+  }
   if (appearance && typeof appearance.onLocaleChange === "function") {
     appearance.onLocaleChange((next) => {
-      locale = next;
-      t = STRINGS[next] || STRINGS.en;
+      setLocale(next);
       buildNav();
+      updateStatus();
       renderCurrentView();
     });
   }
@@ -839,52 +971,46 @@ async function init() {
     const state = await bridge("git.state");
     repoRoot = state.repoRoot;
     workspace = state.workspace;
-    initialPanelState = state.state;
-    if (initialPanelState && initialPanelState.view) {
-      activateView(initialPanelState.view);
-      if (initialPanelState.path) {
-        if (initialPanelState.view === "blame") blameCache = { path: initialPanelState.path };
-        if (initialPanelState.view === "diff") diffCache = { path: initialPanelState.path };
-        if (initialPanelState.view === "history") {
-          historyCache = historyCache || {};
-          historyCache.path = initialPanelState.path;
-        }
-      }
-      if (initialPanelState.view === "history" && initialPanelState.ref) {
-        historyCache = historyCache || {};
-        historyCache.focusSha = initialPanelState.ref;
-      }
-    } else {
-      activateView("overview");
-    }
-    updateChips();
+    if (!applyRequestedState(state.state)) activateView("overview");
+    updateStatus();
   } catch (error) {
     showBanner(error.message || String(error));
     activateView("overview");
   } finally {
     document.documentElement.dataset.booting = "false";
   }
+
+  window.setInterval(() => {
+    if (document.hidden) return;
+    syncHostState().catch(() => {});
+  }, 1000);
 }
 
-function updateChips() {
-  const repoChip = $("repoChip");
-  repoChip.textContent = "";
-  repoChip.append(el("span", "dot"), el("span", "", workspace ? workspace.name : "—"));
-  repoChip.title = repoRoot || "";
-  const branchChip = $("branchChip");
-  branchChip.textContent = "";
-  if (repoRoot) {
-    bridge("git.status").then((status) => {
-      branchChip.append(el("span", "dot"), el("span", "", status.branch || "HEAD"));
-      branchChip.title = status.upstream
-        ? `${status.branch} ↔ ${status.upstream}`
-        : status.branch || "";
-    }).catch(() => {
-      branchChip.append(el("span", "dot"), el("span", "", "—"));
-    });
-  } else {
-    branchChip.append(el("span", "dot"), el("span", "", "—"));
+function updateStatus() {
+  const repo = $("repoChip");
+  const branch = $("branchChip");
+  if (!repo || !branch) return;
+  if (!repoRoot) {
+    branch.textContent = workspace ? workspace.name : "—";
+    repo.textContent = workspace ? t.noRepo : t.noWorkspace;
+    repo.title = "";
+    return;
   }
+  branch.textContent = "…";
+  repo.textContent = workspace ? workspace.name : "";
+  repo.title = repoRoot || "";
+  bridge("git.status").then((status) => {
+    branch.textContent = status.branch || "HEAD";
+    const bits = [];
+    if (workspace?.name) bits.push(workspace.name);
+    if (status.upstream) bits.push(status.upstream);
+    if (status.ahead) bits.push(`↑${status.ahead}`);
+    if (status.behind) bits.push(`↓${status.behind}`);
+    repo.textContent = bits.join(" · ") || repoRoot;
+    repo.title = status.upstream ? `${status.branch} ↔ ${status.upstream}` : repoRoot;
+  }).catch(() => {
+    branch.textContent = "—";
+  });
 }
 
 init().catch((error) => {

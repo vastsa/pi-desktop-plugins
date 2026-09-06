@@ -34,8 +34,8 @@ const panelPolishSource = require("node:fs").readFileSync(
   join(here, "../plugins/pi.gitlens/renderer/panel-polish.css"),
   "utf8",
 );
-const capsuleRetintSource = require("node:fs").readFileSync(
-  join(here, "../plugins/pi.gitlens/renderer/capsule-retint.js"),
+const panelCss = require("node:fs").readFileSync(
+  join(here, "../plugins/pi.gitlens/renderer/panel.css"),
   "utf8",
 );
 
@@ -62,12 +62,17 @@ function createTempRepo() {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.gitlens");
-  assert.equal(manifest.version, "0.1.4");
-  assert.match(manifest.engines.piDesktop, /^>=/);
-  assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register", "agent.prompt.inject"]);
-  assert.equal(typeof manifest.ui.title.en, "string");
-  assert.equal(typeof manifest.ui.title["zh-CN"], "string");
-  assert.ok(manifest.ui.title.en.length > 0 && manifest.ui.title["zh-CN"].length > 0);
+  assert.equal(manifest.version, "0.2.4");
+  assert.equal(manifest.engines.piDesktop, ">=0.8.0");
+  assert.deepEqual(manifest.permissions, ["ui.view", "agent.tool.register", "agent.prompt.inject"]);
+  assert.equal(manifest.ui, undefined);
+  assert.equal(manifest.contributes.views.length, 1);
+  assert.equal(manifest.contributes.views[0].id, "git");
+  assert.equal(manifest.contributes.views[0].entry, "renderer/index.html");
+  assert.equal(manifest.contributes.views[0].icon, "branch");
+  assert.equal(typeof manifest.contributes.views[0].title.en, "string");
+  assert.equal(typeof manifest.contributes.views[0].title["zh-CN"], "string");
+  assert.ok(manifest.contributes.views[0].title.en.length > 0 && manifest.contributes.views[0].title["zh-CN"].length > 0);
   assert.equal(manifest.contributes.commands.length, 5);
   assert.equal(manifest.contributes.agentTools.length, 9);
   assert.deepEqual(manifest.contributes.skills, ["skills/git-workflow.md"]);
@@ -91,15 +96,64 @@ test("manifest declares the expected identity, permissions and contributions", (
   assert.ok(!JSON.stringify(manifest).includes("net.fetch"), "no network permission requested");
 });
 
-test("v3 panel chrome keeps the header clear and follows palette changes", () => {
+test("docks in the work panel with a compact top rail and no detached window", () => {
   assert.match(panelHtml, /<meta\s+name="pi-plugin-chrome"\s+content="v3"\s*\/>/);
-  assert.match(panelHtml, /<script src="\.\/capsule-retint\.js"><\/script>/);
-  assert.match(panelPolishSource, /\.view > \.toolbar:first-child\s*\{\s*padding-right:\s*104px;\s*\}/);
-  assert.match(capsuleRetintSource, /--pi-plugin-panel-page-background/);
-  assert.match(capsuleRetintSource, /--pi-plugin-panel-page-foreground/);
-  assert.match(capsuleRetintSource, /lastBackground/);
-  assert.match(capsuleRetintSource, /lastForeground/);
-  assert.match(capsuleRetintSource, /attributeFilter: \["data-theme", "data-base", "style"\]/);
+  assert.match(panelHtml, /role="tablist"/);
+  assert.match(panelHtml, /class="chrome"/);
+  assert.match(panelHtml, /class="segmented"/);
+  assert.match(panelHtml, /class="status-line"/);
+  assert.match(panelHtml, /id="branchChip"/);
+  assert.doesNotMatch(panelHtml, /class="identity"/);
+  assert.doesNotMatch(panelHtml, /capsule-retint|sidebar|brand-icon|repo-chip/);
+  assert.doesNotMatch(mainSource, /openPanel\(/);
+  assert.doesNotMatch(mainSource, /closePanel\(/);
+  assert.match(mainSource, /showToast/);
+  assert.match(panelCss, /\.segmented\s*\{/);
+  assert.match(panelCss, /\.counts-bar\s*\{/);
+  assert.match(panelCss, /\.count-chip\s*\{/);
+  assert.match(panelCss, /\.sheet\s*\{/);
+  assert.match(panelCss, /\.view\.is-sheet/);
+  assert.match(panelCss, /\.list-pane\s*\{/);
+  assert.match(panelCss, /\.group\s*\{/);
+  assert.match(panelCss, /--accent:\s*#ffffff/);
+  assert.doesNotMatch(panelCss, /\.metrics\s*\{/);
+  assert.doesNotMatch(panelCss, /#8b7cf6|#6d5ce6/);
+  assert.doesNotMatch(panelCss, /tile-grid|repo-chip|\.sidebar\s*\{/);
+  assert.match(panelSource, /applyRequestedState/);
+  assert.match(panelSource, /updateStatus/);
+  assert.match(panelSource, /function grouped/);
+  assert.match(panelSource, /counts-bar/);
+  assert.match(panelSource, /pushSheet/);
+  assert.match(panelSource, /openFileSheet/);
+  assert.match(panelSource, /list-pane/);
+  assert.doesNotMatch(panelSource, /className, "metrics"/);
+  assert.doesNotMatch(panelSource, /className, "metric"/);
+  assert.doesNotMatch(panelSource, /openFileDiff/);
+  assert.match(panelSource, /setInterval/);
+  assert.match(panelSource, /role", "tab"/);
+});
+
+test("follows the host locale for panel copy, commands and toasts", () => {
+  assert.equal(typeof manifest.i18n.en.name, "string");
+  assert.equal(typeof manifest.i18n["zh-CN"].name, "string");
+  assert.equal(typeof manifest.contributes.views[0].title.en, "string");
+  assert.equal(typeof manifest.contributes.views[0].title["zh-CN"], "string");
+  assert.match(panelSource, /function setLocale/);
+  assert.match(panelSource, /function resolveLocale/);
+  assert.match(panelSource, /STRINGS\[locale\]/);
+  assert.match(panelSource, /documentElement\.lang/);
+  assert.match(panelSource, /pageTitle/);
+  assert.match(panelSource, /navOverview: "概览"/);
+  assert.match(panelSource, /back: "返回"/);
+  assert.match(mainSource, /getLocale/);
+  assert.match(mainSource, /VIEW_LABELS/);
+  assert.match(mainSource, /Git Lens：打开/);
+  assert.match(mainSource, /Git Lens：打开历史/);
+  assert.match(mainSource, /Git Lens：打开改动/);
+  assert.match(mainSource, /Git Lens：打开分支/);
+  assert.match(mainSource, /Git Lens：打开追溯/);
+  assert.match(mainSource, /viewLabel/);
+  assert.doesNotMatch(mainSource, /Git Lens（\$\{target\}）/);
 });
 
 test("main.js registers every tool and command it declares, and routes panel channels", () => {

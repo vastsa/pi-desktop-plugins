@@ -7,14 +7,16 @@ project's git state.
 
 ## Features
 
-- **Panel** (`pi.gitlens`): an isolated multi-page dashboard that follows the
-  app language (en / zh-CN) and color mode:
-  - **Overview** — branch, upstream, ahead/behind, staged / unstaged /
-    untracked / conflict counts, recent commits.
-  - **History** — searchable commit log; click a commit for its files, stats
-    and unified patch.
-  - **Changes** — working-tree changes grouped by stage state; per-file diffs;
-    commit box with stage-all / tracked staging and amend.
+- **Work panel view** (`pi.gitlens`): docks in the app's right work panel
+  (no separate window). Open the work panel (`Mod+J`) and choose **Git Lens**.
+  The dashboard follows the app language (en / zh-CN) and color mode from the
+  first paint (command palette titles and toasts too):
+  - **Overview** — compact staged / unstaged / untracked / conflict counts
+    plus recent commits (click a commit to open it).
+  - **History** — searchable commit log; click a commit to open a full-page
+    sheet (files and patch) with Back.
+  - **Changes** — working-tree changes grouped by stage state; click a file
+    to open its diff in a full-page sheet; compact commit box.
   - **Branches** — list with current badge, create / switch / safe delete.
   - **Blame** — GitLens-style per-line attribution for any repo-relative file.
 - **Commands** — `Git Lens: Open`, `Open History`, `Open Changes`,
@@ -31,11 +33,13 @@ project's git state.
 | `git_branch` | medium | List / create / switch / safe delete branches |
 | `git_commit` | medium | Stage and commit (respects hooks, no force) |
 | `git_stash` | medium | List / push / pop / drop stashes |
-| `git_open_panel` | low | **Open any panel page on demand** (AI-callable new page) |
+| `git_open_panel` | low | **Focus any Git Lens page** in the work panel |
 
   The AI-callable `git_open_panel` is the bridge between conversation and UI:
-  ask the agent to "open git history" or "show the repo dashboard" and it opens
-  the panel on the right page, optionally preselecting a path or ref.
+  ask the agent to "open git history" or "show the repo dashboard" and it
+  focuses that page in the work panel, optionally preselecting a path or ref.
+  If Git Lens is not already visible, open the work panel (`Mod+J`) and choose
+  Git Lens.
 
 - **Skill** — `Git workflow` teaches the agent when to use each tool:
   inspect first, mutate deliberately, never push/pull/force without an
@@ -51,18 +55,16 @@ project's git state.
   credentials; the tools cannot push, pull or fetch.
 - Paths must be repo-relative (no absolute paths, no `..` escapes); refs and
   branch names are validated against a safe charset.
-- The panel runs in the host's isolated, context-isolated window and talks to
-  the plugin process only through the host bridge.
-- The panel opts into PI-Desktop's v3 paint-through chrome. The first view
-  toolbar leaves the host window-control capsule's 104px top-right area clear,
-  while the rest of the empty band remains draggable. The capsule is re-tinted
-  from the panel surface and text colors whenever the palette changes.
+- The UI is a `contributes.views` surface docked in the work panel. It talks
+  to the plugin process only through the host bridge, with the same isolation
+  as a panel window (sandboxed page, per-plugin partition) but no detached
+  window chrome.
 
 ## Permissions
 
 | Permission | Why |
 | --- | --- |
-| `ui.panel` | Open the isolated panel |
+| `ui.view` | Dock Git Lens in the right work panel |
 | `agent.tool.register` | Register the nine agent tools |
 | `agent.prompt.inject` | Load the `Git workflow` skill |
 
@@ -82,7 +84,7 @@ plugin process.
 
 ## Requirements
 
-- PI-Desktop `>= 0.2.9`
+- PI-Desktop `>= 0.8.0`
 - `git` available on `PATH`
 - The current workspace must be inside a git repository
 
@@ -98,6 +100,37 @@ Install the packed `.piplug` via **Plugins → Install plugin package**, or load
 the folder as a development plugin.
 
 ## Changelog
+
+### 0.2.4
+
+Command palette titles, work-panel copy and toasts follow the app language
+(en / zh-CN) from the first paint. 命令面板、工作面板文案和提示从首帧起跟随
+应用语言。
+
+### 0.2.3
+
+Compact work-panel UI: overview is a single count row (not 2×2 cards).
+Clicking a changed file or commit opens a full-page sheet with Back,
+instead of dumping the patch under the list.
+
+### 0.2.2
+
+Premium docked UI: iOS-style segmented control, large-title identity,
+inset grouped lists, and a 2×2 metric widget. Feishu/iOS density on the
+host's neutral gray ramp.
+
+### 0.2.1
+
+Restyles the docked view to match the PI-Desktop work panel and Files plugin:
+text tabs, a quiet branch/repo status line, list rows instead of chips and
+colored tiles, and the host's neutral gray accent (no purple).
+
+### 0.2.0
+
+Docks only in the right work panel (`contributes.views` + `ui.view`) and no
+longer opens a separate window. Commands and `git_open_panel` still switch the
+live page; if the view is not visible, a toast points at the work-panel
+switcher (`Mod+J`). Requires PI-Desktop `>= 0.8.0`.
 
 ### 0.1.4
 

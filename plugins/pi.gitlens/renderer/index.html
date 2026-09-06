@@ -4,11 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      PI-Desktop owns exactly a 46px drag band and a minimal three-button
-      window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
-      paint through the 46px band, while host-generated holes keep controls
-      clickable and empty space draggable. Fixed or sticky panel surfaces use
-      var(--pi-plugin-titlebar-height, 46px).
+      Git Lens docks in the host work panel (contributes.views). Embedded views
+      have no window-control capsule and publish --pi-plugin-titlebar-height as
+      0px. Keep reading that variable instead of hard-coding 46px.
     -->
     <meta name="pi-plugin-chrome" content="v3" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'none';" />
@@ -20,25 +18,16 @@
   </head>
   <body>
     <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="6" cy="6" r="2.5" />
-            <circle cx="6" cy="18" r="2.5" />
-            <circle cx="18" cy="8" r="2.5" />
-            <path d="M6 8.5v7M6 8.5C9 11 12 10.5 15.5 8" />
-          </svg>
-          <span class="brand-name">Git Lens</span>
+      <header class="chrome">
+        <div class="status-line">
+          <span class="status-branch" id="branchChip"></span>
+          <span class="status-meta" id="repoChip"></span>
+          <button type="button" class="icon-button" id="refreshAll" aria-label="Refresh"></button>
         </div>
-        <nav class="nav" id="nav" aria-label="Git Lens views"></nav>
-        <div class="sidebar-foot">
-          <div class="repo-chip" id="repoChip" title=""></div>
-          <div class="branch-chip" id="branchChip" title=""></div>
-        </div>
-      </aside>
-
+        <nav class="segmented" id="nav" role="tablist" aria-label="Git Lens views"></nav>
+      </header>
+      <div class="banner" id="banner" hidden></div>
       <main class="content">
-        <div class="banner" id="banner" hidden></div>
         <section class="view" id="view-overview" hidden></section>
         <section class="view" id="view-history" hidden></section>
         <section class="view" id="view-diff" hidden></section>
@@ -49,6 +38,5 @@
 
     <script src="./appearance.js"></script>
     <script src="./panel.js"></script>
-    <script src="./capsule-retint.js"></script>
   </body>
 </html>

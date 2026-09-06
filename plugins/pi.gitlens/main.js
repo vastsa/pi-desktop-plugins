@@ -24,7 +24,7 @@
  *   Agent permission policy.
  *
  * Permissions
- * - ui.panel: the isolated panel (manifest.ui.panel)
+ * - ui.view: the work-panel view (contributes.views, no detached window)
  * - agent.tool.register: register the nine agent tools
  * - agent.prompt.inject: load the git-workflow skill
  */
@@ -49,6 +49,43 @@ const VIEWS = ["overview", "history", "diff", "branches", "blame"];
 const MAX_TOOL_PATCH_CHARS = 120_000;
 const MAX_TOOL_ENTRIES = 1_000;
 const MAX_BLAME_LINES = 2_000;
+
+const VIEW_LABELS = {
+  en: {
+    overview: "Overview",
+    history: "History",
+    diff: "Changes",
+    branches: "Branches",
+    blame: "Blame",
+  },
+  "zh-CN": {
+    overview: "概览",
+    history: "历史",
+    diff: "改动",
+    branches: "分支",
+    blame: "追溯",
+  },
+};
+
+function isZhLocale(locale) {
+  return String(locale || "").toLowerCase().startsWith("zh");
+}
+
+async function hostLocale() {
+  try {
+    if (typeof pi.app?.getLocale === "function") {
+      return await pi.app.getLocale();
+    }
+  } catch {
+    /* older hosts */
+  }
+  return "en";
+}
+
+function viewLabel(view, locale) {
+  const table = isZhLocale(locale) ? VIEW_LABELS["zh-CN"] : VIEW_LABELS.en;
+  return table[view] || view;
+}
 
 /** Where the AI asked the panel to land; consumed by the panel via git.state. */
 let panelState = null;
@@ -432,11 +469,24 @@ async function openPanelView(view, extra = {}) {
     ref: extra.ref && isSafeRef(extra.ref) ? String(extra.ref) : null,
     openedAt: Date.now(),
   };
-  // If the panel is already open it does not reload, so close it first to make
-  // the new page take effect. Closing an unopened panel is a no-op.
-  await pi.ui.closePanel().catch(() => {});
-  await pi.ui.openPanel();
-  return { ok: true, view: target, note: `Git Lens panel opened on ${target}` };
+  // Git Lens only docks in the work panel (no detached window). The live view
+  // polls git.state and switches pages when openedAt changes. There is no
+  // plugin API to reveal a work-panel tab, so point the user at the switcher
+  // when the view is not already on screen.
+  const locale = await hostLocale();
+  const zh = isZhLocale(locale);
+  const page = viewLabel(target, locale);
+  const toast = zh
+    ? `Git Lens 只在右侧工作面板中打开。按 Mod+J，再选择 Git Lens（${page}）。`
+    : `Git Lens lives in the work panel. Press Mod+J, then choose Git Lens (${page}).`;
+  await pi.ui.showToast(toast, "info").catch(() => {});
+  return {
+    ok: true,
+    view: target,
+    note: zh
+      ? `已请求在工作面板中打开 Git Lens 的「${page}」页。若未看到，请打开右侧工作面板（Mod+J）并选择 Git Lens。`
+      : `Git Lens requested ${page} in the work panel. If it is not visible, open the right work panel (Mod+J) and choose Git Lens.`,
+  };
 }
 
 async function toolOpenPanel(args) {
@@ -487,33 +537,35 @@ async function onPanelInvoke(channel, payload) {
 // ---------------------------------------------------------------------------
 
 async function registerCommands() {
+  const zh = isZhLocale(await hostLocale());
+  const title = (en, cn) => (zh ? cn : en);
   await pi.commands.register({
     id: "gitlens.open",
-    title: "Git Lens: Open",
+    title: title("Git Lens: Open", "Git Lens：打开"),
     keywords: ["git", "lens", "gitlens", "版本", "历史", "分支", "提交"],
     run: () => openPanelView("overview"),
   });
   await pi.commands.register({
     id: "gitlens.openHistory",
-    title: "Git Lens: Open History",
+    title: title("Git Lens: Open History", "Git Lens：打开历史"),
     keywords: ["git", "history", "log", "提交历史"],
     run: () => openPanelView("history"),
   });
   await pi.commands.register({
     id: "gitlens.openChanges",
-    title: "Git Lens: Open Changes",
+    title: title("Git Lens: Open Changes", "Git Lens：打开改动"),
     keywords: ["git", "diff", "changes", "改动", "差异"],
     run: () => openPanelView("diff"),
   });
   await pi.commands.register({
     id: "gitlens.openBranches",
-    title: "Git Lens: Open Branches",
+    title: title("Git Lens: Open Branches", "Git Lens：打开分支"),
     keywords: ["git", "branch", "分支"],
     run: () => openPanelView("branches"),
   });
   await pi.commands.register({
     id: "gitlens.openBlame",
-    title: "Git Lens: Open Blame",
+    title: title("Git Lens: Open Blame", "Git Lens：打开追溯"),
     keywords: ["git", "blame", "逐行"],
     run: () => openPanelView("blame"),
   });
@@ -657,7 +709,7 @@ async function registerTools() {
     {
       name: "git_open_panel",
       description:
-        "Open the Git Lens panel in PI-Desktop on a specific page (overview, history, diff, branches or blame). Use this when the user asks to see git information in a visual page, wants a dashboard of the repository, or asks to 'open' git history/changes/branches/blame. Optionally preselect a path (blame/diff/history) or a ref.",
+        "Focus Git Lens in PI-Desktop's right work panel on a specific page (overview, history, diff, branches or blame). Git Lens has no separate window — it only docks in the work panel. Use this when the user asks to see git information visually, wants a dashboard of the repository, or asks to 'open' git history/changes/branches/blame. Optionally preselect a path (blame/diff/history) or a ref. If the view is not already visible, tell the user to open the work panel (Mod+J) and choose Git Lens.",
       risk: "low",
       schema: {
         type: "object",
