@@ -1,0 +1,6 @@
+html, body { scrollbar-gutter: stable; }
+.app, .stage, .session, .chrome, .dock, .tabs { min-width: 0; }
+@media (max-width: 360px) {
+  .tab { max-width: 96px; }
+  .meta { display: none; }
+}

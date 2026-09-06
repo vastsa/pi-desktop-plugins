@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.terminal",
+  "name": "Terminal",
+  "version": "0.1.3",
+  "description": "Otty-inspired interactive terminal for PI-Desktop. Docks in the right work panel (no separate window), with tabs, cross-platform shell profiles, and copy/paste.",
+  "i18n": {
+    "en": {
+      "name": "Terminal",
+      "description": "Otty-inspired interactive terminal for PI-Desktop. Docks in the right work panel (no separate window), with tabs, cross-platform shell profiles, and copy/paste.",
+      "safetyNotes": "This plugin launches a real login shell as your user through a bundled PTY helper (forkpty on macOS/Linux, ConPTY on Windows). Anything you can run in a system terminal can run here, including destructive commands. It does not persist transcripts, passwords, or shell history beyond an in-memory scrollback that dies with the plugin process. Uninstalling or disabling the plugin kills every session. The AI is not given a tool that writes to the PTY; agent command execution continues to use the host Bash tool."
+    },
+    "zh-CN": {
+      "name": "终端",
+      "description": "受 Otty 启发的 PI-Desktop 交互式终端，只停靠在右侧工作面板（无独立窗口）；支持多标签、跨平台 shell profile 与复制粘贴。",
+      "safetyNotes": "本插件通过自带的 PTY 助手以当前用户身份拉起真正的登录 shell（macOS/Linux 为 forkpty，Windows 为 ConPTY）。系统终端能执行的命令这里都能执行，包括破坏性操作。插件不持久化 transcript、密码或 shell 历史，仅在进程内存中保留有限回滚缓冲，卸载或禁用即杀掉全部会话。AI 没有写入 PTY 的工具；模型执行命令仍走宿主 Bash。"
+    }
+  },
+  "author": "PI-Desktop",
+  "categories": ["developer-tools", "productivity", "official"],
+  "changelog": "Release 0.1.3: isolates PTY tabs per open project so switching workspaces cannot mix sessions. Release 0.1.2: docks only in the right work panel; the detached window is removed. Release 0.1.1: login-shell environment so GUI-launched sessions inherit PATH (pnpm, nvm, Homebrew, cargo, bun); denser Otty-like chrome with bottom tabs, find, and font-size controls. Release 0.1.0: first release. Multi-tab PTY sessions, cross-platform default shells (zsh / bash / PowerShell / optional Git Bash), theme and language following, and copy/paste.",
+  "safetyNotes": "This plugin launches a real login shell as your user through a bundled PTY helper (forkpty on macOS/Linux, ConPTY on Windows). Anything you can run in a system terminal can run here, including destructive commands. It does not persist transcripts, passwords, or shell history beyond an in-memory scrollback that dies with the plugin process. Uninstalling or disabling the plugin kills every session. The AI is not given a tool that writes to the PTY; agent command execution continues to use the host Bash tool.",
+  "main": "main.js",
+  "contributes": {
+    "views": [
+      {
+        "id": "shell",
+        "title": {
+          "en": "Terminal",
+          "zh-CN": "终端"
+        },
+        "icon": "terminal",
+        "entry": "renderer/index.html",
+        "order": 20
+      }
+    ],
+    "commands": [
+      {
+        "id": "pi.terminal.open",
+        "title": "Terminal: Open",
+        "keywords": ["terminal", "shell", "pty", "otty", "console", "终端", "命令行"],
+        "category": "Developer"
+      }
+    ],
+    "services": [
+      {
+        "id": "pty-host",
+        "label": "Terminal PTY host"
+      }
+    ],
+    "settings": [
+      {
+        "key": "fontSize",
+        "title": "Font size",
+        "description": "Terminal font size in pixels (10–24).",
+        "type": "number",
+        "default": 13
+      },
+      {
+        "key": "scrollback",
+        "title": "Scrollback lines",
+        "description": "In-memory scrollback kept for reconnect (200–20000).",
+        "type": "number",
+        "default": 5000
+      },
+      {
+        "key": "maxSessions",
+        "title": "Maximum sessions",
+        "description": "Cap on live PTY tabs (1–32).",
+        "type": "number",
+        "default": 8
+      },
+      {
+        "key": "profiles",
+        "title": "Custom profiles",
+        "description": "JSON array of { id, name, shell, args, cwd, env }. cwd must stay inside the workspace or home directory.",
+        "type": "json",
+        "default": []
+      }
+    ],
+    "skills": ["skills/terminal.md"]
+  },
+  "permissions": [
+    "ui.view",
+    "background.service",
+    "clipboard.read",
+    "clipboard.write",
+    "agent.prompt.inject"
+  ],
+  "engines": {
+    "piDesktop": ">=0.8.0"
+  },
+  "activationEvents": [
+    "onCommand:pi.terminal.open",
+    "onStartup"
+  ]
+}

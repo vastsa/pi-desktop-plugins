@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-booting="true">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Terminal docks in the host work panel (contributes.views). Embedded views
+      have no window-control capsule and publish --pi-plugin-titlebar-height as
+      0px. Keep reading that variable instead of hard-coding 46px.
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'none';" />
+    <title>Terminal</title>
+    <script>window.__APPEARANCE_CACHE_KEY = "pi.terminal.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
+    <link rel="stylesheet" href="./vendor/xterm.css" />
+    <link rel="stylesheet" href="./terminal.css" />
+    <link rel="stylesheet" href="./panel-polish.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="chrome">
+        <p class="status" id="status">
+          <span class="status-cwd" id="statusCwd">—</span>
+          <span class="status-sep" id="statusSep" hidden>·</span>
+          <span class="status-shell" id="statusShell"></span>
+        </p>
+        <div class="actions">
+          <button class="icon-button" id="newTab" type="button" title="New tab">+</button>
+          <button class="icon-button" id="menuBtn" type="button" title="Menu" aria-haspopup="menu" aria-expanded="false">⋯</button>
+        </div>
+      </header>
+      <div class="banner" id="banner" hidden></div>
+      <div class="find" id="find" hidden>
+        <input class="find-input" id="findInput" type="search" spellcheck="false" />
+        <span class="find-count" id="findCount"></span>
+        <button class="icon-button" id="findPrev" type="button" title="Previous">↑</button>
+        <button class="icon-button" id="findNext" type="button" title="Next">↓</button>
+        <button class="icon-button" id="findClose" type="button" title="Close">×</button>
+      </div>
+      <main class="stage" id="stage"></main>
+      <footer class="dock" data-pi-plugin-no-drag>
+        <div class="tabs" id="tabs" role="tablist" aria-label="Terminal sessions"></div>
+        <div class="meta" id="meta"></div>
+      </footer>
+    </div>
+    <div class="menu" id="menu" hidden role="menu"></div>
+    <script src="./vendor/xterm.js"></script>
+    <script src="./vendor/addon-fit.js"></script>
+    <script src="./appearance.js"></script>
+    <script src="./terminal.js"></script>
+  </body>
+</html>
