@@ -791,8 +791,18 @@ function applyHostAppearance(appearance, force) {
     if (force) applyTheme(currentBase());
     return;
   }
+  const base =
+    appearance.base === "light" || appearance.base === "dark"
+      ? appearance.base
+      : appearance.theme === "light" || appearance.theme === "dark"
+        ? appearance.theme
+        : "";
+  if (!base) {
+    if (force) applyTheme(currentBase());
+    return;
+  }
   const fingerprint = [
-    appearance.base,
+    base,
     appearance.theme,
     appearance.locale,
     appearance.pluginThemeCss ? String(appearance.pluginThemeCss).length : 0,
@@ -877,13 +887,11 @@ async function init() {
     state.home = boot.home || "";
     state.workspaceKey = boot.workspaceKey == null ? "" : String(boot.workspaceKey);
     if (boot.appearance) applyHostAppearance(boot.appearance, true);
-    else await pullHostAppearance(true);
     await showWorkspace(boot.sessions);
     applyTheme(currentBase());
     window.setInterval(() => {
       if (document.hidden) return;
       syncWorkspace().catch(() => {});
-      pullHostAppearance(false).catch(() => {});
     }, 1000);
   } catch (error) {
     showBanner(error.message || t("helperMissing"));

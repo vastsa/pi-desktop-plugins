@@ -76,17 +76,18 @@ async function readAppearance() {
     if (typeof pi.app?.getAppearance === "function") {
       const appearance = await pi.app.getAppearance();
       if (appearance && typeof appearance === "object") {
-        return flattenAppearance(appearance, locale);
+        const flat = flattenAppearance(appearance, locale);
+        if (flat.base === "light" || flat.base === "dark") return flat;
       }
     }
   } catch {
-    /* older hosts: fall through to locale-only */
+    /* older hosts: keep the last app theme in the renderer */
   }
-  return flattenAppearance({ theme: "system", base: "system" }, locale);
+  return null;
 }
 
 function colorFgBg(appearance) {
-  return appearanceBase(appearance) === "light" ? "0;15" : "15;0";
+  return appearance && appearanceBase(appearance) === "light" ? "0;15" : "15;0";
 }
 
 function loginEnv() {
@@ -180,10 +181,12 @@ async function onPanelInvoke(channel, payload = {}) {
           .slice(0, 6),
       };
     }
-    case "pty.appearance":
-      return { ok: true, ...(await readAppearance()) };
+    case "pty.appearance": {
+      const appearance = await readAppearance();
+      return appearance ? { ok: true, ...appearance } : { ok: false };
+    }
     case "app.getAppearance":
-      return readAppearance();
+      return (await readAppearance()) || { ok: false };
     case "pty.list": {
       const scope = await currentScope();
       return {

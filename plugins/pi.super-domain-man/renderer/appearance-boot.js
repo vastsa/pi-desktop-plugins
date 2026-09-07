@@ -5,17 +5,15 @@
  *
  * The host's real appearance arrives asynchronously through the panel bridge
  * (`app.getAppearance`), one round-trip too late to avoid a flash, so the last
- * known appearance is cached in localStorage and replayed here. Without a
- * cache the document follows the OS preference, which is also the correct
- * fallback on hosts that do not expose the appearance channel yet.
+ * known *app* appearance is cached in localStorage and replayed here.
+ *
+ * Never follow the OS color scheme for the live palette. The app can be dark
+ * while the OS is light (or the reverse); resolving "system" against the OS
+ * fights the host and flashes.
  *
  * Usage (in the plugin's index.html <head>, before other scripts):
  *   <script>window.__APPEARANCE_CACHE_KEY = "my.plugin.appearance.v1";</script>
  *   <script src="./appearance-boot.js"></script>
- *
- * The optional cache-key global lets each plugin keep its own history; the
- * default is "pi.appearance.v1". The script is plain ES5-ish JavaScript so it
- * runs on any Electron renderer.
  */
 (function () {
   "use strict";
@@ -36,32 +34,40 @@
     }
   }
 
-  function prefersLight() {
-    try {
-      return window.matchMedia("(prefers-color-scheme: light)").matches;
-    } catch (error) {
-      return true;
-    }
+  function currentTheme() {
+    var theme = root.getAttribute("data-theme");
+    return theme === "light" || theme === "dark" ? theme : "";
   }
 
-  /** "system" or missing base resolves against the OS. */
+  /**
+   * Only an explicit light/dark value counts. "system" and missing values keep
+   * the current app theme (or stay unset) — they must not snap to the OS.
+   */
   function resolveBase(base) {
     if (base === "light" || base === "dark") return base;
-    return prefersLight() ? "light" : "dark";
+    return currentTheme();
   }
 
-  /** A locale tag to render with: zh → "zh-CN", anything else → "en". */
   function resolveLocale(locale) {
     return String(locale || "").toLowerCase().startsWith("zh") ? "zh-CN" : "en";
   }
 
-  /** Shared with appearance.js through this global so both agree on one algorithm. */
+  function explicitBase(appearance) {
+    if (!appearance || typeof appearance !== "object") return "";
+    if (appearance.base === "light" || appearance.base === "dark") return appearance.base;
+    if (appearance.theme === "light" || appearance.theme === "dark") return appearance.theme;
+    return "";
+  }
+
   function applyAppearance(appearance) {
     var resolved = appearance || {};
-    var base = resolveBase(resolved.base);
+    var base = explicitBase(resolved) || resolveBase(resolved.base);
     var locale = resolveLocale(resolved.locale);
 
-    root.dataset.theme = base;
+    if (base === "light" || base === "dark") {
+      root.dataset.theme = base;
+    }
+
     root.dataset.lang = locale === "zh-CN" ? "zh" : "en";
     root.lang = locale;
 
@@ -77,25 +83,22 @@
       style.remove();
     }
 
-    return { base: base, locale: locale, raw: resolved };
+    return { base: base || currentTheme() || null, locale: locale, raw: resolved };
   }
 
   var cached = readCache();
-  if (cached && (cached.base || cached.locale)) {
+  if (cached && (cached.base === "light" || cached.base === "dark" || cached.locale)) {
     applyAppearance(cached);
-  } else {
-    // No history: follow the OS palette and the panel's own navigator language.
-    root.dataset.theme = prefersLight() ? "light" : "dark";
-    root.dataset.lang = resolveLocale(navigator.language) === "zh-CN" ? "zh" : "en";
-    root.lang = resolveLocale(navigator.language);
   }
+  // No cache: leave data-theme unset until the host answers. CSS :root defaults
+  // cover the first frame; do not paint the OS palette.
 
   window.__appearanceBoot = {
     cacheKey: CACHE_KEY,
     cached: cached,
     applyAppearance: applyAppearance,
-    prefersLight: prefersLight,
     resolveBase: resolveBase,
     resolveLocale: resolveLocale,
+    explicitBase: explicitBase,
   };
 })();

@@ -13,9 +13,9 @@
     - `locale`：app 语言标签（`zh-CN` / `en` …）
     - `pluginTheme`：当前激活的插件主题 `{ id, base, css }` 或 `null`
   - `bridge.on("appearance:changed", fn)`：app 切换主题/语言时实时推送（**独立面板窗口**）
-  - 工作面板 **view** 没有推送通道：适配器会在页面可见时每秒轮询 `app.getAppearance`
-- 工作面板 view 的 `pluginBridge.invoke` 全部进插件 `onPanelInvoke`。view 插件必须自行处理 `app.getAppearance`（调用 `pi.app.getAppearance()` 并返回上述字段，可附带扁平化的 `pluginThemeCss`）。
-- 旧版宿主没有该通道时优雅降级：面板回退到 localStorage 缓存 → 系统偏好（`prefers-color-scheme`）/ 面板自身处理，不报错。
+  - 宿主也会向停靠的 view 广播 `appearance:changed`。适配器另外做慢轮询，避免漏掉推送。
+- **只跟随 app 的解析结果**（`base`/`theme` 为 `light` 或 `dark`）。`base: "system"` 或缺省值**不得**用 `prefers-color-scheme` 回退，否则 app 与系统不一致时会来回闪。
+- 旧版宿主没有该通道时保持上次 app 主题（或 CSS `:root` 默认），不报错、不跟 OS。
 
 ## 文件
 

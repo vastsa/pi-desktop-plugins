@@ -76,7 +76,7 @@ function waitFor(fn, timeoutMs = 1500) {
 test("manifest declares terminal identity, views, permissions and no agent tools", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.terminal");
-  assert.equal(manifest.version, "0.1.4");
+  assert.equal(manifest.version, "0.1.5");
   assert.equal(manifest.ui, undefined);
   assert.deepEqual(manifest.permissions, [
     "ui.view",
@@ -428,6 +428,11 @@ test("flattens host appearance for the renderer adapter", () => {
   assert.equal(flat.pluginThemeCss, "body{}");
   assert.equal(flat.locale, "zh-CN");
   const appearanceJs = readFileSync(join(pluginRoot, "renderer/appearance.js"), "utf8");
+  const appearanceBoot = readFileSync(join(pluginRoot, "renderer/appearance-boot.js"), "utf8");
   assert.match(appearanceJs, /POLL_MS/);
   assert.match(appearanceJs, /startPoll/);
+  assert.match(appearanceJs, /explicitBase/);
+  assert.match(appearanceJs, /Do not snap to the OS/);
+  assert.doesNotMatch(appearanceBoot, /prefers-color-scheme/);
+  assert.equal(colorFgBg(null), "15;0");
 });

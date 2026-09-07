@@ -108,13 +108,14 @@ async function readAppearance() {
     if (typeof pi.app?.getAppearance === "function") {
       const appearance = await pi.app.getAppearance();
       if (appearance && typeof appearance === "object") {
-        return flattenAppearance(appearance, locale);
+        const flat = flattenAppearance(appearance, locale);
+        if (flat.base === "light" || flat.base === "dark") return flat;
       }
     }
   } catch {
-    /* older hosts: fall through to locale-only */
+    /* older hosts: keep the last app theme in the renderer */
   }
-  return flattenAppearance({ theme: "system", base: "system" }, locale);
+  return null;
 }
 
 function viewLabel(view, locale) {

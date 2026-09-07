@@ -7,17 +7,13 @@
  *     language and active plugin theme;
  *   - `bridge.on("appearance:changed", ...)` re-applies live when the app
  *     switches theme or language;
- *   - work-panel *views* have no push channel, so we also poll
- *     `app.getAppearance` while the page is visible;
+ *   - a slow poll covers docked views that miss a push;
  *   - the resolved appearance is cached (same key as the boot script) so the
- *     next open paints correctly before any script runs;
- *   - hosts that do not expose the channel (older PI-Desktop) reject the
- *     invoke; we fall back to the boot-time value (cache or OS) and stay
- *     silent — plugins keep working with their own theme/locale handling.
+ *     next open paints correctly before any script runs.
  *
- * Work-panel views forward every invoke to the plugin's `onPanelInvoke`. Those
- * plugins should handle `app.getAppearance` by calling `pi.app.getAppearance()`
- * and returning `{ theme, base, locale, pluginTheme, pluginThemeCss }`.
+ * Follow the *app* palette only. Never resolve "system" / missing base against
+ * `prefers-color-scheme`: when the app is dark and the OS is light (or the
+ * reverse), that fight flashes the UI every poll.
  *
  * Exposed as window.__appearance:
  *   init(bridge)                     — start reading + subscribing (call once)
@@ -26,19 +22,13 @@
  *   onLocaleChange(fn)               — fn(locale) on language changes
  *   setThemeOverride(base|null)      — force "light"/"dark", or null to follow
  *                                      the app again (for in-panel theme toggles)
- *
- * Usage:
- *   <script src="./appearance.js"></script>
- *   <script>
- *     window.__appearance.init(window.pluginBridge);
- *   </script>
  */
 (function () {
   "use strict";
 
   var boot = window.__appearanceBoot || null;
   var CACHE_KEY = boot ? boot.cacheKey : "pi.appearance.v1";
-  var POLL_MS = 1000;
+  var POLL_MS = 2000;
 
   var state = {
     base: null,
@@ -60,8 +50,22 @@
     }
   }
 
-  function normalizeBase(value) {
-    return value === "light" || value === "dark" ? value : boot ? boot.resolveBase(value) : "light";
+  function documentTheme() {
+    try {
+      var theme = document.documentElement.getAttribute("data-theme");
+      return theme === "light" || theme === "dark" ? theme : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  /** Explicit app light/dark only — never the OS. */
+  function explicitBase(entry) {
+    if (!entry || typeof entry !== "object") return "";
+    if (typeof boot?.explicitBase === "function") return boot.explicitBase(entry) || "";
+    if (entry.base === "light" || entry.base === "dark") return entry.base;
+    if (entry.theme === "light" || entry.theme === "dark") return entry.theme;
+    return "";
   }
 
   function normalizeLocale(value) {
@@ -79,7 +83,7 @@
     if (!entry || typeof entry !== "object") return "";
     var css = pluginThemeCss(entry);
     return [
-      entry.base,
+      explicitBase(entry) || entry.base,
       entry.theme,
       entry.locale,
       css ? String(css).length : 0,
@@ -87,67 +91,79 @@
     ].join("|");
   }
 
+  function notify(list, value) {
+    for (var i = 0; i < list.length; i += 1) {
+      try {
+        list[i](value);
+      } catch (error) {
+        /* a listener must not break appearance handling */
+      }
+    }
+  }
+
   /** Apply a host appearance (or an override) and notify listeners. */
   function apply(entry) {
     var resolved = entry || {};
-    var css = pluginThemeCss(resolved);
-    var base = state.themeOverride || normalizeBase(resolved.base);
+    var incoming = explicitBase(resolved);
+    var base =
+      state.themeOverride ||
+      incoming ||
+      state.base ||
+      documentTheme();
+    if (base !== "light" && base !== "dark") base = null;
     var locale = normalizeLocale(resolved.locale);
-    var themeChanged = base !== state.base;
+    var css = pluginThemeCss(resolved);
+    var themeChanged = base && base !== state.base;
     var localeChanged = locale !== state.locale;
 
-    state.base = base;
+    if (base) state.base = base;
     state.locale = locale;
     state.raw = resolved;
     lastFingerprint = fingerprint(resolved);
 
     if (boot) {
-      // boot.applyAppearance resolves "system" against the OS and injects the
-      // plugin-theme CSS; force the same base the host told us about.
       var applied = boot.applyAppearance({
-        base: state.themeOverride || resolved.base,
+        base: state.themeOverride || incoming || state.base,
         locale: resolved.locale,
         pluginThemeCss: state.themeOverride === null && css ? css : null,
       });
-      state.base = applied.base;
+      if (applied.base === "light" || applied.base === "dark") state.base = applied.base;
       state.locale = applied.locale;
-    } else {
+    } else if (base) {
       document.documentElement.dataset.theme = base;
       document.documentElement.dataset.lang = locale === "zh-CN" ? "zh" : "en";
       document.documentElement.lang = locale;
     }
 
-    // Cache the *resolved* palette so the next boot paints without a flash,
-    // and cache the locale so text lands in the right language.
-    writeCache({
-      base: state.base,
-      locale: state.locale,
-      pluginThemeCss: state.themeOverride === null && css ? css : undefined,
-    });
+    if (state.base === "light" || state.base === "dark") {
+      writeCache({
+        base: state.base,
+        locale: state.locale,
+        pluginThemeCss: state.themeOverride === null && css ? css : undefined,
+      });
+    }
 
-    if (themeChanged) {
-      for (var i = 0; i < themeListeners.length; i += 1) {
-        try {
-          themeListeners[i](state.base);
-        } catch (error) {
-          /* a listener must not break appearance handling */
-        }
-      }
-    }
-    if (localeChanged) {
-      for (var j = 0; j < localeListeners.length; j += 1) {
-        try {
-          localeListeners[j](state.locale);
-        } catch (error) {
-          /* a listener must not break appearance handling */
-        }
-      }
-    }
+    if (themeChanged) notify(themeListeners, state.base);
+    if (localeChanged) notify(localeListeners, state.locale);
     return state;
   }
 
   function ingest(appearance) {
     if (!appearance || typeof appearance !== "object") return;
+    // Ignore OS-fallback payloads (`base: "system"` with no explicit theme).
+    // Applying those snaps the UI to prefers-color-scheme and fights the app.
+    if (!explicitBase(appearance) && !appearance.locale && !pluginThemeCss(appearance)) return;
+    if (!explicitBase(appearance) && !state.base && !documentTheme()) {
+      // Locale/css-only update with no palette yet: keep waiting for the app.
+      if (appearance.locale) {
+        var locale = normalizeLocale(appearance.locale);
+        if (locale !== state.locale) {
+          state.locale = locale;
+          notify(localeListeners, locale);
+        }
+      }
+      return;
+    }
     var next = fingerprint(appearance);
     if (next && next === lastFingerprint) return;
     apply(appearance);
@@ -157,8 +173,7 @@
     if (!bridge || typeof bridge.invoke !== "function") return;
     if (typeof document !== "undefined" && document.hidden) return;
     bridge.invoke("app.getAppearance").then(ingest).catch(function () {
-      // Host without the channel (or an unreachable plugin process): the
-      // boot script already applied the cache or the OS preference.
+      // Missing channel: keep the last app theme. Do not snap to the OS.
     });
   }
 
@@ -174,7 +189,6 @@
     }
   }
 
-  /** Pull the host appearance once and subscribe to live changes. */
   function init(bridge) {
     if (state.started) return;
     state.started = true;
@@ -189,12 +203,9 @@
         /* subscription is best-effort */
       }
     }
-    // Views never receive appearance:changed. Polling is cheap (fingerprint
-    // skips no-ops) and also covers a missed first push on panel windows.
     startPoll(bridge);
   }
 
-  /** Force a palette ("light"/"dark") or clear the override to follow the app. */
   function setThemeOverride(base) {
     var next = base === "light" || base === "dark" ? base : null;
     if (next === state.themeOverride) return;
@@ -215,7 +226,6 @@
       localeListeners.push(fn);
     },
     setThemeOverride: setThemeOverride,
-    /** For debugging / devtools. */
     __state: state,
   };
 })();

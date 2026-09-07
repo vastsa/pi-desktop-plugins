@@ -77,11 +77,14 @@ the folder as a development plugin.
 
 ## Changelog
 
+### 0.2.7
+
+Follow the app color mode only. Do not snap to the OS palette — that flashed
+when the app and the system disagreed. 只跟随应用颜色模式，不再跟系统色抢。
+
 ### 0.2.6
 
-Follows the app light/dark mode live in the work-panel view. Views have no
-`appearance:changed` push, so Git Lens proxies `pi.app.getAppearance()` and
-the renderer polls it. 工作面板内实时跟随应用亮暗模式。
+Follows the app light/dark mode live in the work-panel view.
 
 ### 0.2.5
 

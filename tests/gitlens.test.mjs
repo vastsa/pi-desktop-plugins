@@ -62,7 +62,7 @@ function createTempRepo() {
 test("manifest declares the expected identity, permissions and contributions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.gitlens");
-  assert.equal(manifest.version, "0.2.6");
+  assert.equal(manifest.version, "0.2.7");
   assert.equal(manifest.engines.piDesktop, ">=0.8.0");
   assert.deepEqual(manifest.permissions, ["ui.view"]);
   assert.equal(manifest.ui, undefined);
@@ -440,8 +440,7 @@ test("panel handlers run end-to-end against a real repository", { skip: !hasGit 
       const state = await main.onPanelInvoke("git.state", {});
       assert.equal(state.ok, true);
       assert.equal(state.repoRoot, realpathSync(repo.root));
-      assert.equal(state.appearance.locale, "en");
-      assert.equal(state.appearance.base, "system");
+      assert.equal(state.appearance, null);
 
       // Path/ref guards reject escapes through the panel channel too.
       await assert.rejects(() => main.onPanelInvoke("git.blame", { path: "../etc/passwd" }));

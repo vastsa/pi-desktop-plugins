@@ -931,6 +931,14 @@ function applyRequestedState(state) {
 
 function applyHostAppearance(appearance) {
   if (!appearance || typeof appearance !== "object") return;
+  if (
+    appearance.base !== "light" &&
+    appearance.base !== "dark" &&
+    appearance.theme !== "light" &&
+    appearance.theme !== "dark"
+  ) {
+    return;
+  }
   const adapter = window.__appearance;
   if (adapter && typeof adapter.apply === "function") adapter.apply(appearance);
 }
