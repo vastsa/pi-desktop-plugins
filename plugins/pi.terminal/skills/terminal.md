@@ -28,4 +28,4 @@ Open it by telling them to use the work-panel **Terminal** view (Mod+J, then Ter
 - Uninstalling or disabling the plugin kills every session.
 - Default cwd is the open workspace, otherwise the user's home directory.
 - Sessions are login shells with the user's interactive PATH (pnpm, nvm, Homebrew, cargo, bun), not the thin GUI PATH of the Electron host.
-- macOS defaults to `$SHELL` then zsh; Linux to `$SHELL` then bash; Windows to PowerShell, then cmd, with Git Bash as an optional profile when installed.
+- macOS defaults to `$SHELL` then zsh; Linux to `$SHELL` then bash; Windows to PowerShell, then cmd, with Git Bash as an optional profile when installed. On Windows the shell is attached via ConPTY inside the work panel — it must not open a separate `powershell.exe` window.

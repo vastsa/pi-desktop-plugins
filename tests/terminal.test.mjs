@@ -76,7 +76,7 @@ function waitFor(fn, timeoutMs = 1500) {
 test("manifest declares terminal identity, views, permissions and no agent tools", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.terminal");
-  assert.equal(manifest.version, "0.1.5");
+  assert.equal(manifest.version, "0.1.6");
   assert.equal(manifest.ui, undefined);
   assert.deepEqual(manifest.permissions, [
     "ui.view",
@@ -152,6 +152,23 @@ test("helper binary names cover the six pack targets", () => {
   ]) {
     assert.equal(existsSync(join(vendor, name)), true, `missing ${name}`);
   }
+});
+
+test("Windows ConPTY helper attaches the shell instead of opening a console window", () => {
+  const winPty = readFileSync(join(pluginRoot, "helper/pty_windows.go"), "utf8");
+  const buildSh = readFileSync(join(pluginRoot, "helper/build.sh"), "utf8");
+  const ptyJs = readFileSync(join(pluginRoot, "pty.js"), "utf8");
+  assert.match(winPty, /windows\.CreatePseudoConsole/);
+  assert.match(winPty, /PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE/);
+  assert.match(winPty, /CREATE_NO_WINDOW/);
+  assert.match(winPty, /STARTF_USESTDHANDLES/);
+  assert.match(winPty, /STARTF_USESHOWWINDOW/);
+  assert.match(winPty, /SW_HIDE/);
+  assert.match(winPty, /windows\.CreatePipe/);
+  assert.match(winPty, /unsafe\.Pointer\(hpc\)/);
+  assert.doesNotMatch(winPty, /unsafe\.Pointer\(&hpc\)/);
+  assert.match(buildSh, /-H windowsgui/);
+  assert.match(ptyJs, /windowsHide:\s*true/);
 });
 
 test("default shells follow platform conventions", () => {

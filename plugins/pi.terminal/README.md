@@ -32,6 +32,8 @@ No `fs.*` permission. The plugin process reads the current workspace path and pa
 
 A bundled helper binary (`vendor/pi-pty-<os>-<arch>`) owns the real PTY (forkpty / ConPTY). The plugin process speaks a JSON-line protocol with the helper. The sandboxed view has no Node and no push channel, so output is pulled with `pty.drain` long-polls.
 
+On Windows the helper is a GUI-subsystem binary and attaches PowerShell (or cmd / Git Bash) to ConPTY with `CREATE_NO_WINDOW`, so the shell runs inside the work-panel xterm instead of popping a separate console.
+
 The zip packer does not preserve unix `+x`. On first spawn the plugin `chmod`s the helper.
 
 ## Settings
@@ -44,7 +46,7 @@ The zip packer does not preserve unix `+x`. On first spawn the plugin `chmod`s t
 ## Development
 
 ```bash
-# rebuild helpers (Go 1.22+)
+# rebuild helpers (Go 1.22+). Windows binaries use -H windowsgui.
 sh plugins/pi.terminal/helper/build.sh
 
 python3 scripts/pack_plugin.py plugins/pi.terminal

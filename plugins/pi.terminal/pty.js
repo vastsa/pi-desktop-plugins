@@ -138,6 +138,7 @@ function createPtyHost(options = {}) {
       const spawned = spawnFn(bin, [], {
         stdio: ["pipe", "pipe", "pipe"],
         windowsHide: true,
+        windowsVerbatimArguments: platform === "win32",
       });
       child = spawned;
       stdoutBuf = "";
