@@ -12,6 +12,7 @@
  * Everything here is strictly read-only and stays on this device:
  *   ~/.pi-desktop/pi.sqlite            kv(ns='app', key='app') → { theme, language }
  *                                      providers(id, name)     → display names
+ *                                      turns (completed usage) → subagent-inclusive remainders
  *   ~/.pi-desktop/plugins/registry.json + the theme plugin's manifest + CSS
  *
  * No message text, tool arguments, session ids or project paths are touched, no
@@ -287,8 +288,80 @@ function readHostAppearance(hostRoot) {
   return value;
 }
 
+/**
+ * Completed-turn usage from the host database. Only token columns and ids;
+ * no message text. Used to fold subagent spend that never landed on
+ * transcript `message.usage` into the PI-Desktop scan.
+ */
+function readCompletedTurnUsage(hostRoot) {
+  const result = {
+    events: [],
+    diagnostics: { sourceId: "pi-desktop", filesScanned: 0, filesSkipped: 0, malformedLines: 0, usageMessages: 0 },
+  };
+  const dbFile = path.join(String(hostRoot || ""), "pi.sqlite");
+  if (!existsSync(dbFile)) return result;
+  const db = openHostDb(dbFile);
+  if (!db) {
+    result.diagnostics.filesSkipped += 1;
+    return result;
+  }
+  try {
+    const rows = db
+      .prepare(
+        `SELECT ended_at, input_tokens, output_tokens, usage_json, session_id, model_id, provider_id
+         FROM turns
+         WHERE status = 'completed' AND ended_at IS NOT NULL`,
+      )
+      .all();
+    result.diagnostics.filesScanned += 1;
+    for (const row of rows || []) {
+      const tokens = tokensFromTurnRow(row);
+      const timestamp = Number(row?.ended_at);
+      const sessionId = String(row?.session_id || "").trim();
+      if (!tokens || !sessionId || !Number.isFinite(timestamp)) continue;
+      result.events.push({
+        sourceId: "pi-desktop",
+        sessionId: `pi-desktop:${sessionId}`,
+        timestamp,
+        modelId: String(row.model_id || "Unknown model"),
+        providerId: String(row.provider_id || "Unknown provider"),
+        tokens,
+      });
+      result.diagnostics.usageMessages += 1;
+    }
+  } catch {
+    result.diagnostics.filesSkipped += 1;
+  } finally {
+    closeQuietly(db);
+  }
+  return result;
+}
+
+function tokensFromTurnRow(row) {
+  let parsed = null;
+  try {
+    parsed = row?.usage_json ? JSON.parse(String(row.usage_json)) : null;
+  } catch {
+    parsed = null;
+  }
+  const object = parsed && typeof parsed === "object" ? parsed : {};
+  const n = (value) => {
+    const parsedNumber = Number(value);
+    return Number.isFinite(parsedNumber) ? Math.max(0, parsedNumber) : 0;
+  };
+  const input = n(object.inputTokens ?? object.input_tokens ?? row?.input_tokens);
+  const output = n(object.outputTokens ?? object.output_tokens ?? row?.output_tokens);
+  const cacheRead = n(object.cacheReadTokens);
+  const cacheWrite = n(object.cacheWriteTokens);
+  const reasoning = n(object.reasoningTokens);
+  const total = n(object.totalTokens) || input + output + cacheRead + cacheWrite + reasoning;
+  if (!input && !output && !cacheRead && !cacheWrite && !reasoning && !total) return null;
+  return { input, output, cacheRead, cacheWrite, reasoning, total };
+}
+
 module.exports = {
   hostRootFromDataPath,
+  readCompletedTurnUsage,
   readHostAppearance,
   readProviderLabels,
   __test: {

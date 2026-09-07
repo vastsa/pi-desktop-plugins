@@ -16,6 +16,7 @@ const path = require("node:path");
 const { watch } = require("node:fs");
 const { homedir } = require("node:os");
 const {
+  mergePiDesktopTurnRemainder,
   mergeResults,
   scanClaudeCodeDirectory,
   scanCodexDirectory,
@@ -25,7 +26,12 @@ const {
   toTokens,
 } = require("./source-adapters");
 const aggregateApi = require("./aggregate");
-const { hostRootFromDataPath, readHostAppearance, readProviderLabels } = require("./host-read");
+const {
+  hostRootFromDataPath,
+  readCompletedTurnUsage,
+  readHostAppearance,
+  readProviderLabels,
+} = require("./host-read");
 
 const { aggregate, buildFacts, dayKeyFromTimestamp, milestones, shiftDayKey, todayKey } = aggregateApi;
 
@@ -80,13 +86,19 @@ async function sourceRoots() {
 
 async function scanEvents(progress) {
   const roots = await sourceRoots();
-  const results = await Promise.all([
+  const host = testRoots?.hostRoot || (await hostRoot());
+  const [piJsonl, claudeCode, codex, openCode] = await Promise.all([
     scanPiTranscriptDirectory(roots.piDesktop, progress),
     scanClaudeCodeDirectory(roots.claudeCode, progress),
     scanCodexDirectory(roots.codex, progress),
     scanOpenCodeDirectory(roots.openCode, progress),
   ]);
-  return mergeResults(results);
+  const turns = readCompletedTurnUsage(host);
+  const piDesktop = mergePiDesktopTurnRemainder(piJsonl, turns.events);
+  if (turns.diagnostics?.filesScanned) {
+    piDesktop.diagnostics.filesScanned += turns.diagnostics.filesScanned;
+  }
+  return mergeResults([piDesktop, claudeCode, codex, openCode]);
 }
 
 /**
@@ -482,6 +494,8 @@ module.exports = {
     scanClaudeCodeDirectory,
     scanCodexDirectory,
     scanOpenCodeDirectory,
+    mergePiDesktopTurnRemainder,
+    readCompletedTurnUsage,
     scanPiTranscriptDirectory,
     todayKey,
     toTokens,

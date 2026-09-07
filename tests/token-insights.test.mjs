@@ -50,7 +50,7 @@ function waitForBackgroundScan() {
 }
 
 test("manifest declares the independent scanner and minimal host permissions", () => {
-  assert.equal(manifest.version, "0.4.7");
+  assert.equal(manifest.version, "0.4.8");
   assert.deepEqual(manifest.permissions, ["ui.panel", "agent.tool.register"]);
   assert.equal(manifest.engines.piDesktop, ">=0.2.9");
   assert.deepEqual(
@@ -152,6 +152,144 @@ test("scanner aggregates usage metadata, excludes revisions, and drops transcrip
     });
     assert.equal(result.diagnostics.usageMessages, 2);
     assert.doesNotMatch(JSON.stringify(result), /content|private|message text|tool arguments/i);
+  } finally {
+    fixture.cleanup();
+  }
+});
+
+test("completed-turn remainder fills subagent tokens missing from transcripts", () => {
+  const noon = new Date(2026, 6, 30, 12).getTime();
+  const jsonl = {
+    events: [
+      {
+        sourceId: "pi-desktop",
+        sessionId: "pi-desktop:abc",
+        timestamp: noon,
+        modelId: "alpha",
+        providerId: "local",
+        tokens: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 15 },
+      },
+    ],
+    diagnostics: { sourceId: "pi-desktop", filesScanned: 1, filesSkipped: 0, malformedLines: 0, usageMessages: 1 },
+  };
+  const merged = plugin.__test.mergePiDesktopTurnRemainder(jsonl, [
+    {
+      sourceId: "pi-desktop",
+      sessionId: "pi-desktop:abc",
+      timestamp: noon,
+      modelId: "alpha",
+      providerId: "local",
+      tokens: { input: 20, output: 15, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 35 },
+    },
+  ]);
+  assert.equal(merged.events.length, 2);
+  assert.equal(merged.events[1].modelId, "Subagent");
+  assert.deepEqual(merged.events[1].tokens, {
+    input: 10,
+    output: 10,
+    cacheRead: 0,
+    cacheWrite: 0,
+    reasoning: 0,
+    total: 20,
+  });
+});
+
+test("completed-turn remainder does not double-count matching transcripts", () => {
+  const noon = new Date(2026, 6, 30, 12).getTime();
+  const event = {
+    sourceId: "pi-desktop",
+    sessionId: "pi-desktop:abc",
+    timestamp: noon,
+    modelId: "alpha",
+    providerId: "local",
+    tokens: { input: 10, output: 5, cacheRead: 2, cacheWrite: 1, reasoning: 0, total: 18 },
+  };
+  const merged = plugin.__test.mergePiDesktopTurnRemainder(
+    { events: [event], diagnostics: { usageMessages: 1 } },
+    [event],
+  );
+  assert.equal(merged.events.length, 1);
+  assert.equal(merged.events[0].modelId, "alpha");
+});
+
+test("completed-turn rows fill a session-day with no transcript", () => {
+  const noon = new Date(2026, 6, 30, 12).getTime();
+  const turn = {
+    sourceId: "pi-desktop",
+    sessionId: "pi-desktop:abc",
+    timestamp: noon,
+    modelId: "alpha",
+    providerId: "local",
+    tokens: { input: 8, output: 2, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 10 },
+  };
+  const merged = plugin.__test.mergePiDesktopTurnRemainder(
+    { events: [], diagnostics: { usageMessages: 0 } },
+    [turn],
+  );
+  assert.equal(merged.events.length, 1);
+  assert.equal(merged.events[0].modelId, "alpha");
+  assert.equal(merged.events[0].tokens.total, 10);
+});
+
+test("readCompletedTurnUsage maps turn rows without message text", () => {
+  let sqlite;
+  try {
+    sqlite = require("node:sqlite");
+  } catch {
+    return;
+  }
+  if (!sqlite?.DatabaseSync) return;
+  const fixture = createFixture();
+  try {
+    const db = new sqlite.DatabaseSync(join(fixture.root, "pi.sqlite"));
+    db.exec(`CREATE TABLE turns (
+      id TEXT PRIMARY KEY,
+      session_id TEXT,
+      status TEXT,
+      provider_id TEXT,
+      model_id TEXT,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      usage_json TEXT,
+      started_at INTEGER,
+      ended_at INTEGER
+    )`);
+    const endedAt = new Date(2026, 6, 30, 12).getTime();
+    db.prepare(
+      `INSERT INTO turns (id, session_id, status, provider_id, model_id, input_tokens, output_tokens, usage_json, started_at, ended_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      "t1",
+      "sess-uuid",
+      "completed",
+      "local",
+      "alpha",
+      10,
+      5,
+      JSON.stringify({
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 2,
+        cacheWriteTokens: 0,
+        reasoningTokens: 0,
+        totalTokens: 17,
+      }),
+      endedAt - 1,
+      endedAt,
+    );
+    db.close();
+    const result = plugin.__test.readCompletedTurnUsage(fixture.root);
+    assert.equal(result.events.length, 1);
+    assert.equal(result.events[0].sessionId, "pi-desktop:sess-uuid");
+    assert.deepEqual(result.events[0].tokens, {
+      input: 10,
+      output: 5,
+      cacheRead: 2,
+      cacheWrite: 0,
+      reasoning: 0,
+      total: 17,
+    });
+    assert.doesNotMatch(JSON.stringify(result), /secret|message text|tool arguments/i);
   } finally {
     fixture.cleanup();
   }

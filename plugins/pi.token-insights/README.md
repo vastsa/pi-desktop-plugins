@@ -76,6 +76,7 @@ Everything is local and read-only:
 | Read | Why |
 | --- | --- |
 | `~/.pi-desktop/sessions/*.jsonl` | assistant-reply usage counts |
+| `pi.sqlite` → `turns` | completed-turn totals, including subagent spend missing from `message.usage` |
 | `~/.claude/projects`, `~/.codex/sessions`, `~/.local/share/opencode/storage/message` | the same, for those tools |
 | `pi.sqlite` → `kv(ns='app')` | the app's theme and language |
 | `pi.sqlite` → `providers(id, name)` | so a ranking shows `openlux`, not a UUID |
@@ -89,6 +90,10 @@ only.
 
 ## Notes
 
+- For PI-Desktop, completed-turn totals from `pi.sqlite` fill in subagent spend
+  that never landed on assistant `meta.usage`. Transcript rows still drive
+  model/provider rankings; the extra is labelled Subagent. Days where the
+  transcript already matches the turn total are unchanged.
 - The four counters are summed from each tool's own fields. For some tools cache
   reads and reasoning are already counted inside input and output, so the four
   cards can add up to more than the total. The footer says so on screen.

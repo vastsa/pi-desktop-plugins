@@ -230,6 +230,100 @@ function scanOpenCodeDirectory(root, progress = noopProgress()) {
   return result;
 }
 
+const TOKEN_FIELDS = ["input", "output", "cacheRead", "cacheWrite", "reasoning", "total"];
+
+function emptyTokenBag() {
+  return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 0 };
+}
+
+function addTokens(left, right) {
+  const out = emptyTokenBag();
+  for (const key of TOKEN_FIELDS) out[key] = (left?.[key] || 0) + (right?.[key] || 0);
+  return out;
+}
+
+function remainderTokens(turn, jsonl) {
+  const out = emptyTokenBag();
+  for (const key of TOKEN_FIELDS) {
+    if (key === "total") continue;
+    out[key] = Math.max(0, (turn?.[key] || 0) - (jsonl?.[key] || 0));
+  }
+  out.total = out.input + out.output + out.cacheRead + out.cacheWrite + out.reasoning;
+  const totalGap = Math.max(0, (turn?.total || 0) - (jsonl?.total || 0));
+  if (out.total === 0 && totalGap > 0) {
+    out.input = totalGap;
+    out.total = totalGap;
+  }
+  return out;
+}
+
+function localDayKey(timestamp) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Fold host completed-turn totals into the PI-Desktop JSONL scan.
+ *
+ * Transcript assistant rows stay the model/provider ranking. When a durable
+ * turn's total exceeds those rows (subagent spend that never landed on
+ * `message.usage`), emit one remainder event. When JSONL has nothing for that
+ * session-day, use the turn rows as-is so a missing transcript still counts.
+ */
+function mergePiDesktopTurnRemainder(jsonlResult, turnEvents) {
+  const events = Array.isArray(jsonlResult?.events) ? jsonlResult.events.slice() : [];
+  const diagnostics = jsonlResult?.diagnostics || diagnostics("pi-desktop");
+  const jsonlByKey = new Map();
+  for (const item of events) {
+    const day = localDayKey(item.timestamp);
+    if (!day || !item.sessionId) continue;
+    const key = `${day}|${item.sessionId}`;
+    jsonlByKey.set(key, addTokens(jsonlByKey.get(key), item.tokens));
+  }
+  const turnByKey = new Map();
+  for (const item of turnEvents || []) {
+    const day = localDayKey(item.timestamp);
+    if (!day || !item.sessionId) continue;
+    const key = `${day}|${item.sessionId}`;
+    const prev = turnByKey.get(key);
+    if (prev) {
+      prev.tokens = addTokens(prev.tokens, item.tokens);
+      prev.timestamp = Math.max(prev.timestamp, item.timestamp);
+    } else {
+      turnByKey.set(key, {
+        sourceId: "pi-desktop",
+        sessionId: item.sessionId,
+        timestamp: item.timestamp,
+        modelId: item.modelId || "Unknown model",
+        providerId: item.providerId || "Unknown provider",
+        tokens: addTokens(emptyTokenBag(), item.tokens),
+      });
+    }
+  }
+  const extras = [];
+  for (const [key, turn] of turnByKey) {
+    if (!jsonlByKey.has(key)) {
+      extras.push(turn);
+      continue;
+    }
+    const rem = remainderTokens(turn.tokens, jsonlByKey.get(key));
+    if (!rem.total) continue;
+    extras.push({
+      ...turn,
+      modelId: "Subagent",
+      tokens: rem,
+    });
+  }
+  return {
+    events: events.concat(extras),
+    diagnostics: {
+      ...diagnostics,
+      usageMessages: (diagnostics.usageMessages || 0) + extras.length,
+    },
+  };
+}
+
 function mergeResults(results) {
   const sources = results.map((result) => result.diagnostics);
   return {
@@ -245,6 +339,7 @@ function mergeResults(results) {
 }
 
 module.exports = {
+  mergePiDesktopTurnRemainder,
   mergeResults,
   noopProgress,
   scanClaudeCodeDirectory,
