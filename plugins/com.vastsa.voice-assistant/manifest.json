@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "com.vastsa.voice-assistant",
+  "name": "Voice Assistant",
+  "version": "1.0.0",
+  "description": "Speak to a model and route approved commands to PI-Desktop.",
+  "author": {
+    "name": "VastSa",
+    "url": "https://github.com/vastsa"
+  },
+  "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/com.vastsa.voice-assistant",
+  "repository": "https://github.com/vastsa/pi-desktop-plugins",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "width": 560,
+    "height": 680,
+    "title": {
+      "en": "Voice Assistant",
+      "zh-CN": "语音助手"
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "com.vastsa.voice-assistant.open",
+        "title": "Voice Assistant: open",
+        "keywords": ["voice", "assistant", "speech", "语音", "助手"],
+        "category": "Agent"
+      }
+    ],
+    "settings": [
+      {
+        "key": "modelKey",
+        "type": "string",
+        "default": "",
+        "title": "Voice model",
+        "description": "providerId/modelId used to route spoken commands."
+      },
+      {
+        "key": "thinkingLevel",
+        "type": "select",
+        "default": "low",
+        "title": "Routing effort",
+        "enum": [
+          { "label": "minimal", "value": "minimal" },
+          { "label": "low", "value": "low" },
+          { "label": "medium", "value": "medium" },
+          { "label": "high", "value": "high" }
+        ]
+      },
+      {
+        "key": "speakReplies",
+        "type": "boolean",
+        "default": true,
+        "title": "Speak replies",
+        "description": "Read assistant replies through the system speech synthesizer."
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "ui.microphone",
+    "agent.complete",
+    "models.list",
+    "desktop.control"
+  ],
+  "engines": {
+    "piDesktop": ">=0.8.0"
+  }
+}

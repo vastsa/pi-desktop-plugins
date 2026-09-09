@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="pi-plugin-chrome" content="v2" />
+    <title>语音助手</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f172a;
+        --panel: #111c31;
+        --fg: #f8fafc;
+        --muted: #94a3b8;
+        --border: #263651;
+        --hover: #172640;
+        --accent: #22c55e;
+        --accent-strong: #16a34a;
+        --danger: #fb7185;
+        --shadow: rgb(0 0 0 / 24%);
+        font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      }
+      :root[data-base="light"] {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --fg: #0f172a;
+        --muted: #526176;
+        --border: #d8e0eb;
+        --hover: #eef4fb;
+        --accent: #15803d;
+        --accent-strong: #166534;
+        --danger: #be123c;
+        --shadow: rgb(15 23 42 / 12%);
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); }
+      body { padding-top: var(--pi-plugin-titlebar-height, 0px); }
+      button, select, textarea { font: inherit; }
+      button, select, textarea {
+        color: inherit;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+      }
+      button { cursor: pointer; }
+      button:focus-visible, select:focus-visible, textarea:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .app { display: flex; flex-direction: column; height: 100%; padding: 14px; gap: 12px; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+      .brand-mark {
+        display: grid; place-items: center; width: 30px; height: 30px;
+        color: #052e16; background: var(--accent); border-radius: 8px;
+      }
+      .brand-copy { min-width: 0; }
+      .brand-title { font-size: 14px; font-weight: 700; letter-spacing: .01em; }
+      .brand-meta { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .settings { display: flex; gap: 7px; align-items: center; }
+      .settings select { max-width: 210px; padding: 7px 28px 7px 8px; }
+      .toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+      .toggle input { accent-color: var(--accent); }
+      .messages {
+        flex: 1; min-height: 160px; overflow: auto; padding: 4px 2px;
+        display: flex; flex-direction: column; gap: 9px;
+      }
+      .message { max-width: 90%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+      .message.user { align-self: flex-end; background: var(--hover); }
+      .message.assistant { align-self: flex-start; background: var(--panel); }
+      .message.system { align-self: center; color: var(--muted); border-style: dashed; font-size: 12px; }
+      .empty { margin: auto; max-width: 330px; color: var(--muted); text-align: center; }
+      .empty strong { display: block; color: var(--fg); margin-bottom: 5px; }
+      .confirmation {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+        padding: 10px; border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
+        border-radius: 10px; background: color-mix(in srgb, var(--danger) 9%, var(--panel));
+      }
+      .confirmation-copy { min-width: 0; }
+      .confirmation-title { color: var(--danger); font-weight: 700; margin-bottom: 3px; }
+      .confirmation-text { color: var(--muted); overflow-wrap: anywhere; }
+      .confirmation-actions { display: flex; gap: 6px; flex-shrink: 0; }
+      .confirmation-actions button { padding: 6px 9px; }
+      .confirm { color: #fff; background: var(--danger); border-color: var(--danger); }
+      .composer { display: flex; align-items: flex-end; gap: 8px; }
+      textarea { flex: 1; min-height: 42px; max-height: 120px; resize: vertical; padding: 10px; }
+      .icon-button { display: inline-grid; place-items: center; width: 42px; height: 42px; padding: 0; }
+      .record { color: var(--fg); }
+      .record.live { color: #fff; background: var(--danger); border-color: var(--danger); animation: pulse 1.5s ease-in-out infinite; }
+      .send { color: #052e16; background: var(--accent); border-color: var(--accent); }
+      .send:hover { background: var(--accent-strong); }
+      .footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+      .new-session { padding: 5px 8px; }
+      .status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .error { color: var(--danger); }
+      @keyframes pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 20%, transparent); } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+          </div>
+          <div class="brand-copy">
+            <div class="brand-title">语音助手</div>
+            <div class="brand-meta" id="sessionMeta">正在准备控制目录…</div>
+          </div>
+        </div>
+        <div class="settings">
+          <label class="toggle"><input id="speakReplies" type="checkbox" checked /> 播报</label>
+          <select id="model" aria-label="语音模型"><option value="">选择模型</option></select>
+        </div>
+      </header>
+
+      <section class="messages" id="messages" role="log" aria-live="polite" aria-label="对话记录">
+        <div class="empty" id="emptyState"><strong>点击麦克风开始</strong><span>也可以在下方输入文字，直接调用 PI-Desktop 操作。</span></div>
+      </section>
+
+      <div id="confirmationSlot" aria-live="assertive"></div>
+
+      <form class="composer" id="composer">
+        <textarea id="text" rows="1" placeholder="说出或输入指令…" aria-label="语音指令"></textarea>
+        <button class="icon-button record" id="record" type="button" aria-label="开始录音" title="开始录音">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+        </button>
+        <button class="icon-button send" type="submit" aria-label="发送" title="发送">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
+      </form>
+
+      <footer class="footer">
+        <span class="status" id="status" role="status">就绪</span>
+        <button class="new-session" id="newSession" type="button">新建会话</button>
+      </footer>
+    </main>
+    <script>
+      const modelEl = document.getElementById("model");
+      const speakEl = document.getElementById("speakReplies");
+      const messagesEl = document.getElementById("messages");
+      const emptyEl = document.getElementById("emptyState");
+      const confirmationEl = document.getElementById("confirmationSlot");
+      const textEl = document.getElementById("text");
+      const recordEl = document.getElementById("record");
+      const statusEl = document.getElementById("status");
+      const sessionMetaEl = document.getElementById("sessionMeta");
+      const newSessionEl = document.getElementById("newSession");
+      let recognition = null;
+      let listening = false;
+      let submitOnEnd = false;
+      let finalTranscript = "";
+      let busy = false;
+
+      function applyAppearance(appearance) {
+        const base = appearance?.base === "light" || appearance?.base === "dark"
+          ? appearance.base
+          : window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        document.documentElement.dataset.base = base;
+      }
+
+      function setStatus(text, error = false) {
+        statusEl.textContent = text;
+        statusEl.classList.toggle("error", error);
+      }
+
+      function addMessage(role, text) {
+        emptyEl.hidden = true;
+        const node = document.createElement("div");
+        node.className = `message ${role}`;
+        node.textContent = String(text || "");
+        messagesEl.append(node);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return node;
+      }
+
+      function speak(text) {
+        if (!speakEl.checked || !text || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(String(text));
+        utterance.lang = "zh-CN";
+        window.speechSynthesis.speak(utterance);
+      }
+
+      function clearConfirmation() { confirmationEl.replaceChildren(); }
+
+      function showConfirmation(result) {
+        clearConfirmation();
+        const card = document.createElement("div");
+        card.className = "confirmation";
+        const copy = document.createElement("div");
+        copy.className = "confirmation-copy";
+        const title = document.createElement("div");
+        title.className = "confirmation-title";
+        title.textContent = "需要确认";
+        const body = document.createElement("div");
+        body.className = "confirmation-text";
+        body.textContent = result.text || result.description || result.operation;
+        copy.append(title, body);
+        const actions = document.createElement("div");
+        actions.className = "confirmation-actions";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.textContent = "取消";
+        cancel.addEventListener("click", () => {
+          clearConfirmation();
+          void invoke("voice.cancel").then(handleResult).catch(showError);
+        });
+        const confirm = document.createElement("button");
+        confirm.type = "button";
+        confirm.className = "confirm";
+        confirm.textContent = "确认执行";
+        confirm.addEventListener("click", () => {
+          clearConfirmation();
+          setStatus("正在执行…");
+          void invoke("voice.confirm", { token: result.token }).then(handleResult).catch(showError);
+        });
+        actions.append(cancel, confirm);
+        card.append(copy, actions);
+        confirmationEl.append(card);
+      }
+
+      function showError(error) {
+        const message = error?.message || String(error);
+        addMessage("assistant", message);
+        setStatus(message, true);
+      }
+
+      function invoke(channel, payload) {
+        return window.pluginBridge.invoke(channel, payload);
+      }
+
+      function pollAgent() {
+        void invoke("voice.poll").then((result) => {
+          if (result?.state === "done") {
+            addMessage("assistant", result.text || "Agent 已完成。");
+            speak(result.text);
+            setStatus("就绪");
+            return;
+          }
+          if (result?.state === "error") {
+            addMessage("assistant", result.text || "Agent 执行失败。");
+            setStatus(result.text || "执行失败", true);
+            return;
+          }
+          setStatus(result?.state === "running" ? "Agent 正在执行…" : "等待 Agent 回复…");
+          window.setTimeout(pollAgent, 700);
+        }).catch(showError);
+      }
+
+      function handleResult(result) {
+        if (!result) return;
+        if (result.type === "confirmation") {
+          showConfirmation(result);
+          setStatus("等待确认");
+          return;
+        }
+        if (result.type === "agent_started") {
+          addMessage("assistant", result.text || "Agent 正在执行。");
+          pollAgent();
+          return;
+        }
+        if (result.type === "error") {
+          addMessage("assistant", result.text || "操作失败。");
+          setStatus(result.text || "操作失败", true);
+          return;
+        }
+        if (result.text) {
+          addMessage("assistant", result.text);
+          speak(result.text);
+          setStatus("就绪");
+        }
+      }
+
+      async function sendText(value) {
+        const text = String(value || "").trim();
+        if (!text || busy) return;
+        busy = true;
+        textEl.value = "";
+        addMessage("user", text);
+        setStatus("正在理解…");
+        try {
+          handleResult(await invoke("voice.route", { text }));
+        } catch (error) {
+          showError(error);
+        } finally {
+          busy = false;
+        }
+      }
+
+      async function prepareMicrophone() {
+        if (!navigator.mediaDevices?.getUserMedia) return;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      function stopListening() {
+        if (!recognition) return;
+        submitOnEnd = true;
+        recognition.stop();
+      }
+
+      async function startListening() {
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Recognition) {
+          setStatus("当前环境不支持语音识别，请输入文字。", true);
+          return;
+        }
+        try {
+          await prepareMicrophone();
+        } catch (error) {
+          setStatus(`麦克风不可用：${error?.message || error}`, true);
+          return;
+        }
+        finalTranscript = "";
+        submitOnEnd = false;
+        recognition = new Recognition();
+        recognition.lang = "zh-CN";
+        recognition.interimResults = true;
+        recognition.continuous = false;
+        recognition.onstart = () => {
+          listening = true;
+          recordEl.classList.add("live");
+          recordEl.setAttribute("aria-label", "停止录音");
+          setStatus("正在聆听…");
+        };
+        recognition.onresult = (event) => {
+          let interim = "";
+          for (let index = event.resultIndex; index < event.results.length; index += 1) {
+            const phrase = event.results[index][0]?.transcript || "";
+            if (event.results[index].isFinal) finalTranscript += phrase;
+            else interim += phrase;
+          }
+          textEl.value = `${finalTranscript}${interim}`;
+        };
+        recognition.onerror = (event) => {
+          listening = false;
+          recordEl.classList.remove("live");
+          setStatus(`语音识别失败：${event.error || "unknown"}`, true);
+        };
+        recognition.onend = () => {
+          const shouldSubmit = submitOnEnd || Boolean(finalTranscript.trim());
+          listening = false;
+          recordEl.classList.remove("live");
+          recordEl.setAttribute("aria-label", "开始录音");
+          submitOnEnd = false;
+          if (shouldSubmit) void sendText(finalTranscript || textEl.value);
+          else setStatus("就绪");
+        };
+        recognition.start();
+      }
+
+      recordEl.addEventListener("click", () => {
+        if (listening) stopListening();
+        else void startListening();
+      });
+      document.getElementById("composer").addEventListener("submit", (event) => {
+        event.preventDefault();
+        void sendText(textEl.value);
+      });
+      speakEl.addEventListener("change", () => {
+        void invoke("voice.set", { modelKey: modelEl.value, speakReplies: speakEl.checked }).catch(showError);
+      });
+      modelEl.addEventListener("change", () => {
+        void invoke("voice.set", { modelKey: modelEl.value, speakReplies: speakEl.checked }).then(() => setStatus("模型已保存")).catch(showError);
+      });
+      newSessionEl.addEventListener("click", async () => {
+        try {
+          const result = await invoke("voice.newSession");
+          messagesEl.querySelectorAll(".message").forEach((node) => node.remove());
+          emptyEl.hidden = true;
+          clearConfirmation();
+          addMessage("system", "已新建会话，可以开始说话。");
+          sessionMetaEl.textContent = `会话 ${result?.sessionId || "已准备"}`;
+          setStatus("就绪");
+        } catch (error) { showError(error); }
+      });
+
+      async function load() {
+        const state = await invoke("voice.get");
+        const models = Array.isArray(state?.models) ? state.models : [];
+        modelEl.replaceChildren(new Option("选择模型", ""));
+        for (const model of models) {
+          modelEl.append(new Option(model.label || model.key, model.key));
+        }
+        modelEl.value = String(state?.modelKey || "");
+        speakEl.checked = state?.speakReplies !== false;
+        sessionMetaEl.textContent = `${state?.operationCount || 0} 项桌面操作可调用`;
+        if (state?.pendingConfirmation) {
+          showConfirmation(state.pendingConfirmation);
+          setStatus("等待确认");
+        }
+        if (!models.length) setStatus("没有已登录模型，请先配置模型。", true);
+      }
+
+      window.pluginBridge.on("appearance:changed", applyAppearance);
+      invoke("app.getAppearance").then(applyAppearance).catch(() => {});
+      load().catch(showError);
+    </script>
+  </body>
+</html>
