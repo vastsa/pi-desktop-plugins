@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.log-viewer",
+  "name": "日志查看器",
+  "version": "0.2.0",
+  "description": "PI-Desktop 大日志文件查看器：GB 级流式分页与虚拟滚动、实时跟随、搜索高亮、文本/等级过滤、钉住对比、多文件页签。",
+  "i18n": {
+    "en": {
+      "name": "Log Viewer",
+      "description": "PI-Desktop log viewer for huge files: streamed paging with virtual scroll, tail follow, search highlight, text/level filter, pinned lines, and multi-file tabs.",
+      "safetyNotes": "Reads only user-selected .log/.txt files through the host fs.read permission gateway (stat/readRange). No writes, no network. Session grants are memory-only; dropped/picked file grants expire with the process. Plugin state (tabs, filters, level colors) is stored in the plugin data directory."
+    },
+    "zh-CN": {
+      "name": "日志查看器",
+      "description": "PI-Desktop 大日志文件查看器：GB 级流式分页与虚拟滚动、实时跟随、搜索高亮、文本/等级过滤、钉住对比、多文件页签。",
+      "safetyNotes": "仅通过宿主 fs.read 权限网关（stat/readRange）只读访问用户选定的 .log/.txt 文件；不写入、不联网。目录与拖入授权仅存内存、随进程失效。页签/过滤/等级配色等状态保存在插件数据目录。"
+    }
+  },
+  "author": "Tioit-Wang",
+  "categories": ["developer-tools", "productivity"],
+  "changelog": "Release 0.2.0：插件 id 定稿 pi.log-viewer；搜索与文本过滤分离（搜索高亮可跳转，过滤只显示/隐藏命中）；过滤视图虚拟滚动；等级配色设置；钉住最多 5 行对比；右键「清除筛选并跳转」；系统文件选择器打开 .log/.txt；首次打开示例引导日志；修复静态文件误报新增、顶部首行窗口空白与底部留白。",
+  "safetyNotes": "仅通过宿主 fs.read 权限网关只读访问用户选定的日志文件；不写入、不联网。目录与拖入/选择文件授权仅存内存、随进程失效。页签/过滤/等级配色等状态保存在插件数据目录。",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "Log Viewer",
+      "zh-CN": "日志查看器"
+    },
+    "width": 1280,
+    "height": 832
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "log-viewer.open",
+        "title": "日志查看器：打开",
+        "keywords": ["log", "日志", "viewer", "tail", "filter"],
+        "category": "Developer Tools"
+      }
+    ]
+  },
+  "permissions": ["ui.panel", "fs.read", "clipboard.write"],
+  "fs": {
+    "read": { "root": "userSelected" }
+  },
+  "engines": {
+    "piDesktop": ">=0.14.3"
+  },
+  "activationEvents": [
+    "onCommand:log-viewer.open"
+  ]
+}

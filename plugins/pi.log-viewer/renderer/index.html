@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="pi-plugin-panel-chrome" content="safe-area-v1" />
+  <title>日志查看器</title>
+  <style>
+    /* ========== 主题变量（对齐 pi-markdown 米白 / 黑夜） ========== */
+    :root,
+    :root[data-theme="light"] {
+      --c-bg: 247 245 241;
+      --c-panel: 251 250 247;
+      --c-panel2: 240 237 230;
+      --c-edge: 230 225 215;
+      --c-edge2: 213 207 194;
+      --c-accent: 51 50 47;
+      --c-accent2: 74 72 68;
+      --c-onaccent: 247 245 241;
+      --c-ink: 46 44 41;
+      --c-muted: 111 106 97;
+      --c-faint: 155 149 138;
+      --c-danger: 201 60 66;
+      --c-ok: 46 139 87;
+      --c-warn: 180 83 9;
+      --c-info: 61 107 143;
+      --c-scroll: 203 197 185;
+      --c-scroll-hover: 181 174 160;
+      --c-selection: 206 199 186;
+      --c-hl: 232 220 172;
+      --c-hl-ink: 64 50 12;
+      --c-code-bg: 251 250 247;
+      --c-code-border: 230 225 215;
+      --lv-error-bg: 201 60 66;
+      --lv-error-fg: 201 60 66;
+      --lv-warn-bg: 180 83 9;
+      --lv-warn-fg: 180 83 9;
+      --lv-info-bg: 61 107 143;
+      --lv-info-fg: 46 44 41;
+      --lv-debug-bg: 155 149 138;
+      --lv-debug-fg: 111 106 97;
+      color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+      --c-bg: 22 22 22;
+      --c-panel: 30 30 30;
+      --c-panel2: 38 38 38;
+      --c-edge: 56 56 56;
+      --c-edge2: 74 74 74;
+      --c-accent: 245 245 245;
+      --c-accent2: 255 255 255;
+      --c-onaccent: 0 0 0;
+      --c-ink: 242 242 242;
+      --c-muted: 166 166 166;
+      --c-faint: 115 115 115;
+      --c-danger: 229 72 77;
+      --c-ok: 48 164 108;
+      --c-warn: 240 160 48;
+      --c-info: 120 160 200;
+      --c-scroll: 74 74 74;
+      --c-scroll-hover: 92 92 92;
+      --c-selection: 74 74 74;
+      --c-hl: 92 74 28;
+      --c-hl-ink: 255 233 168;
+      --c-code-bg: 30 30 30;
+      --c-code-border: 46 46 46;
+      --lv-error-bg: 229 72 77;
+      --lv-error-fg: 229 72 77;
+      --lv-warn-bg: 240 160 48;
+      --lv-warn-fg: 240 160 48;
+      --lv-info-bg: 120 160 200;
+      --lv-info-fg: 242 242 242;
+      --lv-debug-bg: 115 115 115;
+      --lv-debug-fg: 166 166 166;
+      color-scheme: dark;
+    }
+
+    :root {
+      --row-h: 20px;
+      --row-fs: 12px;
+      --log-font: "Cascadia Code", Consolas, "SF Mono", Menlo, "Courier New", monospace;
+      --pi-titlebar: var(--pi-plugin-titlebar-height, 46px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      /* 宿主标题栏不占文档流，内容从窗口顶边开始，状态栏贴底 */
+      padding-top: 0;
+      background: rgb(var(--c-bg));
+      color: rgb(var(--c-ink));
+      font: 13px/1.5 "Segoe UI", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      transition: background-color 0.18s ease, color 0.18s ease;
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgb(var(--c-scroll)); border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-scroll-hover)); }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::selection { background: rgb(var(--c-selection)); }
+
+    button, select, input { font: inherit; color: inherit; }
+    button {
+      background: transparent;
+      border: 1px solid rgb(var(--c-edge2));
+      border-radius: 0;
+      padding: 3px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: rgb(var(--c-muted));
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    button:hover { background: rgb(var(--c-panel)); color: rgb(var(--c-ink)); border-color: rgb(var(--c-edge2)); }
+    button.primary {
+      background: rgb(var(--c-accent));
+      border-color: rgb(var(--c-accent));
+      color: rgb(var(--c-onaccent));
+    }
+    button.primary:hover { background: rgb(var(--c-accent2)); border-color: rgb(var(--c-accent2)); color: rgb(var(--c-onaccent)); }
+    button.toggled {
+      background: rgb(var(--c-panel2));
+      border-color: rgb(var(--c-ink));
+      color: rgb(var(--c-ink));
+    }
+    button:disabled { opacity: 0.4; cursor: default; }
+    button.ghost {
+      border-color: transparent;
+      background: transparent;
+      color: rgb(var(--c-faint));
+      padding: 3px 6px;
+    }
+    button.ghost:hover { color: rgb(var(--c-ink)); background: rgb(var(--c-panel2)); }
+
+    input[type="text"], select {
+      background: rgb(var(--c-bg));
+      border: 1px solid rgb(var(--c-edge));
+      border-radius: 0;
+      padding: 3px 8px;
+      outline: none;
+      color: rgb(var(--c-ink));
+      user-select: text;
+      transition: border-color 0.15s ease;
+    }
+    input[type="text"]:focus { border-color: rgb(var(--c-ink)); }
+    input[type="text"]::placeholder { color: rgb(var(--c-faint)); }
+    input[type="checkbox"] { accent-color: rgb(var(--c-accent)); }
+    select {
+      padding: 2px 4px;
+      font-size: 11px;
+      color: rgb(var(--c-muted));
+    }
+    select:hover { color: rgb(var(--c-ink)); }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: rgb(var(--c-muted));
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    label:hover { color: rgb(var(--c-ink)); }
+
+    .spacer { flex: 1; min-width: 0; }
+
+    /* ========== 页签 ========== */
+    .tabs-bar {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      min-height: 34px;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      background: rgb(var(--c-panel));
+      flex: 0 0 auto;
+    }
+    .tabs {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex: 0 1 auto;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px 0 14px;
+      border-right: 1px solid rgb(var(--c-edge));
+      background: transparent;
+      cursor: pointer;
+      max-width: 220px;
+      flex: 0 0 auto;
+      font-size: 12px;
+      color: rgb(var(--c-muted));
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .tab:hover { background: rgb(var(--c-panel2)); color: rgb(var(--c-ink)); }
+    .tab.active {
+      background: rgb(var(--c-bg));
+      color: rgb(var(--c-ink));
+      box-shadow: inset 0 -2px 0 rgb(var(--c-accent));
+    }
+    .tab .t-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tab .t-close {
+      border: 0; background: none; padding: 0 2px; color: rgb(var(--c-faint));
+      font-size: 11px; line-height: 1;
+    }
+    .tab .t-close:hover { color: rgb(var(--c-danger)); background: none; border: 0; }
+    .tabs-bar > .spacer { border-right: none; }
+    .tabs-bar #btnAdd {
+      border: 0;
+      border-left: 1px solid rgb(var(--c-edge));
+      color: rgb(var(--c-muted));
+      padding: 0 14px;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .tabs-bar #btnAdd:hover { background: rgb(var(--c-panel2)); color: rgb(var(--c-ink)); }
+
+    /* ========== 工具栏 ========== */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      background: rgb(var(--c-panel));
+      flex: 0 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .toolbar::-webkit-scrollbar { display: none; }
+    .toolbar .sep {
+      width: 1px;
+      height: 16px;
+      background: rgb(var(--c-edge2));
+      margin: 0 6px;
+      flex: 0 0 auto;
+    }
+    .toolbar button { border-color: transparent; color: rgb(var(--c-muted)); }
+    .toolbar button:hover { border-color: rgb(var(--c-edge2)); }
+    .toolbar button.toggled { border-color: rgb(var(--c-ink)); }
+
+    /* ========== 文件信息 + 等级徽章 ========== */
+    .filebar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      min-height: 30px;
+      font-size: 12px;
+      background: rgb(var(--c-bg));
+      flex: 0 0 auto;
+    }
+    .filebar .f-name {
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 36%;
+      color: rgb(var(--c-ink));
+    }
+    .filebar .f-meta { color: rgb(var(--c-faint)); white-space: nowrap; font-size: 11px; }
+    .idx-progress { color: rgb(var(--c-faint)); font-size: 11px; white-space: nowrap; }
+    .badges { display: flex; gap: 4px; margin-left: auto; }
+    .badge {
+      border: 1px solid rgb(var(--c-edge));
+      border-radius: 0;
+      padding: 1px 8px;
+      cursor: pointer;
+      font-size: 11px;
+      background: transparent;
+      white-space: nowrap;
+      color: rgb(var(--c-muted));
+      font-variant-numeric: tabular-nums;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .badge:hover { border-color: rgb(var(--c-edge2)); color: rgb(var(--c-ink)); }
+    .badge b { font-weight: 600; }
+    .badge.lv-error b { color: rgb(var(--lv-error-fg)); }
+    .badge.lv-warn b { color: rgb(var(--lv-warn-fg)); }
+    .badge.lv-info b { color: rgb(var(--lv-info-fg)); }
+    .badge.lv-debug b { color: rgb(var(--lv-debug-fg)); }
+    .badge.on {
+      background: rgb(var(--c-accent));
+      border-color: rgb(var(--c-accent));
+      color: rgb(var(--c-onaccent));
+    }
+    .badge.on b { color: rgb(var(--c-onaccent)); }
+    .badge.on::after { content: " ·仅"; font-size: 10px; opacity: 0.75; }
+    .badge.exclude {
+      background: transparent;
+      border-color: rgb(var(--c-danger));
+      color: rgb(var(--c-danger));
+    }
+    .badge.exclude b { color: rgb(var(--c-danger)); }
+    .badge.exclude::after { content: " ·排"; font-size: 10px; }
+
+    /* ========== 搜索 / 过滤条 ========== */
+    .searchbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      background: rgb(var(--c-panel));
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+    }
+    .searchbar.hidden { display: none; }
+    .searchbar input[type="text"] {
+      flex: 0 1 320px;
+      min-width: 140px;
+      font-size: 12px;
+    }
+    .searchbar .mode-tag {
+      flex: 0 0 auto;
+      font-size: 11px;
+      color: rgb(var(--c-faint));
+      user-select: none;
+      min-width: 2em;
+    }
+    .searchbar .mode-tag.filter { color: rgb(var(--c-muted)); }
+    .search-state {
+      color: rgb(var(--c-faint));
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+    }
+    .search-state b { color: rgb(var(--c-ink)); font-weight: 600; }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 26px;
+      padding: 0;
+      border-color: transparent;
+      color: rgb(var(--c-muted));
+    }
+    .icon-btn:hover { color: rgb(var(--c-ink)); border-color: rgb(var(--c-edge2)); }
+    .icon-btn.toggled {
+      background: rgb(var(--c-panel2));
+      border-color: rgb(var(--c-ink));
+      color: rgb(var(--c-ink));
+    }
+
+    /* ========== 日志视图 ========== */
+    .view-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: rgb(var(--c-bg));
+    }
+    .pin-bar {
+      flex: 0 0 auto;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      background: rgb(var(--c-panel));
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    .pin-bar.hidden { display: none; }
+    .pin-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 10px 3px 8px;
+      font-family: var(--log-font);
+      font-size: var(--row-fs);
+      line-height: 18px;
+      border-left: 2px solid rgb(var(--c-accent));
+      background: rgb(var(--c-panel2));
+      cursor: pointer;
+      min-height: 22px;
+    }
+    .pin-row + .pin-row { border-top: 1px solid rgb(var(--c-edge)); }
+    .pin-row:hover { background: rgb(var(--c-panel)); }
+    .pin-row .pin-lno {
+      flex: 0 0 auto;
+      color: rgb(var(--c-faint));
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      min-width: 48px;
+      text-align: right;
+      user-select: none;
+    }
+    .pin-row .pin-txt {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: rgb(var(--c-ink));
+      user-select: text;
+    }
+    .pin-row .pin-tag {
+      flex: 0 0 auto;
+      font-size: 10px;
+      color: rgb(var(--c-faint));
+      border: 1px solid rgb(var(--c-edge2));
+      padding: 0 4px;
+      user-select: none;
+    }
+    .pin-row .pin-x {
+      flex: 0 0 auto;
+      border: 0;
+      background: none;
+      color: rgb(var(--c-faint));
+      padding: 0 4px;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .pin-row .pin-x:hover { color: rgb(var(--c-danger)); background: none; border: 0; }
+    #scroller {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: auto;
+      cursor: default;
+    }
+    #spacer { position: relative; width: max-content; min-width: 100%; }
+    .row {
+      position: absolute;
+      left: 0;
+      right: auto;
+      height: var(--row-h);
+      display: flex;
+      align-items: center;
+      font-family: var(--log-font);
+      font-size: var(--row-fs);
+      line-height: var(--row-h);
+      white-space: pre;
+      color: rgb(var(--c-ink));
+      background: transparent;
+    }
+    .row:hover { background: rgb(var(--c-panel2)); }
+    .row:hover .lno { background: rgb(var(--c-panel2)); }
+    .row.current {
+      background: rgb(var(--c-panel2));
+      box-shadow: inset 2px 0 0 rgb(var(--c-accent));
+    }
+    .lno {
+      position: sticky;
+      left: 0;
+      flex: 0 0 auto;
+      min-width: 60px;
+      padding: 0 8px;
+      text-align: right;
+      color: rgb(var(--c-faint));
+      background: rgb(var(--c-bg));
+      border-right: 1px solid rgb(var(--c-edge));
+      cursor: pointer;
+      user-select: none;
+      z-index: 2;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .lno:hover { color: rgb(var(--c-ink)); }
+    .ltxt { padding: 0 12px; user-select: text; cursor: text; }
+    .ltxt mark {
+      background: rgb(var(--c-hl));
+      color: rgb(var(--c-hl-ink));
+      border-radius: 0;
+      padding: 0 1px;
+    }
+
+    /* 等级行：左侧色条 + 极淡底色（颜色可由设置覆盖） */
+    .row.lv-error {
+      --row-tint: rgb(var(--lv-error-bg) / 0.1);
+      box-shadow: inset 2px 0 0 rgb(var(--lv-error-fg) / 0.75);
+      color: rgb(var(--lv-error-fg));
+    }
+    .row.lv-warn {
+      --row-tint: rgb(var(--lv-warn-bg) / 0.1);
+      box-shadow: inset 2px 0 0 rgb(var(--lv-warn-fg) / 0.7);
+      color: rgb(var(--lv-warn-fg));
+    }
+    .row.lv-info {
+      --row-tint: rgb(var(--lv-info-bg) / 0.07);
+      box-shadow: inset 2px 0 0 rgb(var(--lv-info-fg) / 0.45);
+      color: rgb(var(--lv-info-fg));
+    }
+    .row.lv-debug {
+      --row-tint: rgb(var(--lv-debug-bg) / 0.05);
+      box-shadow: inset 2px 0 0 rgb(var(--lv-debug-fg) / 0.4);
+      color: rgb(var(--lv-debug-fg));
+    }
+    .row.lv-error,
+    .row.lv-warn,
+    .row.lv-info,
+    .row.lv-debug { background: var(--row-tint, transparent); }
+    .row.lv-error:hover,
+    .row.lv-warn:hover,
+    .row.lv-info:hover,
+    .row.lv-debug:hover { background: rgb(var(--c-panel2)); }
+    .row.lv-error .lno,
+    .row.lv-warn .lno,
+    .row.lv-info .lno,
+    .row.lv-debug .lno { background: rgb(var(--c-bg)); }
+    .row.lv-error:hover .lno,
+    .row.lv-warn:hover .lno,
+    .row.lv-info:hover .lno,
+    .row.lv-debug:hover .lno { background: rgb(var(--c-panel2)); }
+    .row.current.lv-error,
+    .row.current.lv-warn,
+    .row.current.lv-info,
+    .row.current.lv-debug { box-shadow: inset 2px 0 0 rgb(var(--c-accent)); }
+
+    /* ========== 设置面板 ========== */
+    .settings-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 16px;
+      overflow: auto;
+    }
+    .settings-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 1fr;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .settings-row .lv-label { font-weight: 600; }
+    .settings-row label.color-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgb(var(--c-muted));
+      font-size: 11px;
+    }
+    .settings-row input[type="color"] {
+      width: 36px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid rgb(var(--c-edge2));
+      background: rgb(var(--c-bg));
+      cursor: pointer;
+    }
+    .settings-note {
+      padding: 0 16px 12px;
+      font-size: 11px;
+      color: rgb(var(--c-faint));
+      line-height: 1.5;
+    }
+
+    #jumpChip {
+      position: absolute;
+      right: 16px;
+      bottom: 12px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgb(var(--c-accent));
+      color: rgb(var(--c-onaccent));
+      border-radius: 0;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 5;
+      transition: background-color 0.15s ease;
+    }
+    #jumpChip:hover { background: rgb(var(--c-accent2)); }
+
+    #dropMask {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgb(var(--c-bg) / 0.88);
+      border: 1px dashed rgb(var(--c-edge2));
+      color: rgb(var(--c-muted));
+      font-size: 13px;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    #emptyState {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: rgb(var(--c-muted));
+      font-size: 13px;
+    }
+    #emptyState .hint { font-size: 12px; color: rgb(var(--c-faint)); }
+    #emptyState svg { opacity: 0.35; }
+
+    /* ========== 状态栏 ========== */
+    .statusbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-top: 1px solid rgb(var(--c-edge));
+      padding: 0 12px;
+      font-size: 11px;
+      color: rgb(var(--c-faint));
+      min-height: 26px;
+      background: rgb(var(--c-panel));
+      flex: 0 0 auto;
+    }
+    .statusbar select {
+      border-color: transparent;
+      background: transparent;
+      color: rgb(var(--c-faint));
+    }
+    .statusbar select:hover {
+      border-color: rgb(var(--c-edge2));
+      color: rgb(var(--c-ink));
+    }
+    .follow-state.on { color: rgb(var(--c-ok)); }
+    .follow-state.paused { color: rgb(var(--c-warn)); }
+
+    /* ========== 弹层 / 菜单 / Toast ========== */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgb(0 0 0 / 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .overlay.show { display: flex; }
+    .sheet {
+      background: rgb(var(--c-panel2));
+      border: 1px solid rgb(var(--c-edge2));
+      border-radius: 0;
+      width: min(640px, 88vw);
+      max-height: 78vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      font-weight: 600;
+      font-size: 13px;
+      color: rgb(var(--c-ink));
+    }
+    .sheet-head .x {
+      margin-left: auto;
+      border: 0;
+      background: none;
+      color: rgb(var(--c-faint));
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .sheet-head .x:hover { color: rgb(var(--c-ink)); background: none; }
+    .crumb {
+      padding: 8px 16px;
+      color: rgb(var(--c-muted));
+      font-size: 12px;
+      border-bottom: 1px solid rgb(var(--c-edge));
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: default;
+    }
+    .file-list { flex: 1; overflow: auto; padding: 4px 0; }
+    .f-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px;
+      cursor: pointer;
+      font-size: 12.5px;
+      color: rgb(var(--c-ink));
+    }
+    .f-row:hover { background: rgb(var(--c-panel)); }
+    .f-row .f-size, .f-row .f-time { color: rgb(var(--c-faint)); font-size: 11px; white-space: nowrap; }
+    .f-row .f-size { margin-left: auto; font-variant-numeric: tabular-nums; }
+    .sheet-foot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid rgb(var(--c-edge));
+    }
+    .sheet-foot #dirSelInfo { color: rgb(var(--c-faint)); font-size: 12px; }
+
+    .menu {
+      position: fixed;
+      display: none;
+      flex-direction: column;
+      background: rgb(var(--c-panel2));
+      border: 1px solid rgb(var(--c-edge2));
+      border-radius: 0;
+      padding: 4px 0;
+      min-width: 160px;
+      z-index: 30;
+    }
+    .menu.show { display: flex; }
+    .menu button {
+      border: 0;
+      background: none;
+      text-align: left;
+      padding: 7px 14px;
+      color: rgb(var(--c-ink));
+      font-size: 12px;
+    }
+    .menu button:hover:not(:disabled) { background: rgb(var(--c-panel)); }
+
+    #toast {
+      position: fixed;
+      right: 14px;
+      bottom: 36px;
+      background: rgb(var(--c-panel2));
+      color: rgb(var(--c-ink));
+      border: 1px solid rgb(var(--c-edge2));
+      border-radius: 0;
+      padding: 8px 14px;
+      font-size: 12px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: all 0.18s ease;
+      pointer-events: none;
+      max-width: 60vw;
+      z-index: 40;
+    }
+    #toast.show { opacity: 1; transform: none; }
+  </style>
+</head>
+<body>
+  <div class="tabs-bar">
+    <div class="tabs" id="tabs"></div>
+    <div class="spacer"></div>
+    <button id="btnAdd" title="打开文件">＋</button>
+  </div>
+
+  <div class="toolbar">
+    <button id="btnOpenDir">打开日志</button>
+    <button id="btnHead">头部</button>
+    <button id="btnTail">尾部</button>
+    <button id="btnJumpLine">跳转行</button>
+    <button id="btnFollow">实时跟随</button>
+    <div class="sep"></div>
+    <button id="btnFontDown" title="减小字号">A−</button>
+    <button id="btnFontUp" title="增大字号">A+</button>
+    <select id="fontFamilySel" title="日志字体">
+      <option value="default">等宽字体（系统）</option>
+      <option value="Consolas, monospace">Consolas</option>
+      <option value='"Cascadia Code", "Cascadia Mono", monospace'>Cascadia Code</option>
+      <option value='"SF Mono", Menlo, monospace'>SF Mono / Menlo</option>
+      <option value='"JetBrains Mono", monospace'>JetBrains Mono</option>
+      <option value='"Fira Code", monospace'>Fira Code</option>
+    </select>
+    <div class="spacer"></div>
+    <button id="btnToggleSearch" class="icon-btn" title="搜索栏（Ctrl+F）" aria-label="搜索">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </button>
+    <button id="btnToggleFilter" class="icon-btn" title="过滤栏（Ctrl+Shift+F）" aria-label="过滤">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5h18l-7 8v5l-4 2v-7L3 5z"/></svg>
+    </button>
+    <button id="btnTheme" class="icon-btn" title="切换米白 / 黑夜主题" aria-label="切换主题"></button>
+    <button id="btnSettings" class="icon-btn" title="等级配色设置" aria-label="设置">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="filebar" id="filebar" style="display:none">
+    <span class="f-name" id="fName"></span>
+    <span class="f-meta" id="fMeta"></span>
+    <span class="idx-progress" id="idxProgress"></span>
+    <div class="badges" id="badges">
+      <span class="badge lv-error" data-level="error">ERROR <b>0</b></span>
+      <span class="badge lv-warn" data-level="warn">WARN <b>0</b></span>
+      <span class="badge lv-info" data-level="info">INFO <b>0</b></span>
+      <span class="badge lv-debug" data-level="debug">DEBUG <b>0</b></span>
+    </div>
+  </div>
+
+  <div class="searchbar hidden" id="searchbar">
+    <span class="mode-tag">搜索</span>
+    <input type="text" id="searchInput" placeholder="高亮命中并跳转（Ctrl+F / F3）" />
+    <label><input type="checkbox" id="cbRegex" /> 正则</label>
+    <label><input type="checkbox" id="cbCase" /> 大小写</label>
+    <button id="btnSearch" class="primary">搜索</button>
+    <button id="btnPrevMatch" title="上一个命中（Shift+F3）">↑</button>
+    <button id="btnNextMatch" title="下一个命中（F3）">↓</button>
+    <span class="search-state" id="searchState"></span>
+    <div class="spacer"></div>
+    <button id="btnSearchClear" class="ghost" title="清空搜索结果">清空</button>
+    <button id="btnSearchClose" class="ghost" title="隐藏搜索栏">✕</button>
+  </div>
+
+  <div class="searchbar hidden" id="filterbar">
+    <span class="mode-tag filter">过滤</span>
+    <input type="text" id="filterInput" placeholder="只显示匹配行（Ctrl+Shift+F）；可勾选隐藏匹配" />
+    <label><input type="checkbox" id="cbFilterRegex" /> 正则</label>
+    <label><input type="checkbox" id="cbFilterCase" /> 大小写</label>
+    <label><input type="checkbox" id="cbFilterInvert" title="勾选后隐藏匹配行"> 隐藏匹配</label>
+    <button id="btnFilter" class="primary">应用</button>
+    <span class="search-state" id="filterState"></span>
+    <div class="spacer"></div>
+    <button id="btnFilterClear" class="ghost" title="清空过滤与等级筛选">清空</button>
+    <button id="btnFilterClose" class="ghost" title="隐藏过滤栏">✕</button>
+  </div>
+
+  <div class="view-wrap">
+    <div class="pin-bar hidden" id="pinBar"></div>
+    <div id="scroller">
+      <div id="spacer"></div>
+    </div>
+    <div id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/>
+        <path d="M14 3v5h5"/>
+        <path d="M8 13h8M8 17h5"/>
+      </svg>
+      <div>打开 .log / .txt 日志开始查看</div>
+      <button id="btnEmptyOpen" class="primary">选择日志文件</button>
+      <div class="hint">或将 .log / .txt 文件拖入本窗口</div>
+    </div>
+    <div id="jumpChip">↓ 有新日志，点击回到底部</div>
+    <div id="dropMask">松开以打开 .log / .txt 日志文件</div>
+  </div>
+
+  <div class="statusbar">
+    <span id="stPos">—</span>
+    <span id="stLines"></span>
+    <span id="stSize"></span>
+    <span class="follow-state" id="stFollow"></span>
+    <div class="spacer"></div>
+    <select id="encodingSel" title="编码">
+      <option value="utf-8">UTF-8</option>
+      <option value="gbk">GBK</option>
+      <option value="gb18030">GB18030</option>
+    </select>
+  </div>
+
+  <div class="overlay" id="dirOverlay">
+    <div class="sheet">
+      <div class="sheet-head">选择日志文件<span class="x" id="dirClose">✕</span></div>
+      <div class="crumb" id="dirPath"></div>
+      <div class="file-list" id="fileList"></div>
+      <div class="sheet-foot">
+        <span id="dirSelInfo">未选择</span>
+        <div class="spacer"></div>
+        <button id="dirCancel">取消</button>
+        <button id="dirOpen" class="primary" disabled>打开选中</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu" id="ctxMenu">
+    <button id="ctxCopyLine">复制整行</button>
+    <button id="ctxCopySel">复制选中内容</button>
+    <button id="ctxPinLine">钉住此行</button>
+    <button id="ctxClearJump">清除筛选并跳转</button>
+  </div>
+
+  <div class="overlay" id="settingsOverlay">
+    <div class="sheet">
+      <div class="sheet-head">等级配色<span class="x" id="settingsClose">✕</span></div>
+      <div class="settings-note">为每个日志等级分别设置背景色与文字色。背景会以低透明度铺在行上；恢复默认请点「重置」。</div>
+      <div class="settings-grid" id="settingsGrid">
+        <div class="settings-row" data-level="error">
+          <span class="lv-label" style="color:rgb(var(--lv-error-fg))">ERROR</span>
+          <label class="color-field">背景 <input type="color" id="clrErrorBg" /></label>
+          <label class="color-field">文字 <input type="color" id="clrErrorFg" /></label>
+        </div>
+        <div class="settings-row" data-level="warn">
+          <span class="lv-label" style="color:rgb(var(--lv-warn-fg))">WARN</span>
+          <label class="color-field">背景 <input type="color" id="clrWarnBg" /></label>
+          <label class="color-field">文字 <input type="color" id="clrWarnFg" /></label>
+        </div>
+        <div class="settings-row" data-level="info">
+          <span class="lv-label" style="color:rgb(var(--lv-info-fg))">INFO</span>
+          <label class="color-field">背景 <input type="color" id="clrInfoBg" /></label>
+          <label class="color-field">文字 <input type="color" id="clrInfoFg" /></label>
+        </div>
+        <div class="settings-row" data-level="debug">
+          <span class="lv-label" style="color:rgb(var(--lv-debug-fg))">DEBUG</span>
+          <label class="color-field">背景 <input type="color" id="clrDebugBg" /></label>
+          <label class="color-field">文字 <input type="color" id="clrDebugFg" /></label>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <span id="settingsHint" style="color:var(--c-faint);font-size:12px"></span>
+        <div class="spacer"></div>
+        <button id="settingsReset">重置</button>
+        <button id="settingsDone" class="primary">完成</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <input type="file" id="filePicker" accept=".log,.txt,.LOG,.TXT,text/plain" multiple style="display:none" />
+
+  <script src="level.js"></script>
+  <script src="query.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
