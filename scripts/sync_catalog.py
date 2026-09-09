@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Mirror plugins.aiuo.net catalog + artifacts into this GitHub repo.
+"""Reserved helper for a future plugins.aiuo.net catalog mirror.
 
-The GitHub raw tree remains PI-Desktop's fallback market source. Relative
-package URLs resolve against this catalog's directory, so a client that loaded
-catalog.json from GitHub never follows artifactBaseUrl back to a down origin.
+Not used while this GitHub repo is the live marketplace. Publish with
+pack_plugin.py + rebuild_catalog.py until that registry launches.
 
 Failure is fail-closed: exit non-zero and do not replace catalog.json or
 packages/. Empty or shrinking-to-zero catalogs are rejected.

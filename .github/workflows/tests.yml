@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Mirror rewrite tests
+      - name: Catalog helper tests
         run: python3 tests/test_sync_catalog.py -v
       - name: Plugin tests
         run: node --test tests/*.test.mjs

@@ -47,17 +47,11 @@ export type Catalog = {
   plugins: Plugin[];
 };
 
-export const OFFICIAL_CATALOG_URL = "https://plugins.aiuo.net/catalog.json";
-export const MIRROR_CATALOG_URL =
+export const CATALOG_URL =
+  process.env.CATALOG_URL ??
   "https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json";
 
-export const CATALOG_URL = process.env.CATALOG_URL ?? OFFICIAL_CATALOG_URL;
-
 export const REPOSITORY_URL = "https://github.com/vastsa/pi-desktop-plugins";
-export const REGISTRY_URL = "https://plugins.aiuo.net";
-
-let lastCatalog: Catalog | null = null;
-let lastCatalogUrl = CATALOG_URL;
 
 export const featuredIds = [
   "pi.gitlens",
@@ -67,26 +61,13 @@ export const featuredIds = [
 ];
 
 export async function getCatalog(): Promise<Catalog> {
-  const urls = process.env.CATALOG_URL
-    ? [process.env.CATALOG_URL]
-    : [OFFICIAL_CATALOG_URL, MIRROR_CATALOG_URL];
-  let lastError: Error | null = null;
-  for (const url of urls) {
-    try {
-      const response = await fetch(url, { next: { revalidate: 300 } });
-      if (!response.ok) {
-        lastError = new Error(`Unable to load plugin catalog: ${response.status}`);
-        continue;
-      }
-      const catalog = (await response.json()) as Catalog;
-      lastCatalog = catalog;
-      lastCatalogUrl = url;
-      return catalog;
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-    }
+  const response = await fetch(CATALOG_URL, { next: { revalidate: 300 } });
+
+  if (!response.ok) {
+    throw new Error(`Unable to load plugin catalog: ${response.status}`);
   }
-  throw lastError ?? new Error("Unable to load plugin catalog");
+
+  return response.json() as Promise<Catalog>;
 }
 
 export async function getPlugin(id: string): Promise<Plugin | undefined> {
@@ -120,13 +101,7 @@ export function currentVersion(plugin: Plugin): PluginVersion {
 export function packageUrl(plugin: Plugin): string {
   const url = currentVersion(plugin).url;
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const declared = lastCatalog?.artifactBaseUrl?.trim();
-  const base = declared
-    ? declared.endsWith("/")
-      ? declared
-      : `${declared}/`
-    : lastCatalogUrl;
-  return new URL(url.replace(/^\//, ""), base).toString();
+  return new URL(url, CATALOG_URL).toString();
 }
 
 export function formatBytes(bytes?: number): string {
