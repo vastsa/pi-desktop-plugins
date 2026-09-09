@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="pi-plugin-chrome" content="v3" />
+    <!--
+      PI-Desktop owns exactly a transparent 46px drag band and the three-button
+      window-control capsule. Host-anchored sticky surfaces use
+      var(--pi-plugin-titlebar-height, 46px); this toolbar remains in normal flow.
+    -->
+    <title>Goal X</title>
+    <script>
+      (function () {
+        var root = document.documentElement;
+        try {
+          var cached = JSON.parse(localStorage.getItem("pi.goal-x.appearance.v1") || "null");
+          if (cached && (cached.base === "light" || cached.base === "dark")) root.dataset.theme = cached.base;
+          if (cached && String(cached.locale || "").toLowerCase().startsWith("zh")) {
+            root.lang = "zh-CN";
+            root.dataset.lang = "zh";
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./lucide.min.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell" id="app" aria-busy="true">
+      <header class="chrome-bar">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true"><i data-lucide="target"></i></span>
+          <strong>Goal X</strong>
+        </div>
+        <div class="workspace-chip" id="workspace-chip"></div>
+        <div class="chrome-actions">
+          <button class="icon-button" type="button" data-action="toggle-language" data-tooltip="中文 / English" aria-label="中文 / English">
+            <i data-lucide="languages"></i>
+          </button>
+          <button class="icon-button inspector-toggle" type="button" data-action="toggle-inspector" data-i18n-aria="inspectPanel" data-tooltip="Activity and audit" aria-label="Activity and audit">
+            <i data-lucide="panel-right"></i>
+          </button>
+          <button class="icon-button" type="button" data-action="refresh" data-i18n-aria="refresh" data-tooltip="Refresh" aria-label="Refresh">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="workspace-layout">
+        <aside class="goal-sidebar" aria-label="Goals">
+          <div class="sidebar-head">
+            <div class="segmented tabs" role="tablist" aria-label="Goal groups">
+              <button class="segment is-active" type="button" role="tab" aria-selected="true" data-list-mode="open">
+                <span data-i18n="open">Open</span><span class="count" id="open-count">0</span>
+              </button>
+              <button class="segment" type="button" role="tab" aria-selected="false" data-list-mode="archived">
+                <span data-i18n="archived">Archived</span><span class="count" id="archived-count">0</span>
+              </button>
+            </div>
+            <button class="icon-button accent-button" type="button" data-action="create-goal" data-i18n-aria="newGoal" data-tooltip="New goal" aria-label="New goal">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+          <div class="goal-list" id="goal-list"></div>
+        </aside>
+
+        <main class="goal-main" id="goal-main" aria-live="polite"></main>
+
+        <aside class="inspector" id="inspector" aria-label="Activity and audit settings">
+          <div class="inspector-tabs segmented" role="tablist">
+            <button class="segment is-active" type="button" role="tab" aria-selected="true" data-inspector-tab="activity">
+              <i data-lucide="activity"></i><span data-i18n="activity">Activity</span>
+            </button>
+            <button class="segment" type="button" role="tab" aria-selected="false" data-inspector-tab="audit">
+              <i data-lucide="shield-check"></i><span data-i18n="audit">Audit</span>
+            </button>
+          </div>
+          <div class="inspector-content" id="inspector-content"></div>
+        </aside>
+      </div>
+    </div>
+    <button class="drawer-scrim" type="button" data-action="close-inspector" aria-label="Close"></button>
+
+    <dialog id="goal-dialog" aria-labelledby="goal-dialog-title">
+      <form method="dialog" id="goal-form">
+        <div class="dialog-head">
+          <div>
+            <span class="eyebrow" data-i18n="goalDefinition">Goal definition</span>
+            <h2 id="goal-dialog-title">New goal</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog data-i18n-aria="close" data-tooltip="Close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-stack">
+          <label class="field">
+            <span data-i18n="objective">Objective</span>
+            <textarea id="goal-objective" maxlength="4000" rows="5" required></textarea>
+          </label>
+          <label class="field">
+            <span data-i18n="verificationContract">Verification contract</span>
+            <textarea id="goal-contract" maxlength="2000" rows="3" data-i18n-placeholder="contractPlaceholder" placeholder="What evidence proves this goal is complete?"></textarea>
+          </label>
+          <div class="two-columns">
+            <fieldset class="field no-border">
+              <legend data-i18n="mode">Mode</legend>
+              <div class="segmented mode-control">
+                <label class="segment"><input type="radio" name="goal-mode" value="regular" checked /><span data-i18n="regular">Regular</span></label>
+                <label class="segment"><input type="radio" name="goal-mode" value="sisyphus" /><span>Sisyphus</span></label>
+              </div>
+            </fieldset>
+            <label class="field">
+              <span data-i18n="tokenBudget">Token budget</span>
+              <input id="goal-budget" type="number" min="1" step="1" inputmode="numeric" data-i18n-placeholder="optional" placeholder="Optional" />
+            </label>
+          </div>
+          <label class="toggle-row">
+            <span><strong data-i18n="gateCompletion">Gate completion</strong><small data-i18n="gateCompletionHint">Require every task to be resolved.</small></span>
+            <input id="goal-block-completion" type="checkbox" role="switch" checked />
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button class="text-button secondary" type="button" data-close-dialog data-i18n="cancel">Cancel</button>
+          <button class="text-button primary" type="submit"><i data-lucide="check"></i><span data-i18n="save">Save</span></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="task-dialog" aria-labelledby="task-dialog-title">
+      <form method="dialog" id="task-form">
+        <div class="dialog-head">
+          <div><span class="eyebrow" data-i18n="taskPlan">Task plan</span><h2 id="task-dialog-title" data-i18n="addTask">Add task</h2></div>
+          <button class="icon-button" type="button" data-close-dialog data-i18n-aria="close" data-tooltip="Close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-stack">
+          <label class="field"><span data-i18n="taskTitle">Task title</span><input id="task-title" maxlength="240" required /></label>
+          <label class="field"><span data-i18n="parentTask">Parent task</span><select id="task-parent"></select></label>
+          <label class="field"><span data-i18n="verificationContract">Verification contract</span><textarea id="task-contract" maxlength="2000" rows="3" data-i18n-placeholder="optional" placeholder="Optional"></textarea></label>
+          <label class="toggle-row">
+            <span><strong data-i18n="lightweightSubtasks">Lightweight subtasks</strong><small data-i18n="lightweightHint">Parent may complete while children remain pending.</small></span>
+            <input id="task-lightweight" type="checkbox" role="switch" />
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button class="text-button secondary" type="button" data-close-dialog data-i18n="cancel">Cancel</button>
+          <button class="text-button primary" type="submit"><i data-lucide="plus"></i><span data-i18n="add">Add</span></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="pause-dialog" aria-labelledby="pause-dialog-title">
+      <form method="dialog" id="pause-form">
+        <div class="dialog-head">
+          <div><span class="eyebrow" data-i18n="lifecycle">Lifecycle</span><h2 id="pause-dialog-title" data-i18n="pauseGoal">Pause goal</h2></div>
+          <button class="icon-button" type="button" data-close-dialog data-i18n-aria="close" data-tooltip="Close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-stack">
+          <label class="field"><span data-i18n="pauseReason">Reason</span><textarea id="pause-reason" maxlength="600" rows="3" required></textarea></label>
+          <label class="field"><span data-i18n="suggestedAction">Suggested next action</span><textarea id="pause-action" maxlength="600" rows="2" data-i18n-placeholder="optional" placeholder="Optional"></textarea></label>
+        </div>
+        <div class="dialog-actions">
+          <button class="text-button secondary" type="button" data-close-dialog data-i18n="cancel">Cancel</button>
+          <button class="text-button warning" type="submit"><i data-lucide="pause"></i><span data-i18n="pause">Pause</span></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="task-action-dialog" aria-labelledby="task-action-title">
+      <form method="dialog" id="task-action-form">
+        <div class="dialog-head">
+          <div><span class="eyebrow" data-i18n="taskUpdate">Task update</span><h2 id="task-action-title"></h2></div>
+          <button class="icon-button" type="button" data-close-dialog data-i18n-aria="close" data-tooltip="Close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <p class="dialog-context" id="task-action-context"></p>
+        <label class="field"><span id="task-action-label"></span><textarea id="task-action-note" maxlength="600" rows="4"></textarea></label>
+        <div class="dialog-actions">
+          <button class="text-button secondary" type="button" data-close-dialog data-i18n="cancel">Cancel</button>
+          <button class="text-button primary" type="submit"><i data-lucide="check"></i><span data-i18n="confirm">Confirm</span></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="complete-dialog" aria-labelledby="complete-dialog-title">
+      <form method="dialog" id="complete-form">
+        <div class="dialog-head">
+          <div><span class="eyebrow" data-i18n="independentReview">Independent review</span><h2 id="complete-dialog-title" data-i18n="runCompletionAudit">Run completion audit</h2></div>
+          <button class="icon-button" type="button" data-close-dialog data-i18n-aria="close" data-tooltip="Close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <p class="dialog-context" data-i18n="auditExplanation">The auditor checks the objective, contract, tasks, and available evidence before completion.</p>
+        <label class="field"><span data-i18n="completionSummary">Completion summary</span><textarea id="completion-summary" maxlength="2000" rows="5" data-i18n-placeholder="completionPlaceholder" placeholder="Summarize the result and supporting evidence."></textarea></label>
+        <div class="dialog-actions">
+          <button class="text-button secondary" type="button" data-close-dialog data-i18n="cancel">Cancel</button>
+          <button class="text-button primary" type="submit"><i data-lucide="shield-check"></i><span data-i18n="runAudit">Run audit</span></button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="archive-dialog" aria-labelledby="archive-dialog-title">
+      <form method="dialog" id="archive-form">
+        <div class="dialog-head">
+          <div><span class="eyebrow" data-i18n="lifecycle">Lifecycle</span><h2 id="archive-dialog-title" data-i18n="archiveGoal">Archive goal</h2></div>
+          <button class="icon-button" type="button" data-close-dialog data-i18n-aria="close" data-tooltip="Close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <p class="dialog-context" data-i18n="archiveExplanation">This removes the goal from Open. You can restore it later.</p>
+        <label class="field"><span data-i18n="archiveReason">Reason</span><input id="archive-reason" maxlength="600" data-i18n-placeholder="archivePlaceholder" placeholder="Archived by user" /></label>
+        <div class="dialog-actions">
+          <button class="text-button secondary" type="button" data-close-dialog data-i18n="cancel">Cancel</button>
+          <button class="text-button danger" type="submit"><i data-lucide="archive"></i><span data-i18n="archive">Archive</span></button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

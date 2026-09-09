@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.goal-x",
+  "name": "Goal X",
+  "version": "0.1.0",
+  "description": "Persistent workspace goals, task evidence, ordered execution, and independent completion audits for PI-Desktop.",
+  "i18n": {
+    "en": {
+      "name": "Goal X",
+      "description": "Persistent workspace goals, task evidence, ordered execution, and independent completion audits for PI-Desktop.",
+      "safetyNotes": "Goal records stay in this plugin's private settings. Goal X does not read or write workspace files and makes no network requests. The selected completion auditor receives only a bounded goal record and untrusted completion claim through PI-Desktop's host-owned API. Goal X reads bounded session context locally only to derive an opaque distinct-turn identifier for blocker reports; it neither stores conversation text nor sends it to the auditor. API keys are never exposed to the plugin."
+    },
+    "zh-CN": {
+      "name": "Goal X 目标管理",
+      "description": "为 PI-Desktop 提供持久化工作区目标、任务证据、有序执行与独立完成审计。",
+      "safetyNotes": "目标记录仅保存在本插件的私有设置中。Goal X 不读写工作区文件，也不发起网络请求。完成审计模型只会通过 PI-Desktop 宿主 API 收到受限的目标记录和不可信完成声明。Goal X 仅在本地读取受限会话上下文，用于生成阻塞报告的不透明独立回合标识；不会保存对话文本，也不会把对话发送给审计模型。插件无法获取 API 密钥。"
+    }
+  },
+  "author": "Goal X contributors",
+  "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.goal-x",
+  "repository": "https://github.com/vastsa/pi-desktop-plugins",
+  "categories": [
+    "productivity",
+    "developer-tools"
+  ],
+  "changelog": "Initial PI-Desktop migration: workspace-scoped goal pools, focus, regular and Sisyphus modes, task trees, completion evidence, pause/block/resume/archive lifecycle, bilingual dashboard, Agent tools, and host-owned completion audits.",
+  "safetyNotes": "Goal data stays in plugin-private settings. No workspace file, shell, clipboard, or network access. Completion auditing sends only bounded goal data and an untrusted completion claim to a signed-in model. Bounded session context is read locally only to derive opaque blocker turn identifiers and is never stored or sent to the auditor. The plugin never receives provider credentials.",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "Goal X",
+      "zh-CN": "Goal X 目标管理"
+    },
+    "width": 1120,
+    "height": 760,
+    "resizable": true
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "goal",
+        "title": "Goal X: Open dashboard",
+        "keywords": ["goal", "objective", "目标"],
+        "category": "Agent"
+      },
+      {
+        "id": "sisyphus",
+        "title": "Goal X: New ordered goal",
+        "keywords": ["sisyphus", "ordered", "有序目标"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-direct",
+        "title": "Goal X: New goal",
+        "keywords": ["goal", "new", "新建目标"],
+        "category": "Agent"
+      },
+      {
+        "id": "sisyphus-direct",
+        "title": "Goal X: New ordered goal",
+        "keywords": ["sisyphus", "new", "有序目标"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-list",
+        "title": "Goal X: List goals",
+        "keywords": ["goal", "list", "目标列表"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-status",
+        "title": "Goal X: Show status",
+        "keywords": ["goal", "status", "目标状态"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-focus",
+        "title": "Goal X: Choose focus",
+        "keywords": ["goal", "focus", "聚焦"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-unfocus",
+        "title": "Goal X: Clear focus",
+        "keywords": ["goal", "unfocus", "取消聚焦"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-tweak",
+        "title": "Goal X: Edit focused goal",
+        "keywords": ["goal", "edit", "调整目标"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-clear",
+        "title": "Goal X: Archive a goal",
+        "keywords": ["goal", "archive", "归档目标"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-pause",
+        "title": "Goal X: Pause focused goal",
+        "keywords": ["goal", "pause", "暂停"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-resume",
+        "title": "Goal X: Resume focused goal",
+        "keywords": ["goal", "resume", "恢复"],
+        "category": "Agent"
+      },
+      {
+        "id": "goal-settings",
+        "title": "Goal X: Auditor settings",
+        "keywords": ["goal", "settings", "审计设置"],
+        "category": "Agent"
+      }
+    ],
+    "views": [
+      {
+        "id": "goals",
+        "title": {
+          "en": "Goals",
+          "zh-CN": "目标"
+        },
+        "icon": "target",
+        "entry": "renderer/index.html",
+        "order": 20
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "create_goal",
+        "description": "Create and focus a persistent workspace goal only after the user explicitly requests it. Supports regular and ordered Sisyphus goals.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "objective": { "type": "string", "minLength": 1, "maxLength": 4000 },
+            "mode": { "type": "string", "enum": ["regular", "sisyphus"] },
+            "verification_contract": { "type": "string", "maxLength": 2000 },
+            "token_budget": { "type": "integer", "minimum": 1 },
+            "block_completion": { "type": "boolean" }
+          },
+          "required": ["objective"]
+        }
+      },
+      {
+        "name": "get_goal",
+        "description": "Read the current workspace goal pool or one goal, including task evidence, audit state, and recent activity.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "goal_id": { "type": "string" },
+            "view": { "type": "string", "enum": ["focused", "pool"] },
+            "include_archived": { "type": "boolean" }
+          }
+        }
+      },
+      {
+        "name": "update_goal",
+        "description": "Report a goal outcome: complete runs an independent audit, blocked requires three matching turn reports, and paused stops immediately with a reason.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "goal_id": { "type": "string" },
+            "status": { "type": "string", "enum": ["complete", "blocked", "paused"] },
+            "reason": { "type": "string", "maxLength": 600 },
+            "attempted_actions": { "type": "array", "maxItems": 8, "items": { "type": "string", "maxLength": 240 } },
+            "suggested_action": { "type": "string", "maxLength": 600 },
+            "completion_summary": { "type": "string", "maxLength": 2000 },
+            "expected_revision": { "type": "integer", "minimum": 0 }
+          },
+          "required": ["status"]
+        }
+      },
+      {
+        "name": "set_goal_tasks",
+        "description": "Create or replace a focused goal's task tree. Stable task ids retain progress and parent_id defines nesting.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "goal_id": { "type": "string" },
+            "tasks": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "maxLength": 80 },
+                  "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+                  "parent_id": { "type": "string", "maxLength": 80 },
+                  "verification_contract": { "type": "string", "maxLength": 2000 },
+                  "lightweight_subtasks": { "type": "boolean" }
+                },
+                "required": ["id", "title"]
+              }
+            },
+            "block_completion": { "type": "boolean" },
+            "change_summary": { "type": "string", "maxLength": 600 },
+            "expected_revision": { "type": "integer", "minimum": 0 }
+          },
+          "required": ["tasks"]
+        }
+      },
+      {
+        "name": "update_goal_task",
+        "description": "Atomically start, complete, skip, or reopen one or more goal tasks. Contracted tasks require completion evidence.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "goal_id": { "type": "string" },
+            "task_id": { "type": "string", "maxLength": 80 },
+            "status": { "type": "string", "enum": ["start", "complete", "skipped", "pending"] },
+            "evidence": { "type": "string", "maxLength": 600 },
+            "reason": { "type": "string", "maxLength": 600 },
+            "updates": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "task_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+                  "status": { "type": "string", "enum": ["start", "complete", "skipped", "pending"] },
+                  "evidence": { "type": "string", "maxLength": 600 },
+                  "reason": { "type": "string", "maxLength": 600 }
+                },
+                "required": ["task_id", "status"]
+              }
+            },
+            "expected_revision": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    ],
+    "skills": [
+      "skills/goal-x.md"
+    ],
+    "settings": [
+      {
+        "key": "auditorEnabled",
+        "type": "boolean",
+        "default": true,
+        "title": "Completion auditor",
+        "description": "Require a separate host-owned model completion before archiving a completed goal."
+      },
+      {
+        "key": "auditorModelKey",
+        "type": "string",
+        "default": "",
+        "title": "Auditor model",
+        "description": "providerId/modelId. Leave empty to use the executor model or first authenticated model."
+      },
+      {
+        "key": "auditorEffort",
+        "type": "select",
+        "default": "high",
+        "title": "Auditor effort",
+        "enum": [
+          { "label": "Off", "value": "off" },
+          { "label": "Minimal", "value": "minimal" },
+          { "label": "Low", "value": "low" },
+          { "label": "Medium", "value": "medium" },
+          { "label": "High (recommended)", "value": "high" },
+          { "label": "Extra high", "value": "xhigh" },
+          { "label": "Maximum", "value": "max" }
+        ]
+      },
+      {
+        "key": "defaultBlockCompletion",
+        "type": "boolean",
+        "default": true,
+        "title": "Tasks gate completion",
+        "description": "New goals require every task to be completed or skipped before completion."
+      },
+      {
+        "key": "openShortcut",
+        "type": "shortcut",
+        "default": "Mod+Shift+G",
+        "title": "Open Goal X",
+        "command": "goal",
+        "scope": "plugin"
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "ui.view",
+    "agent.tool.register",
+    "agent.prompt.inject",
+    "models.list",
+    "session.read",
+    "agent.complete"
+  ],
+  "engines": {
+    "piDesktop": ">=0.13.11"
+  },
+  "activationEvents": [
+    "onStartup",
+    "onCommand:goal",
+    "onCommand:sisyphus",
+    "onCommand:goal-direct",
+    "onCommand:sisyphus-direct",
+    "onCommand:goal-list",
+    "onCommand:goal-status",
+    "onCommand:goal-focus",
+    "onCommand:goal-unfocus",
+    "onCommand:goal-tweak",
+    "onCommand:goal-clear",
+    "onCommand:goal-pause",
+    "onCommand:goal-resume",
+    "onCommand:goal-settings"
+  ]
+}
