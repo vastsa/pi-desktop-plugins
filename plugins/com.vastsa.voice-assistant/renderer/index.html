@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="pi-plugin-chrome" content="v2" />
+    <!--
+      PI-Desktop owns exactly a 46px drag band and a minimal three-button
+      window-control capsule. This panel uses pi-plugin-chrome=v3: the page can
+      paint through the 46px band, while host-generated holes keep controls
+      clickable and empty space draggable. Fixed or sticky panel surfaces use
+      var(--pi-plugin-titlebar-height, 46px).
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
     <title>语音助手</title>
     <style>
       :root {
@@ -35,7 +42,6 @@
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); }
-      body { padding-top: var(--pi-plugin-titlebar-height, 0px); }
       button, select, textarea { font: inherit; }
       button, select, textarea {
         color: inherit;
