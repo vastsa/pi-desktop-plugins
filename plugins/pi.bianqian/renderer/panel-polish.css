@@ -21,6 +21,12 @@ body,
   min-width: 0;
 }
 
+/* v3 chrome: the host window-control capsule floats over the top-right corner.
+   Keep every panel toolbar's actions outside its 96px capsule plus 8px gap. */
+#app header {
+  padding-right: 104px !important;
+}
+
 button,
 input,
 textarea {
