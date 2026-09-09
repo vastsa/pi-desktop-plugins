@@ -21,8 +21,26 @@ const MAX_OUTPUT_CHARS = 256 * 1024;
 const MAX_COMMAND_CHARS = 16 * 1024;
 const MAX_EXEC_BUFFER = 512 * 1024;
 const MAX_PASSWORD_CHARS = 4096;
+const MAX_CONFIG_FILE_BYTES = 256 * 1024;
+const MAX_CONFIG_FILES = 32;
+const MAX_CONFIG_TOTAL_BYTES = 1024 * 1024;
+const MAX_CONFIG_INCLUDE_DEPTH = 8;
+const MAX_CONFIG_INCLUDE_MATCHES = 256;
+const WINDOWS_ENV_KEEP = [
+  "ALLUSERSPROFILE", "APPDATA", "LOCALAPPDATA", "ProgramData",
+  "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432",
+  "SYSTEMROOT", "SystemRoot", "WINDIR", "windir", "SYSTEMDRIVE", "SystemDrive",
+  "COMSPEC", "ComSpec", "PATHEXT", "OS",
+  "USERNAME", "USERDOMAIN", "USERDOMAIN_ROAMINGPROFILE", "COMPUTERNAME",
+  "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER",
+  "TEMP", "TMP", "PUBLIC", "HOMEDRIVE", "HOMEPATH", "SESSIONNAME",
+  "LOGONSERVER", "USERPROFILE",
+];
+const SSH_DIAGNOSTIC_PATTERN = /permission denied|could not resolve|connection refused|connection timed out|host key|no matching host key|no more authentication|too many authentication|identity file|no such file|unable to negotiate|connection reset|network is unreachable|no route to host|connection closed|bad configuration|invalid argument|unknown option|not a valid private key|unprotected private key|kex_exchange|broken pipe|operation timed out|name or service not known|no address associated|connection aborted|remote host identification has changed|offending .+ key|banner exchange|protocol error|disconnected from|authentications that can continue|no supported authentication|connection to .+ port/i;
 
 let execFileImpl = execFile;
+const activeProcesses = new Set();
+const activeTimers = new Set();
 
 function fail(message) {
   const error = new Error(message);
@@ -71,9 +89,10 @@ function normalizeUsername(value) {
   return username;
 }
 
-function normalizePath(value, field) {
+function normalizePath(value, field, allowOpenSshTokens = false) {
   const path = optionalText(value, field, 1024);
   if (!path) return null;
+  if (allowOpenSshTokens && /^%[A-Za-z%]/.test(path)) return path;
   const absolute =
     path.startsWith("/") ||
     path === "~" ||
@@ -82,6 +101,29 @@ function normalizePath(value, field) {
     /^[A-Za-z]:[\\/]/.test(path);
   if (!absolute) throw fail(`${field} must be an absolute path or start with ~`);
   return path;
+}
+
+function normalizeAgentSocket(value) {
+  if (value === "SSH_AUTH_SOCK") return value;
+  return normalizePath(value, "agentSocket");
+}
+
+function normalizeOptionalHostName(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const host = text(value, "hostName", 253);
+  if (
+    host.startsWith("-") ||
+    !/^[A-Za-z0-9_.:%\-[\]]+$/.test(host) ||
+    host.includes("..")
+  ) {
+    throw fail("hostName contains unsupported characters");
+  }
+  return host;
+}
+
+function normalizeConfigAlias(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  return normalizeHost(value);
 }
 
 function normalizePort(value) {
@@ -120,14 +162,24 @@ function normalizeProfile(input = {}, existing = {}) {
     identityFile: normalizePath(
       source.identityFile ?? previous.identityFile,
       "identityFile",
+      Boolean(source.configAlias ?? previous.configAlias),
     ),
-    agentSocket: normalizePath(source.agentSocket ?? previous.agentSocket, "agentSocket"),
+    agentSocket: normalizeAgentSocket(source.agentSocket ?? previous.agentSocket),
     strictHostKeyChecking: normalizeHostKeyPolicy(
       source.strictHostKeyChecking ?? previous.strictHostKeyChecking,
     ),
     createdAt: previous.createdAt || now,
     updatedAt: now,
   };
+  const hostName = normalizeOptionalHostName(source.hostName ?? previous.hostName);
+  const configAlias = normalizeConfigAlias(source.configAlias ?? previous.configAlias);
+  const sourcePath = optionalText(source.source ?? previous.source, "source", 2048);
+  if (hostName) {
+    profile.hostName = hostName;
+    profile.hostname = hostName;
+  }
+  if (configAlias) profile.configAlias = configAlias;
+  if (sourcePath) profile.source = sourcePath;
   return profile;
 }
 
@@ -186,8 +238,447 @@ function expandUserPath(value) {
   return `${os.homedir()}${value.slice(1)}`;
 }
 
+function stripConfigComment(line) {
+  let quote = null;
+  let escaped = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "#") {
+      return line.slice(0, index);
+    }
+  }
+  return line;
+}
+
+function configWords(value) {
+  const words = [];
+  let word = "";
+  let quote = null;
+  let escaped = false;
+  const source = String(value || "");
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (escaped) {
+      // OpenSSH uses backslash to quote separators, but a Windows config also
+      // legitimately contains C:\\Users\\... paths. Preserve a backslash
+      // before ordinary characters while still unquoting whitespace, quotes,
+      // comments, and another backslash.
+      if (![" ", "\t", "#", "\\", "'", '"'].includes(character)) word += "\\";
+      word += character;
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) quote = null;
+      else word += character;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === " " || character === "\t") {
+      if (word) {
+        words.push(word);
+        word = "";
+      }
+    } else {
+      word += character;
+    }
+  }
+  if (escaped) word += "\\\\";
+  if (word) words.push(word);
+  return words;
+}
+
+function parseConfigDirective(line) {
+  const words = configWords(stripConfigComment(String(line || "").trim()));
+  if (!words.length) return null;
+  const separator = words[0].indexOf("=");
+  if (separator > 0) {
+    const key = words[0].slice(0, separator).toLowerCase();
+    const inlineValue = words[0].slice(separator + 1);
+    return { key, values: inlineValue ? [inlineValue, ...words.slice(1)] : words.slice(1) };
+  }
+  return { key: words[0].toLowerCase(), values: words.slice(1) };
+}
+
+function hostGlobRegExp(pattern) {
+  let source = "^";
+  let escaped = false;
+  for (const character of String(pattern || "")) {
+    if (escaped) {
+      source += character.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+      escaped = false;
+    } else if (character === "\\") {
+      escaped = true;
+    } else if (character === "*") {
+      source += ".*";
+    } else if (character === "?") {
+      source += ".";
+    } else {
+      source += character.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+    }
+  }
+  if (escaped) source += "\\\\\\\\";
+  return new RegExp(`${source}$`);
+}
+
+function hostPatternMatches(alias, patterns) {
+  const positive = [];
+  for (const pattern of patterns) {
+    if (!pattern) continue;
+    if (pattern.startsWith("!")) {
+      if (hostGlobRegExp(pattern.slice(1)).test(alias)) return false;
+    } else {
+      positive.push(pattern);
+    }
+  }
+  return positive.length > 0 && positive.some((pattern) => hostGlobRegExp(pattern).test(alias));
+}
+
+function usableConfigAlias(value) {
+  const alias = String(value || "").trim();
+  if (!alias || alias.startsWith("!") || /[*?]/.test(alias)) return false;
+  return /^[A-Za-z0-9_.:%\-[\]]+$/.test(alias);
+}
+
+function firstConfigValue(values, field) {
+  for (const value of values || []) {
+    const candidate = String(value || "").trim();
+    if (!candidate || candidate.toLowerCase() === "none") continue;
+    if (field === "port" && !candidate.split("").every((character) => character >= "0" && character <= "9")) continue;
+    return candidate;
+  }
+  return null;
+}
+
+function localOsUsername(fallback = "user") {
+  let username = "";
+  try {
+    username = os.userInfo().username;
+  } catch {
+    username = process.env.USER || process.env.USERNAME || "";
+  }
+  const result = String(username || fallback).trim();
+  return /^[A-Za-z0-9._-]+$/.test(result) && !result.startsWith("-") ? result : fallback;
+}
+
+/**
+ * Parse OpenSSH config text without opening any referenced identity file.
+ * The returned host is always the configured alias, not HostName, so ssh can
+ * still apply the alias's complete stanza (including ProxyJump).
+ */
+function parseOpenSSHConfig(configText, options = {}) {
+  const records = [{ patterns: null, directives: [] }];
+  let current = records[0];
+  const lines = String(configText || "").split(/\r?\n/);
+  for (const line of lines) {
+    const directive = parseConfigDirective(line);
+    if (!directive) continue;
+    if (directive.key === "host") {
+      if (!directive.values.length) {
+        current = { patterns: [], directives: [] };
+        records.push(current);
+        continue;
+      }
+      current = { patterns: directive.values, directives: [] };
+      records.push(current);
+    } else if (directive.key === "match") {
+      // Match conditions need runtime context (local network, exec, etc.).
+      // Do not attribute the following directives to the preceding Host block.
+      current = { patterns: [], directives: [] };
+      records.push(current);
+    } else if (directive.key !== "include") {
+      current.directives.push(directive);
+    }
+  }
+
+  const aliases = [];
+  const seen = new Set();
+  for (const record of records) {
+    for (const pattern of record.patterns || []) {
+      if (usableConfigAlias(pattern) && !seen.has(pattern)) {
+        seen.add(pattern);
+        aliases.push(pattern);
+      }
+    }
+  }
+
+  const source = options.source ? String(options.source) : null;
+  const username = options.username ? String(options.username) : localOsUsername();
+  return aliases.filter((alias) =>
+    records.some((record) =>
+      record.patterns &&
+      record.patterns.some((pattern) => usableConfigAlias(pattern)) &&
+      hostPatternMatches(alias, record.patterns),
+    ),
+  ).map((alias) => {
+    const result = {
+      alias,
+      configAlias: alias,
+      host: alias,
+      hostName: null,
+      hostname: null,
+      username,
+      user: username,
+      port: 22,
+      identityFile: null,
+      agentSocket: null,
+      source,
+    };
+    const assigned = new Set();
+    for (const record of records) {
+      if (record.patterns && !hostPatternMatches(alias, record.patterns)) continue;
+      for (const directive of record.directives) {
+        const key = directive.key;
+        if (key === "hostname" && !assigned.has("hostName")) {
+          const value = firstConfigValue(directive.values);
+          if (value) {
+            result.hostName = value;
+            result.hostname = value;
+            assigned.add("hostName");
+          }
+        } else if (key === "user" && !assigned.has("username")) {
+          const value = firstConfigValue(directive.values);
+          if (value) {
+            result.username = value;
+            result.user = value;
+            assigned.add("username");
+          }
+        } else if (key === "port" && !assigned.has("port")) {
+          const value = firstConfigValue(directive.values, "port");
+          const port = value ? Number(value) : NaN;
+          if (Number.isInteger(port) && port >= 1 && port <= 65535) {
+            result.port = port;
+            assigned.add("port");
+          }
+        } else if (key === "identityfile" && !assigned.has("identityFile")) {
+          const value = firstConfigValue(directive.values);
+          if (value) {
+            result.identityFile = value;
+            assigned.add("identityFile");
+          }
+        } else if (key === "identityagent" && !assigned.has("agentSocket")) {
+          const value = firstConfigValue(directive.values);
+          if (value) {
+            result.agentSocket = value;
+            assigned.add("agentSocket");
+          }
+        }
+      }
+    }
+    return result;
+  });
+}
+
+function configGlobRegExp(pattern) {
+  let source = "^";
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index];
+    if (character === "*") source += ".*";
+    else if (character === "?") source += ".";
+    else if (character === "[") {
+      const end = pattern.indexOf("]", index + 1);
+      if (end > index + 1) {
+        const set = pattern.slice(index + 1, end).replace(/[\\\\^]/g, "\\\\$&");
+        source += `[${set}]`;
+        index = end;
+      } else source += "\\\\[";
+    } else source += character.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+  }
+  return new RegExp(`${source}$`);
+}
+
+function configPathParts(value) {
+  const normalized = String(value || "").replace(/\\/g, "/");
+  const parsed = path.parse(normalized);
+  const root = parsed.root || "";
+  return { root: root || ".", parts: normalized.slice(root.length).split("/").filter(Boolean) };
+}
+
+function expandConfigPattern(pattern, baseDirectory, state) {
+  const expanded = expandUserPath(String(pattern || "").trim());
+  if (
+    !expanded ||
+    expanded.includes("%") ||
+    expanded.includes(String.fromCharCode(0)) ||
+    expanded.includes("\r") ||
+    expanded.includes("\n")
+  ) return [];
+  const absolute = path.isAbsolute(expanded) ? expanded : path.resolve(baseDirectory, expanded);
+  const { root, parts } = configPathParts(absolute);
+  const matches = [];
+  const visit = (directory, index, depth) => {
+    if (matches.length >= MAX_CONFIG_INCLUDE_MATCHES || depth > MAX_CONFIG_INCLUDE_DEPTH + 2) return;
+    const segment = parts[index];
+    if (segment === undefined) {
+      try {
+        if (fs.statSync(directory).isFile()) matches.push(path.resolve(directory));
+      } catch {
+        // An unavailable optional Include is ignored.
+      }
+      return;
+    }
+    if (segment === "**") {
+      visit(directory, index + 1, depth);
+      try {
+        for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+          if (entry.isDirectory() && !entry.isSymbolicLink()) visit(path.join(directory, entry.name), index, depth + 1);
+        }
+      } catch {
+        // An unreadable directory fails closed.
+      }
+      return;
+    }
+    const wildcard = /[*?\[]/.test(segment);
+    if (!wildcard) {
+      const next = path.join(directory, segment);
+      try {
+        const stat = fs.lstatSync(next);
+        if (index === parts.length - 1) {
+          if (stat.isFile() && !stat.isSymbolicLink()) matches.push(path.resolve(next));
+        } else if (stat.isDirectory() && !stat.isSymbolicLink()) visit(next, index + 1, depth);
+      } catch {
+        // An unavailable optional Include is ignored.
+      }
+      return;
+    }
+    try {
+      const entries = fs.readdirSync(directory, { withFileTypes: true })
+        .filter((entry) => configGlobRegExp(segment).test(entry.name))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      for (const entry of entries) {
+        const next = path.join(directory, entry.name);
+        if (index === parts.length - 1) {
+          if (entry.isFile() && !entry.isSymbolicLink()) matches.push(path.resolve(next));
+        } else if (entry.isDirectory() && !entry.isSymbolicLink()) visit(next, index + 1, depth);
+      }
+    } catch {
+      // An unreadable optional Include is ignored.
+    }
+  };
+  visit(root, 0, 0);
+  const directory = path.dirname(absolute);
+  const basename = path.basename(absolute);
+  if (!matches.length && /[*?\[]/.test(basename)) {
+    const matcher = configGlobRegExp(basename);
+    try {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        if (entry.isFile() && !entry.isSymbolicLink() && matcher.test(entry.name)) {
+          matches.push(path.resolve(directory, entry.name));
+        }
+      }
+    } catch {
+      // An unreadable optional Include is ignored.
+    }
+  }
+  return matches.slice(0, MAX_CONFIG_INCLUDE_MATCHES);
+}
+
+function expandConfigFile(filePath, state, depth = 0) {
+  if (depth > MAX_CONFIG_INCLUDE_DEPTH || state.files >= MAX_CONFIG_FILES) return "";
+  let resolved;
+  try {
+    resolved = fs.realpathSync(filePath);
+    if (state.visited.has(resolved)) return "";
+    const stat = fs.statSync(resolved);
+    if (!stat.isFile() || stat.size > MAX_CONFIG_FILE_BYTES) return "";
+    if (state.totalBytes + stat.size > MAX_CONFIG_TOTAL_BYTES) return "";
+    state.visited.add(resolved);
+    state.files += 1;
+    state.totalBytes += stat.size;
+    const content = fs.readFileSync(resolved, "utf8");
+    let output = "";
+    for (const line of content.split(/\r?\n/)) {
+      const directive = parseConfigDirective(line);
+      if (directive?.key !== "include") {
+        output += line + String.fromCharCode(10);
+        continue;
+      }
+      for (const includePattern of directive.values) {
+        for (const included of expandConfigPattern(includePattern, path.dirname(resolved), state)) {
+          output += expandConfigFile(included, state, depth + 1);
+        }
+      }
+    }
+    return output;
+  } catch {
+    return null;
+  }
+}
+
+function configProfileId(alias) {
+  const digest = crypto.createHash("sha256").update(String(alias)).digest("hex").slice(0, 24);
+  return `config-${digest}`;
+}
+
+function configPathValue(value) {
+  const result = String(value || "").trim();
+  if (!result || result.toLowerCase() === "none") return null;
+  const absolute = result.startsWith("/") || result === "~" || result.startsWith("~/") || result.startsWith("~\\") || /^[A-Za-z]:[\\/]/.test(result);
+  // OpenSSH expands these tokens itself. They are safe as one argv value, but
+  // an unqualified path is not accepted by the manual profile validator.
+  return absolute || /^%[A-Za-z%]/.test(result) ? result : null;
+}
+
+function normalizeConfigCandidate(candidate, options = {}) {
+  const input = {
+    id: configProfileId(candidate.alias),
+    name: candidate.alias,
+    host: candidate.alias,
+    hostName: candidate.hostName,
+    username: candidate.username || localOsUsername(),
+    port: candidate.port,
+    identityFile: configPathValue(candidate.identityFile),
+    agentSocket: candidate.agentSocket === "SSH_AUTH_SOCK" ? candidate.agentSocket : configPathValue(candidate.agentSocket),
+    configAlias: candidate.alias,
+    source: candidate.source || options.source,
+  };
+  try {
+    return normalizeProfile(input);
+  } catch {
+    return null;
+  }
+}
+
+/** Discover normalized host profiles from the local user's OpenSSH config. */
+function discoverSshProfiles(options = {}) {
+  const configPath = options.configPath
+    ? expandUserPath(String(options.configPath))
+    : path.join(os.homedir(), ".ssh", "config");
+  const state = { visited: new Set(), files: 0, totalBytes: 0 };
+  const expanded = expandConfigFile(configPath, state);
+  if (expanded === null) return [];
+  const candidates = parseOpenSSHConfig(expanded, {
+    source: configPath,
+    username: options.username,
+  });
+  return candidates.map((candidate) => normalizeConfigCandidate(candidate, { source: configPath })).filter(Boolean);
+}
+
 function buildTarget(profile) {
-  return `${profile.username}@${profile.host}`;
+  // Imported profiles deliberately use the alias as the SSH target. This lets
+  // OpenSSH re-evaluate the complete Host stanza instead of flattening it into
+  // a partial -p/-i override (ProxyJump, Match, multiple IdentityFile entries,
+  // and other directives must keep their native semantics).
+  return profile.configAlias ? profile.host : `${profile.username}@${profile.host}`;
 }
 
 function buildSshArgs(profile, options = {}) {
@@ -224,8 +715,13 @@ function buildSshArgs(profile, options = {}) {
       "PreferredAuthentications=password,keyboard-interactive",
     );
   }
-  if (profile.identityFile) args.push("-i", expandUserPath(profile.identityFile));
-  if (profile.port !== 22) args.push("-p", String(profile.port));
+  if (profile.identityFile) {
+    args.push("-i", expandUserPath(profile.identityFile));
+    // Imported aliases keep OpenSSH config semantics (ProxyJump, extra
+    // IdentityFile entries). IdentitiesOnly would flatten those away.
+    if (!profile.configAlias) args.push("-o", "IdentitiesOnly=yes");
+  }
+  if (!profile.configAlias && profile.port !== 22) args.push("-p", String(profile.port));
   args.push(buildTarget(profile));
   if (options.remoteCommand !== undefined) {
     const command = String(options.remoteCommand);
@@ -240,17 +736,109 @@ function buildSshArgs(profile, options = {}) {
   return args;
 }
 
+function sshPathEntries(platform = process.platform, env = process.env, home = os.homedir()) {
+  if (platform === "win32") {
+    const systemRoot = env.SystemRoot || env.SYSTEMROOT || "C:\\Windows";
+    const programFiles = env.ProgramFiles || "C:\\Program Files";
+    return [
+      path.join(systemRoot, "System32", "OpenSSH"),
+      path.join(programFiles, "Git", "usr", "bin"),
+      path.join(programFiles, "Git", "cmd"),
+      path.join(home, "AppData", "Local", "Programs", "Git", "usr", "bin"),
+    ];
+  }
+  return ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"];
+}
+
+function mergePath(existing, options = {}) {
+  const platform = options.platform || process.platform;
+  const sep = platform === "win32" ? ";" : ":";
+  const parts = String(existing || "").split(sep).map((entry) => entry.trim()).filter(Boolean);
+  const keyOf = (value) => (platform === "win32" ? value.toLowerCase() : value);
+  const seen = new Set(parts.map(keyOf));
+  for (const extra of sshPathEntries(platform, options.env || process.env, options.home || os.homedir())) {
+    const key = keyOf(extra);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    parts.push(extra);
+  }
+  if (parts.length) return parts.join(sep);
+  return platform === "win32" ? "" : "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+}
+
+function inheritWindowsEnv(env, processEnv = process.env, platform = process.platform) {
+  if (platform !== "win32") return env;
+  for (const key of WINDOWS_ENV_KEEP) {
+    if (processEnv[key] && env[key] === undefined) env[key] = processEnv[key];
+  }
+  const systemRoot = env.SYSTEMROOT || env.SystemRoot || env.WINDIR || env.windir || "C:\\Windows";
+  if (!env.SYSTEMROOT) env.SYSTEMROOT = systemRoot;
+  if (!env.SystemRoot) env.SystemRoot = systemRoot;
+  if (!env.WINDIR) env.WINDIR = systemRoot;
+  if (!env.windir) env.windir = systemRoot;
+  if (!env.COMSPEC && !env.ComSpec) {
+    env.COMSPEC = path.join(systemRoot, "System32", "cmd.exe");
+    env.ComSpec = env.COMSPEC;
+  }
+  if (!env.PATHEXT) env.PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.MSC";
+  if (env.PATH && !env.Path) env.Path = env.PATH;
+  return env;
+}
+
+function resolveSshCommand(options = {}) {
+  const platform = options.platform || process.platform;
+  if (platform !== "win32") return "ssh";
+  const env = options.env || process.env;
+  const home = options.home || os.homedir();
+  const existsSync = options.existsSync || fs.existsSync;
+  for (const directory of sshPathEntries(platform, env, home)) {
+    const candidate = path.join(directory, "ssh.exe");
+    try {
+      if (existsSync(candidate)) return candidate;
+    } catch {
+      // Keep searching; execFile can still look up ssh.exe on PATH.
+    }
+  }
+  return "ssh.exe";
+}
+
+function killChild(child) {
+  if (!child || typeof child.kill !== "function") return;
+  try {
+    if (process.platform === "win32") child.kill();
+    else child.kill("SIGTERM");
+  } catch {
+    // The process may already have exited.
+  }
+}
+
+function killActiveProcesses() {
+  for (const timer of [...activeTimers]) {
+    clearTimeout(timer);
+    activeTimers.delete(timer);
+  }
+  for (const child of [...activeProcesses]) {
+    activeProcesses.delete(child);
+    killChild(child);
+  }
+}
+
 function buildEnvironment(profile, options = {}) {
   const home = os.homedir();
+  const processEnv = options.processEnv || process.env;
+  const platform = options.platform || process.platform;
+  const pathValue = processEnv.PATH || processEnv.Path;
   const env = {
-    PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    PATH: mergePath(pathValue, { platform, env: processEnv, home }),
     HOME: home,
-    USERPROFILE: home,
-    LANG: process.env.LANG || "en_US.UTF-8",
+    USERPROFILE: processEnv.USERPROFILE || home,
+    LANG: processEnv.LANG || "en_US.UTF-8",
   };
-  const socket = profile.agentSocket
-    ? expandUserPath(profile.agentSocket)
-    : process.env.SSH_AUTH_SOCK;
+  inheritWindowsEnv(env, processEnv, platform);
+  const configuredSocket = profile.agentSocket;
+  const socket = configuredSocket && configuredSocket !== "SSH_AUTH_SOCK"
+    ? expandUserPath(configuredSocket)
+    : processEnv.SSH_AUTH_SOCK;
   if (socket) env.SSH_AUTH_SOCK = socket;
   if (options.askpassPath) {
     env.SSH_ASKPASS = options.askpassPath;
@@ -273,14 +861,57 @@ function clip(value, maxLength) {
 function redactLocalPaths(value, profile) {
   let output = String(value || "");
   for (const candidate of [
-    profile.identityFile,
-    profile.agentSocket,
-    profile.identityFile ? expandUserPath(profile.identityFile) : null,
-    profile.agentSocket ? expandUserPath(profile.agentSocket) : null,
+    profile?.identityFile,
+    profile?.agentSocket,
+    profile?.identityFile ? expandUserPath(profile.identityFile) : null,
+    profile?.agentSocket ? expandUserPath(profile.agentSocket) : null,
   ]) {
     if (candidate) output = output.split(candidate).join("[local credential path]");
   }
   return output;
+}
+
+function decodeProcessOutput(value) {
+  if (value == null) return "";
+  if (Buffer.isBuffer(value)) return value.toString("utf8");
+  return String(value);
+}
+
+function extractSshDiagnostic(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^debug\d?:/i.test(line));
+  const interesting = lines.filter((line) => SSH_DIAGNOSTIC_PATTERN.test(line));
+  if (interesting.length) return interesting.join("\n");
+  return lines.slice(-8).join("\n");
+}
+
+function formatSshFailure(result, profile) {
+  const stderr = decodeProcessOutput(result?.stderr).trim();
+  const stdout = decodeProcessOutput(result?.stdout).trim();
+  const diagnostic = extractSshDiagnostic([stderr, stdout].filter(Boolean).join("\n"));
+  const spawnCode = result?.error && typeof result.error.code === "string" ? result.error.code : null;
+  const parts = [];
+  if (result?.timedOut) parts.push("SSH command timed out.");
+  if (spawnCode === "ENOENT") {
+    parts.push("Unable to start ssh: the OpenSSH client was not found on PATH.");
+    parts.push("Install OpenSSH Client (Windows optional feature) or add ssh.exe to PATH.");
+  } else if (diagnostic) {
+    parts.push(diagnostic);
+  } else if (Number.isInteger(result?.exitCode)) {
+    parts.push(`ssh exited with code ${result.exitCode}.`);
+  } else if (result?.error) {
+    parts.push(String(result.error.message || result.error));
+  } else {
+    parts.push("SSH connection failed.");
+  }
+  if (!diagnostic && !result?.timedOut && (result?.exitCode === 255 || spawnCode === "ENOENT")) {
+    parts.push("Typical causes: unknown host key (use Accept new), missing identity/password, unreachable host/port, or a missing system ssh client.");
+  }
+  const text = redactLocalPaths(parts.join(" "), profile || {});
+  return text.length > 1200 ? `${text.slice(0, 1168).trimEnd()}…` : text;
 }
 
 function createAskpassHelper(password) {
@@ -317,19 +948,25 @@ function runProcess(file, args, options) {
     const finish = (error, stdout = "", stderr = "") => {
       if (finished) return;
       finished = true;
-      if (timer) clearTimeout(timer);
-      resolve({ error, stdout: String(stdout || ""), stderr: String(stderr || ""), timedOut });
+      if (timer) {
+        clearTimeout(timer);
+        activeTimers.delete(timer);
+      }
+      if (child) activeProcesses.delete(child);
+      resolve({
+        error,
+        stdout: decodeProcessOutput(stdout),
+        stderr: decodeProcessOutput(stderr),
+        timedOut,
+      });
     };
 
     timer = setTimeout(() => {
       timedOut = true;
-      try {
-        child?.kill?.("SIGTERM");
-      } catch {
-        // The callback below still completes the operation if the process is gone.
-      }
+      killChild(child);
       finish(new Error("SSH command timed out"), "", "SSH command timed out");
     }, options.timeoutSeconds * 1000);
+    activeTimers.add(timer);
 
     try {
       child = execFileImpl(
@@ -343,6 +980,14 @@ function runProcess(file, args, options) {
         },
         finish,
       );
+      if (child) {
+        activeProcesses.add(child);
+        if (typeof child.on === "function") {
+          child.on("error", (error) => {
+            finish(error, "", decodeProcessOutput(error?.message));
+          });
+        }
+      }
     } catch (error) {
       finish(error, "", "");
     }
@@ -362,7 +1007,7 @@ async function runSsh(profile, options = {}) {
       acceptNewHostKey: options.acceptNewHostKey,
       password,
     });
-    const result = await runProcess("ssh", args, {
+    const result = await runProcess(resolveSshCommand(), args, {
       timeoutSeconds: timeoutSeconds + 5,
       env: buildEnvironment(normalized, {
         askpassPath: askpass?.file,
@@ -378,13 +1023,14 @@ async function runSsh(profile, options = {}) {
         : 0;
     const error = result.timedOut
       ? "SSH command timed out"
-      : result.error && typeof result.error.code === "string"
-        ? `Unable to start ssh: ${result.error.code}`
-        : result.error && exitCode !== null
-          ? `ssh exited with code ${exitCode}`
-          : result.error
-            ? String(result.error.message || result.error)
-            : null;
+      : result.error
+        ? formatSshFailure({
+          ...result,
+          stdout: stdout.text,
+          stderr: stderr.text,
+          exitCode,
+        }, normalized)
+        : null;
     return {
       ok: !result.error,
       exitCode,
@@ -458,7 +1104,13 @@ module.exports = {
   MAX_OUTPUT_CHARS,
   buildSshArgs,
   createSessionId,
+  parseOpenSSHConfig,
+  parseSshConfig: parseOpenSSHConfig,
+  discoverSshProfiles,
+  scanLocalSshConfig: discoverSshProfiles,
   findCommandRisk,
+  formatSshFailure,
+  killActiveProcesses,
   normalizePassword,
   normalizeMaxOutput,
   normalizeProfile,
@@ -473,8 +1125,20 @@ module.exports = {
     },
     resetExecFile() {
       execFileImpl = execFile;
+      killActiveProcesses();
     },
     clip,
     buildEnvironment,
+    inheritWindowsEnv,
+    mergePath,
+    resolveSshCommand,
+    parseConfigDirective,
+    configGlobRegExp,
+    configPathParts,
+    expandConfigPattern,
+    expandConfigFile,
+    activeProcessCount() {
+      return activeProcesses.size;
+    },
   },
 };

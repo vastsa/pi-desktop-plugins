@@ -13,6 +13,13 @@ const STRINGS = {
     pageSubtitle: "Connect to a configured host, then run a bounded command.",
     ready: "Ready",
     refresh: "Refresh",
+    scanConfig: "Scan ~/.ssh/config",
+    scanningConfig: "Scanning ~/.ssh/config…",
+    chooseFile: "Choose file",
+    identityFileHelp: "Only the file path is used; private-key contents are never read.",
+    identityFileFallback: "This browser did not provide a file path. Enter the identity-file path manually.",
+    importedHosts: "Imported {count} SSH host(s)",
+    noImportedHosts: "No usable SSH hosts were found in ~/.ssh/config.",
     hostProfile: "HOST PROFILE",
     profileName: "Display name",
     host: "Host",
@@ -82,6 +89,13 @@ const STRINGS = {
     pageSubtitle: "连接已配置主机，然后执行有边界的远程命令。",
     ready: "就绪",
     refresh: "刷新",
+    scanConfig: "扫描 ~/.ssh/config",
+    scanningConfig: "正在扫描 ~/.ssh/config…",
+    chooseFile: "选择文件",
+    identityFileHelp: "只使用文件路径，插件不会读取私钥内容。",
+    identityFileFallback: "当前浏览器没有提供文件路径，请手动输入私钥路径。",
+    importedHosts: "已导入 {count} 台 SSH 主机",
+    noImportedHosts: "在 ~/.ssh/config 中没有找到可用的 SSH 主机。",
     hostProfile: "主机配置",
     profileName: "显示名称",
     host: "主机",
@@ -212,6 +226,8 @@ function applyStaticText() {
   $("profileAgent").placeholder = state.locale === "zh-CN" ? "有 SSH_AUTH_SOCK 时自动使用" : "Uses SSH_AUTH_SOCK when available";
   $("profilePassword").placeholder = state.locale === "zh-CN" ? "仅在本机输入" : "Enter only on this device";
   $("closeModal").setAttribute("aria-label", t("close"));
+  $("configScan").setAttribute("aria-label", t("scanConfig"));
+  $("configScan").title = t("scanConfig");
 }
 
 function renderHostList() {
@@ -408,6 +424,32 @@ function render() {
   document.documentElement.dataset.booting = "false";
 }
 
+async function scanConfig() {
+  const scanButton = $("configScan");
+  scanButton.disabled = true;
+  setNotice(t("scanningConfig"), "");
+  try {
+    const result = await invoke("ssh.config.import");
+    const imported = Array.isArray(result.profiles) ? result.profiles : [];
+    const importedIds = new Set(imported.map((profile) => profile.id));
+    state.profiles = state.profiles.filter((profile) => !importedIds.has(profile.id)).concat(imported);
+    state.profiles.sort((a, b) => a.name.localeCompare(b.name));
+    if (imported.length) {
+      const currentIsImported = state.selectedId && imported.some((profile) => profile.id === state.selectedId);
+      state.selectedId = currentIsImported ? state.selectedId : imported[0].id;
+      setNotice(tr("importedHosts", { count: imported.length }), "success");
+    } else {
+      setNotice(t("noImportedHosts"), "warning");
+    }
+    state.output = null;
+    render();
+  } catch (error) {
+    setNotice(error.message || String(error), "error");
+  } finally {
+    scanButton.disabled = false;
+  }
+}
+
 async function refresh(showNotice = false) {
   state.loading = true;
   render();
@@ -434,6 +476,7 @@ function fillProfileForm(profile) {
   $("profilePort").value = profile?.port || 22;
   $("profileUsername").value = profile?.username || "";
   $("profileIdentity").value = profile?.identityFile || "";
+  $("identityFilePicker").value = "";
   $("profileAgent").value = profile?.agentSocket || "";
   $("profilePassword").value = "";
   $("clearPassword").checked = false;
@@ -449,6 +492,19 @@ function openModal(profile = null) {
 
 function closeModal() {
   $("profileModal").hidden = true;
+}
+
+function chooseIdentityFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const selectedPath = typeof file.path === "string" ? file.path.trim() : "";
+  if (selectedPath) {
+    $("profileIdentity").value = selectedPath;
+  } else {
+    setNotice(t("identityFileFallback"), "warning");
+    $("profileIdentity").focus();
+  }
+  event.target.value = "";
 }
 
 async function saveProfile(event) {
@@ -501,10 +557,14 @@ async function connect(profile) {
     });
     state.sessions = state.sessions.filter((session) => session.profileId !== profile.id);
     if (result.session) state.sessions.push(result.session);
+    state.output = null;
     setNotice(tr("connectedNotice", { host: profile.host }), "success");
     render();
   } catch (error) {
-    setNotice(`${t("connectFailed")}: ${error.message || error}`, "error");
+    const message = error.message || String(error);
+    state.output = { ok: false, error: message, stderr: message, exit_code: null };
+    setNotice(`${t("connectFailed")}: ${message}`, "error");
+    render();
   }
 }
 
@@ -548,7 +608,10 @@ async function runCommand(profile) {
 
 function bindEvents() {
   $("addHost").addEventListener("click", () => openModal());
+  $("configScan").addEventListener("click", () => void scanConfig());
   $("refresh").addEventListener("click", () => void refresh(true));
+  $("chooseIdentity").addEventListener("click", () => $("identityFilePicker").click());
+  $("identityFilePicker").addEventListener("change", chooseIdentityFile);
   $("closeModal").addEventListener("click", closeModal);
   $("cancelModal").addEventListener("click", closeModal);
   $("profileForm").addEventListener("submit", (event) => void saveProfile(event));

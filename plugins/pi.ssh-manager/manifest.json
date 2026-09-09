@@ -2,12 +2,12 @@
   "schemaVersion": 1,
   "id": "pi.ssh-manager",
   "name": "SSH Manager",
-  "version": "0.1.1",
-  "description": "A local-first SSH host manager for PI-Desktop with bounded OpenSSH commands that the AI can call through explicit, high-risk tools.",
+  "version": "0.1.2",
+  "description": "A local-first SSH host manager for PI-Desktop with local OpenSSH config import, identity-file selection, and bounded high-risk commands.",
   "i18n": {
     "en": {
       "name": "SSH Manager",
-      "description": "A local-first SSH host manager with bounded OpenSSH commands that the AI can call through explicit, high-risk tools.",
+      "description": "A local-first SSH host manager with local OpenSSH config import, identity-file selection, and bounded high-risk commands.",
       "safetyNotes": "Uses the system OpenSSH client and the user's existing config, ssh-agent, identity-file path, or a password entered in the panel. Passwords are held in memory for at most 30 minutes and never persisted or passed to AI. The plugin never stores private-key contents, command output, or remote transcripts. AI connect and execute tools are high risk; conservative static filtering blocks mutating or ambiguous commands, and only a one-time approval checkbox in the management panel can release a blocked command."
     },
     "zh-CN": {
@@ -22,7 +22,7 @@
     "productivity",
     "official"
   ],
-  "changelog": "Release 0.1.1: strengthens destructive-command filtering and makes one-time dangerous-command approval available only from the SSH Manager panel. Release 0.1.0: adds local SSH host profiles, strict host-key verification, OpenSSH key/agent and transient password authentication, bounded remote command execution, a focused management panel, and an AI skill describing safe SSH workflows.",
+  "changelog": "Release 0.1.2: imports concrete hosts from the local OpenSSH config, preserves aliases for complete SSH behavior, adds identity-file selection, surfaces OpenSSH diagnostics instead of a bare exit 255, inherits Windows system environment so ssh.exe can run, and stops leftover ssh processes from throwing on quit. Release 0.1.1: strengthens destructive-command filtering and makes one-time dangerous-command approval available only from the SSH Manager panel. Release 0.1.0: adds local SSH host profiles, strict host-key verification, OpenSSH key/agent and transient password authentication, bounded remote command execution, a focused management panel, and an AI skill describing safe SSH workflows.",
   "safetyNotes": "SSH credentials are never persisted by this plugin. Passwords entered in the panel are held in memory for at most 30 minutes and private-key contents stay outside the plugin. Authentication is delegated to the local OpenSSH client. The panel stores only connection metadata in plugin settings; AI tools can connect to configured hosts and execute remote shell commands, so PI-Desktop's high-risk tool policy must remain enabled.",
   "main": "main.js",
   "ui": {

@@ -150,9 +150,8 @@ function getSession(id) {
   return session;
 }
 
-function sshFailure(result) {
-  const detail = String(result.stderr || result.error || "SSH connection failed").trim();
-  return detail.length > 1200 ? `${detail.slice(0, 1168).trimEnd()}…` : detail;
+function sshFailure(result, profile) {
+  return ssh.formatSshFailure(result, profile);
 }
 
 async function connectProfile(profile, options = {}) {
@@ -167,7 +166,7 @@ async function connectProfile(profile, options = {}) {
   if (!result.ok) {
     return {
       ok: false,
-      error: sshFailure(result),
+      error: sshFailure(result, profile),
       exit_code: result.exitCode,
       timed_out: result.timedOut,
     };
@@ -236,7 +235,7 @@ async function executeProfile(args = {}, { source = "agent" } = {}) {
     stderr: result.stderr,
     output_truncated: result.outputTruncated,
     timed_out: result.timedOut,
-    error: result.ok ? null : sshFailure(result),
+    error: result.ok ? null : sshFailure(result, target.profile),
   };
 }
 
@@ -370,10 +369,55 @@ async function onLoad() {
   await registerTools();
 }
 
+async function scanConfigProfiles(args = {}) {
+  const options = {};
+  if (typeof args.configPath === "string" && args.configPath.trim()) options.configPath = args.configPath;
+  if (typeof args.username === "string" && args.username.trim()) options.username = args.username;
+  return ssh.discoverSshProfiles(options);
+}
+
+async function importConfigProfiles(args = {}) {
+  const discovered = await scanConfigProfiles(args);
+  const imported = [];
+  let updated = 0;
+  for (const candidate of discovered) {
+    const existingIndex = store.profiles.findIndex(
+      (profile) => profile.configAlias === candidate.configAlias,
+    );
+    const existing = existingIndex >= 0 ? store.profiles[existingIndex] : null;
+    const profile = ssh.normalizeProfile(candidate, existing || {});
+    if (existingIndex >= 0) {
+      store.profiles[existingIndex] = profile;
+      updated += 1;
+    } else {
+      store.profiles.push(profile);
+    }
+    imported.push(panelProfile(profile));
+  }
+  if (imported.length) await persistStore();
+  return {
+    ok: true,
+    profiles: imported,
+    count: imported.length,
+    imported: imported.length - updated,
+    updated,
+  };
+}
+
 async function onPanelInvoke(channel, payload = {}) {
   await loadStore();
   const args = payload && typeof payload === "object" ? payload : {};
   switch (channel) {
+    case "ssh.config.scan": {
+      const profiles = await scanConfigProfiles(args);
+      return { ok: true, profiles: profiles.map(ssh.profileForPanel), count: profiles.length };
+    }
+
+    case "ssh.config.import":
+    case "ssh.config.scanImport":
+    case "ssh.config.scan-and-import":
+      return importConfigProfiles(args);
+
     case "ssh.snapshot":
       pruneSessions();
       return {
@@ -435,6 +479,7 @@ async function onPanelInvoke(channel, payload = {}) {
 async function onUnload() {
   sessions.clear();
   profilePasswords.clear();
+  ssh.killActiveProcesses();
   await pi.commands.unregister(COMMAND_ID);
   for (const name of TOOL_NAMES) await pi.agent.unregisterTool(name);
   loaded = false;
@@ -448,6 +493,7 @@ module.exports = {
     async resetState() {
       sessions.clear();
       profilePasswords.clear();
+      ssh.killActiveProcesses();
       store = ssh.normalizeStore({});
       loaded = false;
       persistQueue = Promise.resolve();

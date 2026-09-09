@@ -2,12 +2,14 @@
 
 `pi.ssh-manager` 是一个本地优先的 SSH 主机管理插件：面板保存主机连接元数据，
 认证交给本机 OpenSSH、已有的 `~/.ssh/config`、ssh-agent、用户指定的私钥路径，或面板中
-临时输入的密码。
+临时输入的密码。添加或编辑主机时，私钥可以手动输入路径，也可以使用「选择文件」；插件只
+使用 Electron 提供的文件路径，从不读取文件内容。
 插件把有限时、有限输出的 SSH 能力提供给 PI-Desktop AI。
 
 ## 能做什么
 
 - 管理多台 SSH 主机：名称、主机、端口、用户名、私钥路径和 agent socket。
+- 一键扫描并导入本机 `~/.ssh/config`（含有界的 `Include`），保留 Host 别名以继续使用完整 OpenSSH 配置（包括 ProxyJump）。重复扫描会更新已有导入项，不会重复创建。连接失败会展示 OpenSSH 诊断而不是笼统的 exit 255；Windows 会继承 SYSTEMROOT 等系统环境并查找 `ssh.exe`。
 - 默认严格校验 `known_hosts`；只有用户显式选择时才使用 `accept-new`。
 - 在面板中测试连接、执行一次性命令、查看 stdout/stderr，并忘记逻辑会话。
 - 向 AI 暴露四个工具：

@@ -57,6 +57,10 @@
           </div>
           <div class="header-actions">
             <span class="host-status" id="globalStatus"><span class="status-dot"></span><span data-i18n="ready">Ready</span></span>
+            <button class="button button-secondary config-scan-button" id="configScan" type="button" title="Scan ~/.ssh/config" aria-label="Scan ~/.ssh/config">
+              <span class="button-icon" aria-hidden="true">⌕</span>
+              <span data-i18n="scanConfig">Scan ~/.ssh/config</span>
+            </button>
             <button class="button button-secondary" id="refresh" type="button" title="Refresh">
               <span class="button-icon" aria-hidden="true">↻</span>
               <span data-i18n="refresh">Refresh</span>
@@ -100,7 +104,14 @@
           </div>
           <label>
             <span data-i18n="identityFile">Identity file path <em>(optional)</em></span>
-            <input id="profileIdentity" name="identityFile" maxlength="1024" autocomplete="off" placeholder="~/.ssh/id_ed25519" />
+            <div class="identity-picker">
+              <div class="identity-input-row">
+                <input id="profileIdentity" name="identityFile" maxlength="1024" autocomplete="off" placeholder="~/.ssh/id_ed25519" aria-describedby="identityFileHelp" />
+                <input id="identityFilePicker" type="file" hidden aria-label="Choose an SSH identity file" />
+                <button class="button button-secondary choose-file" id="chooseIdentity" type="button" data-i18n="chooseFile">Choose file</button>
+              </div>
+              <span class="form-help" id="identityFileHelp" data-i18n="identityFileHelp">The file path is used only; private-key contents are never read.</span>
+            </div>
           </label>
           <label>
             <span data-i18n="agentSocket">SSH agent socket <em>(optional)</em></span>

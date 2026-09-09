@@ -428,11 +428,14 @@ h1 {
   background: var(--surface-raised);
   color: var(--text-secondary);
   font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
 }
-
 .notice.success { border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); color: var(--accent); }
 .notice.warning { border-color: color-mix(in srgb, var(--warning) 48%, var(--border)); color: var(--warning); }
 .notice.error { border-color: color-mix(in srgb, var(--danger) 48%, var(--border)); color: var(--danger); }
+
 
 .detail { max-width: 900px; margin: 0 auto; }
 
@@ -628,6 +631,10 @@ h1 {
 .profile-form label em { color: var(--text-faint); font-size: 11px; font-style: normal; font-weight: 400; }
 .profile-form label.modal-checkbox { flex-direction: row; align-items: center; gap: 7px; cursor: pointer; font-weight: 500; }
 .modal-checkbox input { width: 14px; min-height: 14px; accent-color: var(--warning); }
+.identity-picker { display: flex; flex-direction: column; gap: 6px; }
+.identity-input-row { display: flex; align-items: stretch; gap: 8px; }
+.identity-input-row input { min-width: 0; flex: 1; }
+.choose-file { flex: none; white-space: nowrap; }
 .form-grid { display: grid; gap: 10px; }
 .form-grid-three { grid-template-columns: minmax(0, 1.5fr) 96px minmax(0, 1fr); }
 .form-help { color: var(--text-faint); font-size: 11px; line-height: 1.5; }
@@ -651,6 +658,8 @@ h1 {
   .detail-actions { justify-content: flex-start; }
   .form-grid-three { grid-template-columns: 1fr 86px; }
   .form-grid-three label:first-child { grid-column: 1 / -1; }
+  .identity-input-row { flex-direction: column; }
+  .choose-file { width: 100%; }
   .command-footer { align-items: flex-start; flex-direction: column; }
   .command-footer .button { width: 100%; }
   .modal-backdrop { padding: 14px; }
