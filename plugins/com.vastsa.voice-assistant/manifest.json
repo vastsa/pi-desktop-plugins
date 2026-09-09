@@ -16,10 +16,7 @@
       "safetyNotes": "通过浏览器 SpeechRecognition API 使用系统麦克风。语音指令经 PI-Desktop 宿主已审核的桌面操作目录路由；插件不会将原始音频发送到外部服务器。模型密钥和 API 凭据不会暴露给插件。"
     }
   },
-  "author": {
-    "name": "VastSa",
-    "url": "https://github.com/vastsa"
-  },
+  "author": "VastSa",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/com.vastsa.voice-assistant",
   "repository": "https://github.com/vastsa/pi-desktop-plugins",
   "main": "main.js",

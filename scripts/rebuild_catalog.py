@@ -12,6 +12,17 @@ PLUGINS = ROOT / "plugins"
 PACKAGES = ROOT / "packages"
 
 
+def catalog_author(value) -> str:
+    """Marketplace catalog author is a string (PI-Desktop MarketCatalogEntry)."""
+    if isinstance(value, dict):
+        name = str(value.get("name") or "").strip()
+        return name or "PI-Desktop"
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return "PI-Desktop"
+
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     h.update(path.read_bytes())
@@ -34,7 +45,7 @@ def main() -> int:
                 "name": manifest.get("name", plugin_id),
                 "description": manifest.get("description", ""),
                 "i18n": manifest.get("i18n") or {},
-                "author": manifest.get("author", "PI-Desktop"),
+                "author": catalog_author(manifest.get("author")),
                 "categories": manifest.get("categories")
                 or (["official"] if plugin_id.startswith("demo.") else ["community"]),
                 "verified": True,
