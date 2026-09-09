@@ -6,8 +6,8 @@
   "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.",
   "changelog": "Release 0.2.3: makes the editor use the full panel height with a stable responsive action row and synchronized host capsule colors. Release 0.2.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.2.1: refreshes the notes panel controls, editor surface, focus states, and responsive spacing.",
   "i18n": {
-    "en": { "name": "Workspace Notes", "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants." },
-    "zh-CN": { "name": "工作区笔记", "description": "读写工作区笔记，并在明确授权后获取远程片段。" }
+    "en": { "name": "Workspace Notes", "description": "Read/write workspace notes and fetch remote snippets with explicit high-risk grants.", "safetyNotes": "Reads and writes NOTES.md in the current workspace. Fetches remote snippets only when explicitly granted. The save_note agent tool is high-risk and requires explicit approval." },
+    "zh-CN": { "name": "工作区笔记", "description": "读写工作区笔记，并在明确授权后获取远程片段。", "safetyNotes": "读写当前工作区的 NOTES.md 文件。仅在明确授权后获取远程片段。save_note Agent 工具为高风险，需要显式批准。" }
   },
   "author": "PI-Desktop",
   "main": "main.js",

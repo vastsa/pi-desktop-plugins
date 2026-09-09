@@ -4,6 +4,18 @@
   "name": "Voice Assistant",
   "version": "1.0.0",
   "description": "Speak to a model and route approved commands to PI-Desktop.",
+  "i18n": {
+    "en": {
+      "name": "Voice Assistant",
+      "description": "Speak to a model and route approved commands to PI-Desktop.",
+      "safetyNotes": "Uses the system microphone through the browser SpeechRecognition API. Spoken commands are routed through PI-Desktop's host-owned desktop-operation catalog; the plugin never sends raw audio to external servers. Model keys and API credentials are never exposed to the plugin."
+    },
+    "zh-CN": {
+      "name": "语音助手",
+      "description": "语音对话，将语音指令路由到 PI-Desktop 已审核的桌面操作目录。",
+      "safetyNotes": "通过浏览器 SpeechRecognition API 使用系统麦克风。语音指令经 PI-Desktop 宿主已审核的桌面操作目录路由；插件不会将原始音频发送到外部服务器。模型密钥和 API 凭据不会暴露给插件。"
+    }
+  },
   "author": {
     "name": "VastSa",
     "url": "https://github.com/vastsa"

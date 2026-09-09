@@ -6,8 +6,8 @@
   "description": "Official sample plugin with panel, command, and echo tool.",
   "changelog": "Release 0.3.3: fills the v3 panel surface, improves responsive spacing and focus states, and keeps the host window-control capsule synchronized with theme changes. Release 0.3.2: migrates the panel to v3 paint-through chrome so top-band controls remain clickable while blank space remains draggable. Release 0.3.1: refreshes the panel surface to match PI-Desktop's compact neutral design system.",
   "i18n": {
-    "en": { "name": "Hello", "description": "Official sample plugin with panel, command, and echo tool." },
-    "zh-CN": { "name": "Hello", "description": "官方示例插件，包含面板、命令和回声工具。" }
+    "en": { "name": "Hello", "description": "Official sample plugin with panel, command, and echo tool.", "safetyNotes": "A demo plugin with no network, file or clipboard access beyond its own panel. The echo tool returns whatever text the agent sends." },
+    "zh-CN": { "name": "Hello", "description": "官方示例插件，包含面板、命令和回声工具。", "safetyNotes": "示例插件，不访问网络、文件或剪贴板。echo 工具仅原样返回 Agent 发送的文本。" }
   },
   "author": "PI-Desktop",
   "main": "main.js",
