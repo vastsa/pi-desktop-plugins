@@ -62,7 +62,7 @@ scroll container may keep a local `top: 0` offset.
 ### Packages & catalog
 
 - `.piplug` is a store-compressed zip written by a hand-rolled struct-packed Python zip writer in `scripts/pack_plugin.py` (no compression level, no external zip dependency).
-- `catalog.json` keeps a single `versions` entry per plugin, so the current manifest version must always have a matching `packages/<id>-<version>.piplug`; `rebuild_catalog.py` fails otherwise.
+- `catalog.json` keeps a single `versions` entry per plugin, so the current manifest version must always have a matching `packages/<id>-<version>.piplug`; `rebuild_catalog.py` fails otherwise. IDs in `UNPUBLISHED_PLUGIN_IDS` are omitted from the catalog even if source remains.
 - The catalog `shasum` must match the packed file — it is recomputed on every rebuild.
 
 ### Tests

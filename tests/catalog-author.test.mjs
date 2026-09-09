@@ -24,3 +24,11 @@ test("catalog rebuild stringifies object authors instead of copying them", () =>
   assert.match(generator, /def catalog_author\(/);
   assert.match(generator, /catalog_author\(manifest\.get\("author"\)\)/);
 });
+
+test("unpublished plugins stay out of the marketplace catalog", () => {
+  const ids = new Set(catalog.plugins.map((plugin) => plugin.id));
+  assert.equal(ids.has("com.vastsa.voice-assistant"), false);
+  assert.match(generator, /UNPUBLISHED_PLUGIN_IDS/);
+  assert.match(generator, /com\.vastsa\.voice-assistant/);
+});
+

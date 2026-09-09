@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Rebuild catalog.json from plugins/*/manifest.json + packages/*.piplug."""
+"""Rebuild catalog.json from plugins/*/manifest.json + packages/*.piplug.
+
+Plugins in UNPUBLISHED_PLUGIN_IDS stay in plugins/ but are omitted from the
+marketplace catalog (delisted).
+"""
 from __future__ import annotations
 
 import hashlib
@@ -10,6 +14,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLUGINS = ROOT / "plugins"
 PACKAGES = ROOT / "packages"
+
+# Present in plugins/ but not listed in catalog.json.
+UNPUBLISHED_PLUGIN_IDS = frozenset({
+    "com.vastsa.voice-assistant",
+})
 
 
 def catalog_author(value) -> str:
@@ -34,6 +43,8 @@ def main() -> int:
     for manifest_path in sorted(PLUGINS.glob("*/manifest.json")):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         plugin_id = manifest["id"]
+        if plugin_id in UNPUBLISHED_PLUGIN_IDS:
+            continue
         version = manifest["version"]
         package = PACKAGES / f"{plugin_id}-{version}.piplug"
         if not package.exists():

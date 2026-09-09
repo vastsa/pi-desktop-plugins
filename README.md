@@ -26,7 +26,6 @@ PI-Desktop 是一个现代化、AI 驱动的桌面环境，本仓库是其**官�
 | **pi.gitlens** | GitLens 风格的本地 Git 管理，停靠在右侧工作面板（仅人机 UI，无 Agent 工具） | PI-Desktop |
 | **pi.ssh-manager** | 本地优先的 SSH 主机管理与 AI 远程命令工具，支持面板临时密码且不持久化凭据 | PI-Desktop |
 | **pi.terminal** | 受 Otty 启发的交互式终端，只停靠在右侧工作面板；多标签、跨平台 shell | PI-Desktop |
-| **com.vastsa.voice-assistant** | 语音助手：语音输入，经确认后把指令交给 PI-Desktop | VastSa |
 
 ### 社区插件
 

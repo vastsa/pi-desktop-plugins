@@ -56,7 +56,9 @@ bump version in manifest.json
 The catalog keeps a single `versions` entry per plugin. The current manifest
 version **must** always have a matching `packages/<id>-<version>.piplug`;
 `rebuild_catalog.py` fails otherwise. The catalog `shasum` is recomputed on
-every rebuild and must match the packed file.
+every rebuild and must match the packed file. Plugin IDs listed in
+`UNPUBLISHED_PLUGIN_IDS` (`scripts/rebuild_catalog.py`) stay in `plugins/`
+but are omitted from `catalog.json`. Do not re-add them unless asked to relist.
 
 ## Plugin Anatomy
 
