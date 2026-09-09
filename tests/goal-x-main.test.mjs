@@ -90,18 +90,13 @@ test("onLoad/onUnload registrations match and the panel bridge persists a comple
     assert.deepEqual(calls.registeredTools.map((tool) => tool.name), expectedToolNames);
     assert.equal(new Set(expectedCommandIds).size, expectedCommandIds.length);
     assert.equal(new Set(expectedToolNames).size, expectedToolNames.length);
-    assert.equal(calls.eventOn.length, 1);
-    assert.equal(calls.eventOn[0].name, "plugin:settingsChanged");
-    assert.equal(typeof calls.eventOn[0].handler, "function");
-
-    const sisyphusCommand = calls.registeredCommands.find((command) => command.id === "sisyphus-direct");
+    const sisyphusCommand = calls.registeredCommands.find((command) => command.id === "goal-x.new-sisyphus");
     await sisyphusCommand.run();
     assert.equal(calls.openedPanels, 1);
     const initialPanelState = await main.onPanelInvoke("goal.state");
     assert.equal(initialPanelState.pendingCreateMode, "sisyphus");
     assert.equal(initialPanelState.workspace.goals.length, 0);
     assert.equal((await main.onPanelInvoke("goal.state")).pendingCreateMode, null);
-
     const created = await main.onPanelInvoke("goal.create", {
       objective: "Ship the migrated plugin",
       verificationContract: "Node tests pass",
@@ -244,9 +239,6 @@ test("onLoad/onUnload registrations match and the panel bridge persists a comple
     loaded = false;
     assert.deepEqual(calls.unregisteredTools, expectedToolNames);
     assert.deepEqual(calls.unregisteredCommands, expectedCommandIds);
-    assert.equal(calls.eventOff.length, 1);
-    assert.equal(calls.eventOff[0].name, "plugin:settingsChanged");
-    assert.strictEqual(calls.eventOff[0].handler, calls.eventOn[0].handler);
   } finally {
     if (loaded) await main.onUnload().catch(() => undefined);
     globalThis.pi = previousPi;

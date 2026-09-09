@@ -78,5 +78,7 @@ test("Goal X declares bounded capabilities and the v3 host chrome contract", () 
   assert.match(styles, /-webkit-app-region:\s*drag/);
   assert.match(styles, /\.chrome-bar button\s*\{\s*-webkit-app-region:\s*no-drag/);
   assert.match(panel, /\.\/lucide\.min\.js/);
+  assert.match(panel, /\.\/appearance-boot\.js/);
+  assert.match(panel, /\.\/capsule-retint\.js/);
   assert.doesNotMatch(panel, /https?:\/\//i);
 });

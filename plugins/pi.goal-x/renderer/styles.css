@@ -84,6 +84,12 @@ svg { width: 16px; height: 16px; stroke-width: 1.8; }
   -webkit-app-region: drag;
 }
 .chrome-bar button { -webkit-app-region: no-drag; }
+body.is-docked .chrome-bar {
+  height: 42px;
+  min-height: 42px;
+  padding: 0 12px;
+  -webkit-app-region: no-drag;
+}
 .brand-lockup { min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--text-strong); }
 .brand-lockup strong { font-size: 13px; font-weight: 680; white-space: nowrap; }
 .brand-mark { width: 23px; height: 23px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px; color: var(--accent); }
@@ -308,6 +314,7 @@ svg { width: 16px; height: 16px; stroke-width: 1.8; }
 .verdict { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 660; }
 .verdict.approved { color: var(--success); }
 .verdict.rejected { color: var(--danger); }
+.verdict.skipped { color: var(--muted); }
 .audit-result p { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .settings-list { border-top: 1px solid var(--border); }
@@ -385,7 +392,7 @@ dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 38
 .is-spinning svg { animation: spin 800ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 1120px) {
+@media (max-width: 1100px) {
   .workspace-layout { grid-template-columns: 235px minmax(390px, 1fr); }
   .inspector-toggle { display: inline-grid; }
   .inspector {
@@ -402,6 +409,7 @@ dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 38
     transition: transform 160ms ease;
   }
   .inspector.is-open { transform: translateX(0); }
+  body.is-docked .inspector { top: 42px; }
   .drawer-scrim {
     position: fixed;
     z-index: 41;
@@ -413,6 +421,7 @@ dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 38
     border-radius: 0;
     background: rgba(12, 15, 12, 0.38);
   }
+  body.is-docked .drawer-scrim { inset: 42px 0 0; }
   .drawer-scrim.is-open { display: block; }
   .goal-view { padding-left: 26px; padding-right: 26px; }
 }

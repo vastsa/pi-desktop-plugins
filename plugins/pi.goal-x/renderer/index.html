@@ -8,24 +8,16 @@
       PI-Desktop owns exactly a transparent 46px drag band and the three-button
       window-control capsule. Host-anchored sticky surfaces use
       var(--pi-plugin-titlebar-height, 46px); this toolbar remains in normal flow.
+      Docked work-panel views publish a 0px titlebar height and have no capsule.
     -->
     <title>Goal X</title>
-    <script>
-      (function () {
-        var root = document.documentElement;
-        try {
-          var cached = JSON.parse(localStorage.getItem("pi.goal-x.appearance.v1") || "null");
-          if (cached && (cached.base === "light" || cached.base === "dark")) root.dataset.theme = cached.base;
-          if (cached && String(cached.locale || "").toLowerCase().startsWith("zh")) {
-            root.lang = "zh-CN";
-            root.dataset.lang = "zh";
-          }
-        } catch (_) {}
-      })();
-    </script>
+    <script>window.__APPEARANCE_CACHE_KEY = "pi.goal-x.appearance.v1";</script>
+    <script src="./appearance-boot.js"></script>
     <link rel="stylesheet" href="./styles.css" />
     <script defer src="./lucide.min.js"></script>
+    <script defer src="./appearance.js"></script>
     <script defer src="./app.js"></script>
+    <script src="./capsule-retint.js"></script>
   </head>
   <body>
     <div class="app-shell" id="app" aria-busy="true">
@@ -81,7 +73,7 @@
         </aside>
       </div>
     </div>
-    <button class="drawer-scrim" type="button" data-action="close-inspector" aria-label="Close"></button>
+    <button class="drawer-scrim" type="button" data-action="close-inspector" data-i18n-aria="close" aria-label="Close"></button>
 
     <dialog id="goal-dialog" aria-labelledby="goal-dialog-title">
       <form method="dialog" id="goal-form">
@@ -106,7 +98,7 @@
               <legend data-i18n="mode">Mode</legend>
               <div class="segmented mode-control">
                 <label class="segment"><input type="radio" name="goal-mode" value="regular" checked /><span data-i18n="regular">Regular</span></label>
-                <label class="segment"><input type="radio" name="goal-mode" value="sisyphus" /><span>Sisyphus</span></label>
+                <label class="segment"><input type="radio" name="goal-mode" value="sisyphus" /><span data-i18n="sisyphus">Sisyphus</span></label>
               </div>
             </fieldset>
             <label class="field">

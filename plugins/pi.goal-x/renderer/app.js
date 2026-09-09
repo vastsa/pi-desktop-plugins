@@ -1,17 +1,17 @@
 (function () {
   "use strict";
 
+  var PREVIEW = /(?:^|[?&])preview=1(?:&|$)/.test(String(location.search || ""));
   var bridge = window.pluginBridge && typeof window.pluginBridge.invoke === "function" ? window.pluginBridge : null;
   var root = document.documentElement;
   var appElement = document.getElementById("app");
   var toastTimer = null;
-
   var messages = {
     en: {
       open: "Open", archived: "Archived", activity: "Activity", audit: "Audit", refresh: "Refresh",
       newGoal: "New goal", close: "Close", goalDefinition: "Goal definition", objective: "Objective",
       verificationContract: "Verification contract", contractPlaceholder: "What evidence proves this goal is complete?",
-      mode: "Mode", regular: "Regular", tokenBudget: "Token budget", optional: "Optional",
+      mode: "Mode", regular: "Regular", sisyphus: "Sisyphus", tokenBudget: "Token budget", optional: "Optional",
       gateCompletion: "Gate completion", gateCompletionHint: "Require every task to be resolved before audit.",
       cancel: "Cancel", save: "Save", taskPlan: "Task plan", addTask: "Add task", taskTitle: "Task title",
       parentTask: "Parent task", noParent: "No parent", lightweightSubtasks: "Lightweight subtasks",
@@ -51,13 +51,13 @@
       archivedEvent: "Goal archived.", restoredEvent: "Goal restored from archive.", modelDefault: "Default",
       off: "Off", minimal: "Minimal", low: "Low", medium: "Medium", high: "High", xhigh: "Extra high", max: "Maximum",
       archivedReason: "Archived by user", auditPendingHint: "The completion gate is active and {count} task(s) remain pending.",
-      selectedTask: "Selected task", mockMode: "Preview data", none: "None"
+      selectedTask: "Selected task", mockMode: "Preview data", none: "None", goals: "Goals", disconnected: "Goal X is not connected to PI-Desktop."
     },
     zh: {
       open: "进行中", archived: "已归档", activity: "动态", audit: "审计", refresh: "刷新",
       newGoal: "新建目标", close: "关闭", goalDefinition: "目标定义", objective: "目标",
       verificationContract: "验收契约", contractPlaceholder: "什么证据可以证明目标已经完成？",
-      mode: "模式", regular: "常规", tokenBudget: "Token 预算", optional: "可选",
+      mode: "模式", regular: "常规", sisyphus: "Sisyphus", tokenBudget: "Token 预算", optional: "可选",
       gateCompletion: "完成门禁", gateCompletionHint: "审计前要求所有任务都已处理。",
       cancel: "取消", save: "保存", taskPlan: "任务计划", addTask: "添加任务", taskTitle: "任务标题",
       parentTask: "父任务", noParent: "无父任务", lightweightSubtasks: "轻量子任务",
@@ -97,7 +97,7 @@
       archivedEvent: "目标已归档。", restoredEvent: "目标已从归档恢复。", modelDefault: "默认",
       off: "关闭", minimal: "最少", low: "低", medium: "中", high: "高", xhigh: "极高", max: "最高",
       archivedReason: "由用户归档", auditPendingHint: "完成门禁已启用，仍有 {count} 个任务待处理。",
-      selectedTask: "所选任务", mockMode: "预览数据", none: "无"
+      selectedTask: "所选任务", mockMode: "预览数据", none: "无", goals: "目标", disconnected: "Goal X 未连接到 PI-Desktop。"
     }
   };
 
@@ -277,8 +277,9 @@
   }
 
   async function rpc(channel, payload) {
-    var result = bridge ? await bridge.invoke(channel, payload || {}) : await mockInvoke(channel, payload || {});
-    return unwrapResult(result);
+    if (bridge) return unwrapResult(await bridge.invoke(channel, payload || {}));
+    if (PREVIEW) return unwrapResult(await mockInvoke(channel, payload || {}));
+    throw new Error(t("disconnected"));
   }
 
   function goalList() {
@@ -370,7 +371,7 @@
       node.setAttribute("aria-label", label);
       node.dataset.tooltip = label;
     });
-    document.querySelector(".goal-sidebar").setAttribute("aria-label", t("tasks"));
+    document.querySelector(".goal-sidebar").setAttribute("aria-label", t("goals"));
     document.getElementById("inspector").setAttribute("aria-label", t("inspectPanel"));
   }
 
@@ -551,7 +552,7 @@
         renderMetric(t("budget"), goal.tokenBudget ? formatInteger(goal.tokenBudget) : t("unlimited")) +
         renderMetric(t("tasks"), t("taskCount", { done: resolved, total: stats.total })) +
       "</div>" + notice +
-      '<section class="section"><div class="section-heading"><h2>' + escapeHtml(t("verificationContract")) + '</h2><span class="section-meta">' + escapeHtml(goal.mode === "sisyphus" ? "Sisyphus" : t("regular")) + '</span></div><p class="' + contractClass + '">' + escapeHtml(goal.verificationContract || t("noContract")) + "</p></section>" +
+      '<section class="section"><div class="section-heading"><h2>' + escapeHtml(t("verificationContract")) + '</h2><span class="section-meta">' + escapeHtml(goal.mode === "sisyphus" ? t("sisyphus") : t("regular")) + '</span></div><p class="' + contractClass + '">' + escapeHtml(goal.verificationContract || t("noContract")) + "</p></section>" +
       '<section class="section"><div class="section-heading"><h2>' + escapeHtml(t("taskProgress")) + '</h2><span class="section-meta">' + escapeHtml(t("taskCount", { done: resolved, total: stats.total })) + "</span></div>" +
         (tasks.length ? '<div class="task-list">' + tasks.map(function (entry) { return renderTaskRow(goal, entry, archivedGoal); }).join("") + "</div>" : '<p class="contract is-empty">' + escapeHtml(t("noTasks")) + "</p>") +
         (!archivedGoal && (goal.status === "active" || goal.status === "paused") ? '<button class="text-button compact task-add" type="button" data-action="add-task">' + icon("plus") + '<span>' + escapeHtml(t("addTask")) + "</span></button>" : "") +
@@ -639,10 +640,12 @@
   }
 
   function renderLatestAudit(audit) {
-    var approved = audit.approved === true;
     var skipped = audit.skipped === true;
+    var approved = !skipped && audit.approved === true;
     var label = skipped ? t("auditSkipped") : approved ? t("approved") : t("rejected");
-    return '<div class="audit-result"><div class="audit-result-head"><span class="verdict ' + (approved ? "approved" : "rejected") + '">' + icon(approved ? "badge-check" : "shield-alert") + escapeHtml(label) + '</span><span class="timeline-time">' + escapeHtml(formatRelative(audit.at)) + '</span></div>' + (audit.report ? '<p>' + escapeHtml(audit.report) + "</p>" : "") + "</div>";
+    var verdict = skipped ? "skipped" : approved ? "approved" : "rejected";
+    var glyph = skipped ? "shield-off" : approved ? "badge-check" : "shield-alert";
+    return '<div class="audit-result"><div class="audit-result-head"><span class="verdict ' + verdict + '">' + icon(glyph) + escapeHtml(label) + '</span><span class="timeline-time">' + escapeHtml(formatRelative(audit.at)) + '</span></div>' + (audit.report ? '<p>' + escapeHtml(audit.report) + "</p>" : "") + "</div>";
   }
 
   function renderAuditSettings(goal) {
@@ -1007,60 +1010,36 @@
     if (event.target.matches("[data-setting]")) saveSettingsFromUi();
   });
 
-  document.addEventListener("keydown", function (event) {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n" && !document.querySelector("dialog[open]")) {
-      event.preventDefault();
-      openGoalDialog("create");
-    }
-  });
+  function syncDockedMode() {
+    var raw = (getComputedStyle(root).getPropertyValue("--pi-plugin-titlebar-height") || "").trim();
+    document.body.classList.toggle("is-docked", raw === "0px" || raw === "0");
+  }
 
-  function applyAppearance(value) {
-    value = value || {};
-    var base = value.base === "light" || value.base === "dark" ? value.base : value.theme === "light" || value.theme === "dark" ? value.theme : null;
-    if (base) root.dataset.theme = base;
-    if (!state.localeOverride && value.locale) {
-      state.locale = String(value.locale).toLowerCase().startsWith("zh") ? "zh" : "en";
-      root.lang = state.locale === "zh" ? "zh-CN" : "en";
-      root.dataset.lang = state.locale;
-      if (state.loaded) renderAll();
-    }
-    var css = value.pluginThemeCss || value.pluginTheme && value.pluginTheme.css;
-    var style = document.getElementById("pi-plugin-theme");
-    if (css) {
-      if (!style) {
-        style = document.createElement("style");
-        style.id = "pi-plugin-theme";
-        document.head.appendChild(style);
-      }
-      style.textContent = css;
-    } else if (style) {
-      style.remove();
-    }
-    try { localStorage.setItem("pi.goal-x.appearance.v1", JSON.stringify({ base: base || root.dataset.theme, locale: value.locale || root.lang })); } catch (_) {}
+  function localeFromHost(value) {
+    return String(value || "").toLowerCase().startsWith("zh") ? "zh" : "en";
+  }
+
+  function applyHostLocale(locale) {
+    if (state.localeOverride) return;
+    var next = localeFromHost(locale);
+    if (next === state.locale) return;
+    state.locale = next;
+    root.lang = next === "zh" ? "zh-CN" : "en";
+    root.dataset.lang = next;
+    if (state.loaded) renderAll();
   }
 
   function initAppearance() {
-    if (bridge) {
-      if (typeof bridge.on === "function") {
-        try { bridge.on("appearance:changed", applyAppearance); } catch (_) {}
+    if (window.__appearance && typeof window.__appearance.init === "function") {
+      window.__appearance.init(bridge);
+      if (typeof window.__appearance.onLocaleChange === "function") {
+        window.__appearance.onLocaleChange(applyHostLocale);
       }
-      bridge.invoke("app.getAppearance").then(applyAppearance).catch(function () {});
-      setInterval(function () {
-        if (!document.hidden) bridge.invoke("app.getAppearance").then(applyAppearance).catch(function () {});
-      }, 2000);
-      document.addEventListener("visibilitychange", function () {
-        if (!document.hidden) bridge.invoke("app.getAppearance").then(applyAppearance).catch(function () {});
-      });
-    } else {
-      var query = window.matchMedia("(prefers-color-scheme: dark)");
-      root.dataset.theme = query.matches ? "dark" : "light";
-      if (!state.localeOverride) {
-        state.locale = String(navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en";
-        root.lang = state.locale === "zh" ? "zh-CN" : "en";
-        root.dataset.lang = state.locale;
-      }
-      if (typeof query.addEventListener === "function") query.addEventListener("change", function (event) { root.dataset.theme = event.matches ? "dark" : "light"; });
+      var current = typeof window.__appearance.current === "function" ? window.__appearance.current() : null;
+      if (current && current.locale) applyHostLocale(current.locale);
     }
+    syncDockedMode();
+    window.addEventListener("resize", syncDockedMode);
   }
 
   function findMockGoal(id, archived) {

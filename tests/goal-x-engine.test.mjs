@@ -146,6 +146,11 @@ test("persisted state normalization is bounded and prototype-safe", () => {
   assert.equal(flattenTasks(root.workspaces.alpha.goals[0].tasks).length, LIMITS.tasks);
 });
 
+test("malformed persisted state is rejected instead of wiped", () => {
+  assert.throws(() => normalizeRoot("not-an-object"), (error) => error.code === "STORAGE_INVALID");
+  assert.throws(() => normalizeRoot({ version: 1 }), (error) => error.code === "STORAGE_INVALID");
+  assert.equal(Object.keys(normalizeRoot(null).workspaces).length, 0);
+});
 test("workspace retention rejects overflow unless an empty workspace can be reclaimed", () => {
   const fullRoot = normalizeRoot(null);
   for (let index = 0; index < LIMITS.workspaces; index += 1) {

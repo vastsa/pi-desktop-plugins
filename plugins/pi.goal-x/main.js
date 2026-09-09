@@ -31,19 +31,12 @@ const { runAudit } = require("./lib/auditor");
 
 const TOOL_NAMES = ["create_goal", "get_goal", "update_goal", "set_goal_tasks", "update_goal_task"];
 const COMMAND_IDS = [
-  "goal",
-  "sisyphus",
-  "goal-direct",
-  "sisyphus-direct",
-  "goal-list",
-  "goal-status",
-  "goal-focus",
-  "goal-unfocus",
-  "goal-tweak",
-  "goal-clear",
-  "goal-pause",
-  "goal-resume",
-  "goal-settings",
+  "goal-x.open",
+  "goal-x.new",
+  "goal-x.new-sisyphus",
+  "goal-x.unfocus",
+  "goal-x.pause",
+  "goal-x.resume",
 ];
 
 const DEFAULT_SETTINGS = Object.freeze({
@@ -55,7 +48,6 @@ const DEFAULT_SETTINGS = Object.freeze({
 const COMPLETION_SUMMARY_LIMIT = 2000;
 
 let pendingCreateMode = null;
-let settingsHandler = null;
 
 function opaqueKey(prefix, value) {
   const text = String(value ?? "").trim();
@@ -89,18 +81,13 @@ async function blockerTurnId(context) {
     const messages = Array.isArray(llmContext?.messages) ? llmContext.messages : [];
     let userCount = 0;
     let lastUserIndex = -1;
-    let lastUserContent = "";
     for (let index = 0; index < messages.length; index += 1) {
       if (messages[index]?.role !== "user") continue;
       userCount += 1;
       lastUserIndex = index;
-      lastUserContent = String(messages[index]?.content ?? "");
     }
     if (lastUserIndex < 0) return null;
-    return opaqueKey(
-      "turn",
-      `${context.sessionId}\0${userCount}\0${lastUserIndex}\0${lastUserContent}`,
-    );
+    return opaqueKey("turn", `${context.sessionId}\0${userCount}\0${lastUserIndex}`);
   } catch {
     return null;
   }
@@ -462,19 +449,12 @@ async function unfocusFromCommand() {
 }
 
 const COMMAND_DEFINITIONS = [
-  { id: "goal", title: "Goal X: Open dashboard", keywords: ["goal", "目标"], run: () => openPanel("regular") },
-  { id: "sisyphus", title: "Goal X: New ordered goal", keywords: ["sisyphus", "ordered", "有序目标"], run: () => openPanel("sisyphus") },
-  { id: "goal-direct", title: "Goal X: New goal", keywords: ["goal", "new", "新建目标"], run: () => openPanel("regular") },
-  { id: "sisyphus-direct", title: "Goal X: New ordered goal", keywords: ["sisyphus", "new", "有序目标"], run: () => openPanel("sisyphus") },
-  { id: "goal-list", title: "Goal X: List goals", keywords: ["goal", "list", "目标列表"], run: () => openPanel() },
-  { id: "goal-status", title: "Goal X: Show status", keywords: ["goal", "status", "目标状态"], run: () => openPanel() },
-  { id: "goal-focus", title: "Goal X: Choose focus", keywords: ["goal", "focus", "聚焦"], run: () => openPanel() },
-  { id: "goal-unfocus", title: "Goal X: Clear focus", keywords: ["goal", "unfocus", "取消聚焦"], run: unfocusFromCommand },
-  { id: "goal-tweak", title: "Goal X: Edit focused goal", keywords: ["goal", "edit", "调整目标"], run: () => openPanel() },
-  { id: "goal-clear", title: "Goal X: Archive a goal", keywords: ["goal", "archive", "归档目标"], run: () => openPanel() },
-  { id: "goal-pause", title: "Goal X: Pause focused goal", keywords: ["goal", "pause", "暂停"], run: pauseFocusedFromCommand },
-  { id: "goal-resume", title: "Goal X: Resume focused goal", keywords: ["goal", "resume", "恢复"], run: resumeFocusedFromCommand },
-  { id: "goal-settings", title: "Goal X: Auditor settings", keywords: ["goal", "settings", "审计设置"], run: () => openPanel() },
+  { id: "goal-x.open", title: "Goal X: Open dashboard", keywords: ["goal", "目标"], run: () => openPanel() },
+  { id: "goal-x.new", title: "Goal X: New goal", keywords: ["goal", "new", "新建目标"], run: () => openPanel("regular") },
+  { id: "goal-x.new-sisyphus", title: "Goal X: New ordered goal", keywords: ["sisyphus", "ordered", "有序目标"], run: () => openPanel("sisyphus") },
+  { id: "goal-x.unfocus", title: "Goal X: Clear focus", keywords: ["goal", "unfocus", "取消聚焦"], run: unfocusFromCommand },
+  { id: "goal-x.pause", title: "Goal X: Pause focused goal", keywords: ["goal", "pause", "暂停"], run: pauseFocusedFromCommand },
+  { id: "goal-x.resume", title: "Goal X: Resume focused goal", keywords: ["goal", "resume", "恢复"], run: resumeFocusedFromCommand },
 ];
 
 async function panelState() {
@@ -617,15 +597,9 @@ async function onPanelInvoke(channel, payload) {
 async function onLoad() {
   for (const command of COMMAND_DEFINITIONS) await pi.commands.register(command);
   for (const tool of TOOL_DEFINITIONS) await pi.agent.registerTool(tool);
-  settingsHandler = () => undefined;
-  pi.events.on("plugin:settingsChanged", settingsHandler);
 }
 
 async function onUnload() {
-  if (settingsHandler) {
-    pi.events.off("plugin:settingsChanged", settingsHandler);
-    settingsHandler = null;
-  }
   for (const toolName of TOOL_NAMES) await pi.agent.unregisterTool(toolName);
   for (const commandId of COMMAND_IDS) await pi.commands.unregister(commandId);
 }

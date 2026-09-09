@@ -11,7 +11,7 @@ not load the original Pi extension or its SDK dependencies.
 
 ## Features
 
-- Regular and ordered Sisyphus goals
+- Regular goals and Sisyphus mode (order is Agent guidance, not engine-enforced)
 - Up to 32 open goals per workspace, with an explicit focus
 - Nested tasks with stable ids, completion contracts, evidence, skip reasons,
   and atomic batch updates
@@ -32,19 +32,14 @@ commands are also available:
 
 | Command | Action |
 | --- | --- |
-| `/goal` | Open the dashboard with a regular-goal draft ready |
-| `/sisyphus` | Open an ordered-goal draft |
-| `/goal-direct` | Open a regular-goal draft |
-| `/sisyphus-direct` | Open an ordered-goal draft |
-| `/goal-list`, `/goal-status`, `/goal-focus` | Open the dashboard |
-| `/goal-unfocus` | Clear the current workspace focus |
-| `/goal-tweak`, `/goal-clear`, `/goal-settings` | Open the relevant dashboard workflow |
-| `/goal-pause`, `/goal-resume` | Change the focused goal immediately |
+| `/goal-x.open` | Open the dashboard |
+| `/goal-x.new` | Open a regular-goal draft |
+| `/goal-x.new-sisyphus` | Open an ordered-goal draft (Sisyphus mode) |
+| `/goal-x.unfocus` | Clear the current workspace focus |
+| `/goal-x.pause`, `/goal-x.resume` | Change the focused goal immediately |
 
-PI-Desktop plugin commands currently receive no arguments. `/goal` is handled
-locally, but `/goal build the export` remains a normal prompt instead of
-passing `build the export` to this command. Use the panel, or ask the Agent to
-create the goal in Agent mode.
+PI-Desktop plugin commands currently receive no arguments. Use the panel, or
+ask the Agent to create the goal in Agent mode.
 
 ### Agent tools
 
@@ -97,7 +92,7 @@ workspace file, network, shell, or clipboard permission.
 | `agent.tool.register` | Provide the five goal tools in Agent mode |
 | `agent.prompt.inject` | Load the Goal X workflow skill on demand |
 | `models.list` | Populate the auditor model picker and choose a fallback |
-| `session.read` | Locally derive an opaque turn identifier so repeated blocker reports must come from distinct Agent turns; conversation text is not stored or sent to the auditor |
+| `session.read` | Locally derive an opaque turn identifier from session/turn metadata so repeated blocker reports must come from distinct Agent turns; conversation text is not stored, hashed, or sent to the auditor |
 | `agent.complete` | Run the independent completion audit |
 
 The state root, each workspace, and every mutation are normalized before use.

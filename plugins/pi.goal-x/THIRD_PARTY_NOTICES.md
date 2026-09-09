@@ -2,12 +2,12 @@
 
 ## Lucide 0.460.0
 
-The bundled `renderer/lucide.min.js` icon subset is derived from Lucide.
+The bundled `renderer/lucide.min.js` is the full Lucide 0.460.0 UMD build
+(same vendor file used by `pi.scratch-calc`), not an icon subset.
 
 ISC License
 
 Copyright (c) 2020, Lucide Contributors
-
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
 copyright notice and this permission notice appear in all copies.

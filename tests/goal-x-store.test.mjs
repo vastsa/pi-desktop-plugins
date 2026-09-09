@@ -30,6 +30,7 @@ function host(initial = {}) {
         getSettings: async () => clone(settings),
         setSettings: async (patch) => {
           writes.push(clone(patch));
+          for (const key of Object.keys(settings)) delete settings[key];
           Object.assign(settings, clone(patch));
         },
       },
@@ -109,6 +110,26 @@ test("oversized state is rejected before the host settings file is touched", asy
     );
     assert.equal(current.writes.length, 0);
     assert.deepEqual(await readSettings(), {});
+  } finally {
+    globalThis.pi = previousPi;
+    __test.resetQueue();
+  }
+});
+
+test("malformed goalXState aborts without writing or dropping other settings", async () => {
+  const previousPi = globalThis.pi;
+  const current = host({ [STATE_SETTING_KEY]: "not-an-object", auditorEnabled: true });
+  globalThis.pi = current.pi;
+  __test.resetQueue();
+
+  try {
+    await assert.rejects(
+      mutateCurrentWorkspace(() => assert.fail("mutator must not run")),
+      (error) => error?.code === "STORAGE_INVALID",
+    );
+    assert.equal(current.writes.length, 0);
+    assert.equal(current.settings.auditorEnabled, true);
+    assert.equal(current.settings[STATE_SETTING_KEY], "not-an-object");
   } finally {
     globalThis.pi = previousPi;
     __test.resetQueue();

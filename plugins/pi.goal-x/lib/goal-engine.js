@@ -260,13 +260,19 @@ function normalizeWorkspace(raw, descriptor = {}) {
 }
 
 function normalizeRoot(raw) {
+  if (raw == null || raw === "") {
+    return {
+      version: 1,
+      workspaces: Object.create(null),
+    };
+  }
+  if (typeof raw !== "object" || Array.isArray(raw) || !raw.workspaces || typeof raw.workspaces !== "object" || Array.isArray(raw.workspaces)) {
+    throw new GoalError("STORAGE_INVALID", "Goal X state is not a valid object; no data was changed.");
+  }
   const root = {
     version: 1,
     workspaces: Object.create(null),
   };
-  if (!raw || typeof raw !== "object" || !raw.workspaces || typeof raw.workspaces !== "object") {
-    return root;
-  }
   for (const [key, workspace] of Object.entries(raw.workspaces).slice(0, LIMITS.workspaces)) {
     if (!key || key.length > 128 || ["__proto__", "prototype", "constructor"].includes(key)) continue;
     root.workspaces[key] = normalizeWorkspace(workspace, { key });

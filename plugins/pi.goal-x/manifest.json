@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "id": "pi.goal-x",
   "name": "Goal X",
-  "version": "0.1.0",
-  "description": "Persistent workspace goals, task evidence, ordered execution, and independent completion audits for PI-Desktop.",
+  "version": "0.1.1",
+  "description": "Persistent workspace goals, task evidence, and host-owned completion audits for PI-Desktop.",
   "i18n": {
     "en": {
       "name": "Goal X",
-      "description": "Persistent workspace goals, task evidence, ordered execution, and independent completion audits for PI-Desktop.",
-      "safetyNotes": "Goal records stay in this plugin's private settings. Goal X does not read or write workspace files and makes no network requests. The selected completion auditor receives only a bounded goal record and untrusted completion claim through PI-Desktop's host-owned API. Goal X reads bounded session context locally only to derive an opaque distinct-turn identifier for blocker reports; it neither stores conversation text nor sends it to the auditor. API keys are never exposed to the plugin."
+      "description": "Persistent workspace goals, task evidence, and host-owned completion audits for PI-Desktop.",
+      "safetyNotes": "Goal records stay in this plugin's private settings. Goal X does not read or write workspace files and makes no network requests. The selected completion auditor receives only a bounded goal record and untrusted completion claim through PI-Desktop's host-owned API. Goal X reads bounded session metadata locally only to derive an opaque distinct-turn identifier for blocker reports; it neither stores conversation text nor sends it to the auditor. API keys are never exposed to the plugin."
     },
     "zh-CN": {
       "name": "Goal X 目标管理",
-      "description": "为 PI-Desktop 提供持久化工作区目标、任务证据、有序执行与独立完成审计。",
-      "safetyNotes": "目标记录仅保存在本插件的私有设置中。Goal X 不读写工作区文件，也不发起网络请求。完成审计模型只会通过 PI-Desktop 宿主 API 收到受限的目标记录和不可信完成声明。Goal X 仅在本地读取受限会话上下文，用于生成阻塞报告的不透明独立回合标识；不会保存对话文本，也不会把对话发送给审计模型。插件无法获取 API 密钥。"
+      "description": "为 PI-Desktop 提供持久化工作区目标、任务证据与宿主完成审计。",
+      "safetyNotes": "目标记录仅保存在本插件的私有设置中。Goal X 不读写工作区文件，也不发起网络请求。完成审计模型只会通过 PI-Desktop 宿主 API 收到受限的目标记录和不可信完成声明。Goal X 仅在本地读取受限会话元数据，用于生成阻塞报告的不透明独立回合标识；不会保存对话文本，也不会把对话发送给审计模型。插件无法获取 API 密钥。"
     }
   },
   "author": "Goal X contributors",
@@ -23,8 +23,8 @@
     "productivity",
     "developer-tools"
   ],
-  "changelog": "Initial PI-Desktop migration: workspace-scoped goal pools, focus, regular and Sisyphus modes, task trees, completion evidence, pause/block/resume/archive lifecycle, bilingual dashboard, Agent tools, and host-owned completion audits.",
-  "safetyNotes": "Goal data stays in plugin-private settings. No workspace file, shell, clipboard, or network access. Completion auditing sends only bounded goal data and an untrusted completion claim to a signed-in model. Bounded session context is read locally only to derive opaque blocker turn identifiers and is never stored or sent to the auditor. The plugin never receives provider credentials.",
+  "changelog": "0.1.1: docked work-panel chrome, fail-closed storage, namespaced commands, appearance adapter. 0.1.0: workspace-scoped goal pools, focus, regular and Sisyphus modes, task trees, completion evidence, pause/block/resume/archive lifecycle, bilingual dashboard, Agent tools, and host-owned completion audits.",
+  "safetyNotes": "Goal data stays in plugin-private settings. No workspace file, shell, clipboard, or network access. Completion auditing sends only bounded goal data and an untrusted completion claim to a signed-in model. Bounded session metadata is read locally only to derive opaque blocker turn identifiers and is never stored or sent to the auditor. The plugin never receives provider credentials.",
   "main": "main.js",
   "ui": {
     "panel": "renderer/index.html",
@@ -32,88 +32,46 @@
       "en": "Goal X",
       "zh-CN": "Goal X 目标管理"
     },
-    "width": 1120,
+    "width": 1240,
     "height": 760,
     "resizable": true
   },
   "contributes": {
     "commands": [
       {
-        "id": "goal",
+        "id": "goal-x.open",
         "title": "Goal X: Open dashboard",
         "keywords": ["goal", "objective", "目标"],
         "category": "Agent"
       },
       {
-        "id": "sisyphus",
-        "title": "Goal X: New ordered goal",
-        "keywords": ["sisyphus", "ordered", "有序目标"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-direct",
+        "id": "goal-x.new",
         "title": "Goal X: New goal",
         "keywords": ["goal", "new", "新建目标"],
         "category": "Agent"
       },
       {
-        "id": "sisyphus-direct",
+        "id": "goal-x.new-sisyphus",
         "title": "Goal X: New ordered goal",
-        "keywords": ["sisyphus", "new", "有序目标"],
+        "keywords": ["sisyphus", "ordered", "有序目标"],
         "category": "Agent"
       },
       {
-        "id": "goal-list",
-        "title": "Goal X: List goals",
-        "keywords": ["goal", "list", "目标列表"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-status",
-        "title": "Goal X: Show status",
-        "keywords": ["goal", "status", "目标状态"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-focus",
-        "title": "Goal X: Choose focus",
-        "keywords": ["goal", "focus", "聚焦"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-unfocus",
+        "id": "goal-x.unfocus",
         "title": "Goal X: Clear focus",
         "keywords": ["goal", "unfocus", "取消聚焦"],
         "category": "Agent"
       },
       {
-        "id": "goal-tweak",
-        "title": "Goal X: Edit focused goal",
-        "keywords": ["goal", "edit", "调整目标"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-clear",
-        "title": "Goal X: Archive a goal",
-        "keywords": ["goal", "archive", "归档目标"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-pause",
+        "id": "goal-x.pause",
         "title": "Goal X: Pause focused goal",
         "keywords": ["goal", "pause", "暂停"],
         "category": "Agent"
       },
       {
-        "id": "goal-resume",
+        "id": "goal-x.resume",
         "title": "Goal X: Resume focused goal",
         "keywords": ["goal", "resume", "恢复"],
-        "category": "Agent"
-      },
-      {
-        "id": "goal-settings",
-        "title": "Goal X: Auditor settings",
-        "keywords": ["goal", "settings", "审计设置"],
         "category": "Agent"
       }
     ],
@@ -292,7 +250,7 @@
         "type": "shortcut",
         "default": "Mod+Shift+G",
         "title": "Open Goal X",
-        "command": "goal",
+        "command": "goal-x.open",
         "scope": "plugin"
       }
     ]
@@ -311,18 +269,11 @@
   },
   "activationEvents": [
     "onStartup",
-    "onCommand:goal",
-    "onCommand:sisyphus",
-    "onCommand:goal-direct",
-    "onCommand:sisyphus-direct",
-    "onCommand:goal-list",
-    "onCommand:goal-status",
-    "onCommand:goal-focus",
-    "onCommand:goal-unfocus",
-    "onCommand:goal-tweak",
-    "onCommand:goal-clear",
-    "onCommand:goal-pause",
-    "onCommand:goal-resume",
-    "onCommand:goal-settings"
+    "onCommand:goal-x.open",
+    "onCommand:goal-x.new",
+    "onCommand:goal-x.new-sisyphus",
+    "onCommand:goal-x.unfocus",
+    "onCommand:goal-x.pause",
+    "onCommand:goal-x.resume"
   ]
 }

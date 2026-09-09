@@ -66,7 +66,8 @@ function assertStateCapacity(root) {
 
 async function saveRoot(root) {
   assertStateCapacity(root);
-  await pi.plugin.setSettings({ [STATE_SETTING_KEY]: root });
+  const current = await readSettings();
+  await pi.plugin.setSettings({ ...current, [STATE_SETTING_KEY]: root });
 }
 
 function serializeMutation(operation) {
@@ -92,11 +93,15 @@ async function updatePluginSettings(updater) {
     if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
       throw new GoalError("INVALID_ARGUMENT", "The settings update must return an object.");
     }
-    if (Object.prototype.hasOwnProperty.call(patch, STATE_SETTING_KEY)) {
-      assertStateCapacity(patch[STATE_SETTING_KEY]);
+    const next = { ...current, ...patch };
+    if (!Object.prototype.hasOwnProperty.call(patch, STATE_SETTING_KEY) && Object.prototype.hasOwnProperty.call(current, STATE_SETTING_KEY)) {
+      next[STATE_SETTING_KEY] = current[STATE_SETTING_KEY];
     }
-    await pi.plugin.setSettings(patch);
-    return { ...current, ...patch };
+    if (Object.prototype.hasOwnProperty.call(next, STATE_SETTING_KEY)) {
+      assertStateCapacity(next[STATE_SETTING_KEY]);
+    }
+    await pi.plugin.setSettings(next);
+    return next;
   });
 }
 
