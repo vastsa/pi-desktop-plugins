@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   ListTodo,
   NotebookPen,
+  Palette,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export function BrandMark({ className = "" }: { className?: string }) {
 const icons: Record<string, LucideIcon> = {
   "developer-tools": GitBranch,
   productivity: LayoutGrid,
+  theme: Palette,
   community: Globe2,
   official: FlaskConical,
   template: FolderKanban,

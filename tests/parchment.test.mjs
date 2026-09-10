@@ -15,7 +15,8 @@ const themeCss = readFileSync(
 test("Parchment manifest declares the exact release identity and capabilities", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.parchment");
-  assert.equal(manifest.version, "1.0.2");
+  assert.equal(manifest.version, "1.0.3");
+  assert.deepEqual(manifest.categories, ["theme", "community"]);
   assert.equal(manifest.main, "main.js");
   assert.equal(manifest.ui.panel, "renderer/index.html");
   assert.deepEqual(manifest.permissions, ["ui.panel", "ui.theme"]);

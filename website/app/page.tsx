@@ -24,7 +24,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   const locale = await getRequestLocale((await searchParams).lang, availableLocales);
   const copy = getCopy(locale);
   const featured = featuredIds.map((id) => catalog.plugins.find((plugin) => plugin.id === id)).filter(Boolean);
-  const categories = ["productivity", "developer-tools", "community", "official", "template"].map((id) => ({
+  const categories = ["productivity", "developer-tools", "theme", "community", "official", "template"].map((id) => ({
     id,
     count: catalog.plugins.filter((plugin) => plugin.categories.includes(id)).length,
   }));
