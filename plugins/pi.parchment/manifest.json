@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pi.parchment",
   "name": "Parchment Theme",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A warm parchment global theme: cream paper background with a faint grid, ink-colored user bubbles, paper assistant cards, and monospace meta lines. No features beyond styling.",
   "i18n": {
     "en": {
@@ -41,7 +41,7 @@
     "community"
   ],
   "safetyNotes": "Pure styling. The plugin contributes one global theme (CSS only) and a small info panel. No network, file, clipboard, or agent access.",
-  "changelog": "Release 1.0.1: fix parchment code-block and inline-code overrides against the host light-theme cascade. Release 1.0.0: first release. Warm parchment global theme built on the host design tokens: cream paper background with faint 22px grid, solid ink user bubbles with paper-colored text, soft paper assistant cards, warm code blocks and tables, monospace meta lines, and composer/message width alignment in both sidebar layouts.",
+  "changelog": "Release 1.0.2: add README screenshots (chat view and theme picker). Release 1.0.1: fix parchment code-block and inline-code overrides against the host light-theme cascade. Release 1.0.0: first release. Warm parchment global theme built on the host design tokens: cream paper background with faint 22px grid, solid ink user bubbles with paper-colored text, soft paper assistant cards, warm code blocks and tables, monospace meta lines, and composer/message width alignment in both sidebar layouts.",
   "permissions": [
     "ui.panel",
     "ui.theme"
