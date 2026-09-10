@@ -39,6 +39,7 @@ Contains plugin sources, installable `.piplug` packages, and the generated marke
 | **pi.log-viewer** | Large log viewer with streaming pagination, live tail, search highlighting and multi-file tabs | Tioit-Wang |
 | **pi.bianqian** | Markdown desktop sticky notes: multi-note, live preview, task lists, highlighter and trash | ZY |
 | **io.github.muzimu217.session-import** | Universal session import + forge: bring sessions in from ZCode, WorkBuddy, Claude Code, Codex, OpenCode and Pi, then distill them into project conventions and reusable practices | muzimu217 |
+| **io.github.muzimu217.deps-audit** | Dependency vulnerability audit: spawn local osv-scanner over the workspace, list OSV matches grouped by severity, and hand a selection to the Agent as an explicit fix request | muzimu217 |
 
 ### Demos
 

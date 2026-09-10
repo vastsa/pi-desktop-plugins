@@ -1,0 +1,10 @@
+[
+  {
+    "id": "CVE-2022-9999",
+    "summary": "bare array shape test",
+    "package": {"name": "colors", "version": "1.4.0", "ecosystem": "npm"},
+    "severity": [{"type": "CVSS_V3", "score": "3.1"}],
+    "affected": [],
+    "references": []
+  }
+]

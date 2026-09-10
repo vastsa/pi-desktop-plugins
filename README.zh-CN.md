@@ -38,6 +38,7 @@
 | **pi.log-viewer** | 大日志查看器：流式分页、实时跟随、搜索高亮、多文件页签 | Tioit-Wang |
 | **pi.bianqian** | Markdown 桌面便签：多便签、实时预览、任务列表、荧光笔与回收站 | ZY |
 | **io.github.muzimu217.session-import** | 一体化会话导入与熔炉：导入 ZCode、WorkBuddy、Claude Code、Codex、OpenCode、Pi 的会话，再蒸馏成项目约定与可复用做法 | muzimu217 |
+| **io.github.muzimu217.deps-audit** | 依赖漏洞扫描：spawn 本机 osv-scanner 扫描工作区，按严重度聚合 OSV 数据库匹配与修复版本；选中后可生成给 Agent 的修复询问（永不自动应用） | muzimu217 |
 
 ### 示例插件（学习参考）
 

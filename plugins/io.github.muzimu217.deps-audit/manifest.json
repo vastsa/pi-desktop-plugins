@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.muzimu217.deps-audit",
+  "name": "Deps Audit",
+  "version": "0.1.0",
+  "description": "依赖漏洞扫描：唤起 osv-scanner 扫描工作区，列出 OSV 数据库中的依赖漏洞，让 Agent 给出升级或修复 patch。",
+  "i18n": {
+    "en": {
+      "name": "Deps Audit",
+      "description": "Dependency vulnerability audit: invoke osv-scanner over the workspace, list known OSV matches, and let the Agent propose a fix or upgrade.",
+      "safetyNotes": "Reads workspace manifest files (package.json, requirements.txt, Cargo.toml, go.mod, pom.xml, *.gemspec) in read-only mode through the host fs.read permission gateway. Spawns the local osv-scanner binary (no network calls from the plugin itself — osv-scanner fetches the OSV database on its own). Writes nothing. The plugin surfaces a vulnerability list to the work panel; selecting one and asking the Agent to fix is always an explicit user action, never automatic."
+    },
+    "zh-CN": {
+      "name": "依赖审计",
+      "description": "依赖漏洞扫描：唤起 osv-scanner 扫描工作区，列出 OSV 数据库中的依赖漏洞，让 Agent 给出升级或修复 patch。",
+      "safetyNotes": "以只读方式经宿主 fs.read 权限网关读取工作区 manifest 文件（package.json、requirements.txt、Cargo.toml、go.mod、pom.xml、*.gemspec）。spawn 本机 osv-scanner 二进制（插件本身不发起任何网络请求，OSV 数据库由 osv-scanner 自己拉取）。不写入任何文件。漏洞列表在面板中只读展示；选中并请 Agent 修复永远是用户的显式动作，永不自动发生。"
+    }
+  },
+  "categories": ["security", "developer-tools", "audit"],
+  "changelog": "Release 0.1.0：首个公开版本。唤起 osv-scanner 扫描工作区 manifest（package.json / requirements.txt / Cargo.toml / go.mod / pom.xml / *.gemspec / pyproject.toml / composer.json），按严重度聚合 OSV 数据库匹配结果；面板只读展示，发现选中后生成可复制给 Agent 的修复询问文本（永不自动应用）。Agent 工具 deps_audit_run（risk low）按需触发扫描。",
+  "safetyNotes": "只读扫描工作区 manifest；spawn 本机 osv-scanner 二进制（插件本身不发网络请求，OSV 数据库由 osv-scanner 自取）；不写任何文件；选中漏洞请 Agent 修复需用户显式操作。",
+  "author": "muzimu217",
+  "main": "main.js",
+  "ui": {
+    "panel": "views/audit.html",
+    "width": 1040,
+    "height": 680,
+    "title": {
+      "en": "Deps Audit",
+      "zh-CN": "依赖审计"
+    }
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "deps-audit",
+        "title": {
+          "en": "Deps Audit",
+          "zh-CN": "依赖审计"
+        },
+        "icon": "shield",
+        "entry": "views/audit.html",
+        "order": 48
+      }
+    ],
+    "commands": [
+      {
+        "id": "deps-audit.open",
+        "title": "Deps Audit: Open Work-Panel View",
+        "keywords": ["deps", "audit", "vuln", "osv", "依赖", "漏洞", "扫描"],
+        "category": "Security"
+      },
+      {
+        "id": "deps-audit.run",
+        "title": "Deps Audit: Scan Workspace Now",
+        "keywords": ["scan", "audit", "vuln", "扫描", "依赖"],
+        "category": "Security"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "deps_audit_run",
+        "description": "Run an OSV-Scanner audit on the workspace's dependency manifests. Returns a structured vulnerability list (ecosystem, package, installed version, fix versions, advisory links). The Agent must not auto-apply any fix — only summarize and propose; the user applies.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifests": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["package.json", "requirements.txt", "Cargo.toml", "go.mod", "pom.xml", "*.gemspec", "pyproject.toml", "composer.json"]
+              },
+              "description": "Restrict to these manifest types; empty = all detected."
+            },
+            "severity_min": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "critical"],
+              "description": "Filter: only show findings at or above this severity."
+            }
+          }
+        }
+      }
+    ],
+    "settings": [
+      {
+        "key": "scannerPath",
+        "title": "osv-scanner binary path",
+        "description": "绝对路径或 PATH 中的可执行名。留空则按 PATH 查找 osv-scanner。",
+        "type": "string",
+        "default": "osv-scanner",
+        "scope": "plugin"
+      },
+      {
+        "key": "severityMin",
+        "title": "Severity filter",
+        "description": "仅显示达到该等级及以上的漏洞。",
+        "type": "select",
+        "default": "low",
+        "enum": [
+          { "label": "Low (show all)", "value": "low" },
+          { "label": "Medium", "value": "medium" },
+          { "label": "High", "value": "high" },
+          { "label": "Critical", "value": "critical" }
+        ],
+        "scope": "plugin"
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "ui.view",
+    "agent.complete",
+    "agent.tool.register",
+    "models.list"
+  ],
+  "engines": {
+    "piDesktop": ">=0.14.3"
+  },
+  "activationEvents": [
+    "onCommand:deps-audit.open",
+    "onCommand:deps-audit.run",
+    "onStartup"
+  ]
+}

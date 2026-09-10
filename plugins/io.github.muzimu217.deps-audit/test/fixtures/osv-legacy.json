@@ -1,0 +1,12 @@
+{
+  "vulns": [
+    {
+      "id": "GHSA-aaaa-bbbb-cccc",
+      "summary": "legacy shape test",
+      "package": {"name": "left-pad", "version": "1.0.0", "ecosystem": "npm"},
+      "severity": [{"type": "CVSS_V3", "score": "5.0"}],
+      "affected": [{"ranges": [{"type": "ECOSYSTEM", "events": [{"fixed": "1.0.1"}]}]}],
+      "references": []
+    }
+  ]
+}

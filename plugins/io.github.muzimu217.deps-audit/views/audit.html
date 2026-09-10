@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="pi-plugin-chrome" content="v3" />
+<!-- v3 paint-through chrome contract: PI-Desktop owns exactly a 46px drag band at the top; the three-button window-control capsule is drawn by the host. Panels reserve this strip via var(--pi-plugin-titlebar-height, 46px). -->
+<title>依赖审计</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: var(--pi-surface, #fafafa);
+    --bg-elev: var(--pi-surface-elev, #ffffff);
+    --border: var(--pi-border, #e5e5e5);
+    --border-strong: var(--pi-border-strong, #c8c8c8);
+    --fg: var(--pi-fg, #1a1a1a);
+    --fg-muted: var(--pi-fg-muted, #6b6b6b);
+    --accent: var(--pi-accent, #2b6cb0);
+    --accent-fg: #fff;
+    --critical: #b91c1c;
+    --high:     #c2410c;
+    --medium:   #b45309;
+    --low:      #4b5563;
+    --ok:       #15803d;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --radius: 6px;
+    --font: var(--pi-font, -apple-system, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --bg-elev: #232323;
+      --border: #2e2e2e;
+      --border-strong: #3a3a3a;
+      --fg: #ededed;
+      --fg-muted: #9a9a9a;
+      --accent: #4a9eff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font); }
+  /* v3 paint-through: reserve the host-owned 46px drag band at the top so the
+     sticky topbar sits below it instead of under the window-control capsule. */
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: var(--bg-elev); position: sticky;
+    top: var(--pi-plugin-titlebar-height, 46px); z-index: 2;
+  }
+  body { padding-top: var(--pi-plugin-titlebar-height, 46px); box-sizing: border-box; }
+  .topbar h1 { font-size: 14px; font-weight: 600; margin: 0; }
+  .topbar .meta { color: var(--fg-muted); font-size: 12px; }
+  .topbar .spacer { flex: 1; }
+  button {
+    border: 1px solid var(--border-strong);
+    background: var(--bg-elev);
+    color: var(--fg);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font: 13px var(--font);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: var(--bg); border-color: var(--accent); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button.primary:hover { filter: brightness(1.08); }
+
+  .banner {
+    margin: 12px 16px; padding: 10px 12px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--bg-elev);
+    font-size: 12.5px; line-height: 1.6; color: var(--fg-muted);
+  }
+  .banner.error { border-color: var(--critical); color: var(--critical); }
+  .banner.error pre { margin: 6px 0 0; font: 12px/1.5 var(--mono); white-space: pre-wrap; }
+
+  .layout { display: grid; grid-template-columns: 1fr 380px; gap: 0; height: calc(100vh - 50px); }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .detail { display: none; } }
+
+  .list { overflow: auto; padding: 8px 8px 32px; }
+  .empty { padding: 60px 24px; text-align: center; color: var(--fg-muted); }
+  .empty .check { font-size: 32px; margin-bottom: 8px; }
+
+  .group { margin-bottom: 16px; }
+  .group h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--fg-muted); margin: 6px 8px;
+  }
+  .row {
+    display: grid; grid-template-columns: 8px 1fr auto; gap: 10px;
+    padding: 10px 12px; border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .row:hover { background: var(--bg-elev); border-color: var(--border); }
+  .row.active { background: var(--bg-elev); border-color: var(--accent); }
+  .row .bar { background: var(--low); border-radius: 2px; }
+  .row .bar.critical { background: var(--critical); }
+  .row .bar.high     { background: var(--high); }
+  .row .bar.medium   { background: var(--medium); }
+  .row .pkg { font-weight: 600; font-family: var(--mono); font-size: 13px; }
+  .row .sub { color: var(--fg-muted); font-size: 12px; margin-top: 2px; }
+  .row .badges { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--fg-muted); }
+  .row .badges .eco {
+    background: var(--bg); border: 1px solid var(--border); padding: 1px 6px; border-radius: 10px;
+    font: 10.5px var(--mono);
+  }
+
+  .detail {
+    border-left: 1px solid var(--border);
+    background: var(--bg-elev);
+    padding: 16px 18px; overflow: auto;
+  }
+  .detail h3 { margin: 0 0 8px; font-size: 14px; }
+  .detail .pkg-name { font: 14px var(--mono); }
+  .detail .summary { color: var(--fg-muted); font-size: 12.5px; margin: 8px 0 12px; }
+  .detail .kv { display: grid; grid-template-columns: 88px 1fr; gap: 6px 12px; font-size: 12.5px; margin: 8px 0; }
+  .detail .kv dt { color: var(--fg-muted); }
+  .detail .kv dd { margin: 0; font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .detail .refs a { color: var(--accent); text-decoration: none; font-family: var(--mono); font-size: 11.5px; display: block; }
+  .detail .refs a:hover { text-decoration: underline; }
+  .detail .actions { margin-top: 16px; display: flex; gap: 8px; }
+  .detail .empty { padding: 20px 0; }
+
+  .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 10; }
+  .modal { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; max-width: 640px; width: calc(100% - 32px); box-shadow: var(--shadow); }
+  .modal h3 { margin: 0 0 8px; font-size: 14px; }
+  .modal pre { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; max-height: 280px; overflow: auto; font: 12px/1.55 var(--mono); white-space: pre-wrap; }
+  .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>依赖审计 <span class="meta">· Deps Audit</span></h1>
+    <span class="meta" id="status">未扫描</span>
+    <span class="spacer"></span>
+    <button id="scan-btn" class="primary">扫描</button>
+  </div>
+
+  <div id="banners"></div>
+
+  <div class="layout">
+    <div class="list" id="list">
+      <div class="empty">
+        <div class="check">○</div>
+        点击「扫描」对当前工作区运行 osv-scanner。<br>
+        <span class="meta">支持 npm / PyPI / crates.io / Go / Maven / Composer / RubyGems</span>
+      </div>
+    </div>
+    <div class="detail" id="detail">
+      <div class="empty">选中一个漏洞查看详情。</div>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const list = $('list');
+  const detail = $('detail');
+  const banners = $('banners');
+  const status = $('status');
+  const scanBtn = $('scan-btn');
+  const modalRoot = $('modal-root');
+
+  const bridge = window.pluginBridge;
+  let lastResult = null;
+  let selectedFinding = null;
+
+  function severityRank(s) { return ({critical:4,high:3,medium:2,low:1}[(s||'').toLowerCase()] || 0); }
+
+  function formatError(r) {
+    if (!r) return '未知错误';
+    if (r.reason === 'binary_missing') return r.message;
+    if (r.reason === 'timeout') return `osv-scanner 超时（>${r.took_ms}ms）：` + (r.stderr || '');
+    if (r.reason === 'non_zero_exit') return `osv-scanner 退出码 ${r.code}：\n` + (r.stderr || '');
+    if (r.reason === 'parse_error') return `JSON 解析失败：${r.message}`;
+    return r.message || JSON.stringify(r);
+  }
+
+  function showError(text) {
+    banners.innerHTML = '';
+    const el = document.createElement('div');
+    el.className = 'banner error';
+    const pre = document.createElement('pre');
+    pre.textContent = text;
+    el.appendChild(pre);
+    banners.appendChild(el);
+    status.textContent = '出错';
+  }
+  function clearBanners() { banners.innerHTML = ''; }
+
+  function renderResult(r) {
+    clearBanners();
+    if (!r.ok) return showError(formatError(r));
+    lastResult = r;
+    if (!r.findings || r.findings.length === 0) {
+      list.innerHTML = `<div class="empty"><div class="check" style="color: var(--ok)">✓</div>未发现已知漏洞。<br><span class="meta">扫描了 ${r.manifest_count || 0} 个 manifest，耗时 ${r.took_ms}ms</span></div>`;
+      detail.innerHTML = '<div class="empty">无选中项。</div>';
+      status.textContent = `0 个漏洞 · ${r.manifest_count} manifest · ${r.took_ms}ms`;
+      return;
+    }
+    status.textContent = `${r.findings.length} 个漏洞${r.truncated ? '（已截断）' : ''} · ${r.manifest_count} manifest · ${r.took_ms}ms`;
+
+    const by = { critical: [], high: [], medium: [], low: [], other: [] };
+    for (const f of r.findings) (by[(f.severity in by) ? f.severity : 'other'] || by.other).push(f);
+    const order = ['critical', 'high', 'medium', 'low', 'other'];
+    const labels = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', other: '未分级' };
+
+    list.innerHTML = '';
+    for (const sev of order) {
+      const items = by[sev];
+      if (!items.length) continue;
+      const g = document.createElement('div');
+      g.className = 'group';
+      g.innerHTML = `<h2>${labels[sev]} (${items.length})</h2>`;
+      for (const f of items) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.dataset.id = f.id;
+        row.innerHTML = `
+          <div class="bar ${sev}"></div>
+          <div>
+            <div class="pkg">${escapeHtml(f.package)} <span class="meta">@ ${escapeHtml(f.installed)}</span></div>
+            <div class="sub">${escapeHtml(f.id)}${f.aliases.length ? ' · ' + escapeHtml(f.aliases.slice(0,2).join(', ')) : ''}</div>
+          </div>
+          <div class="badges"><span class="eco">${escapeHtml(f.ecosystem)}</span></div>
+        `;
+        row.addEventListener('click', () => select(f, row));
+        g.appendChild(row);
+      }
+      list.appendChild(g);
+    }
+
+    const first = (by.critical[0] || by.high[0] || by.medium[0] || by.low[0] || by.other[0]);
+    if (first) {
+      const firstRow = list.querySelector(`.row[data-id="${cssEsc(first.id)}"]`);
+      if (firstRow) select(first, firstRow);
+    }
+  }
+
+  function select(f, rowEl) {
+    selectedFinding = f;
+    list.querySelectorAll('.row.active').forEach((el) => el.classList.remove('active'));
+    rowEl.classList.add('active');
+    detail.innerHTML = `
+      <h3 class="pkg-name">${escapeHtml(f.package)} <span class="meta">@ ${escapeHtml(f.installed)}</span></h3>
+      <div class="summary">${escapeHtml(f.summary || '(无摘要)')}</div>
+      <dl class="kv">
+        <dt>等级</dt><dd>${escapeHtml(f.severity || '未分级')}</dd>
+        <dt>生态</dt><dd>${escapeHtml(f.ecosystem)}</dd>
+        <dt>漏洞 ID</dt><dd>${escapeHtml(f.id)}</dd>
+        ${f.aliases.length ? `<dt>别名</dt><dd>${escapeHtml(f.aliases.join(', '))}</dd>` : ''}
+        ${f.fixed.length ? `<dt>已修复版本</dt><dd>${escapeHtml(f.fixed.join(', '))}</dd>` : '<dt>已修复版本</dt><dd>(暂无)</dd>'}
+        ${f.source ? `<dt>来源</dt><dd>${escapeHtml(f.source)}</dd>` : ''}
+      </dl>
+      ${f.references.length ? `<div class="refs"><h3>参考</h3>${f.references.slice(0,5).map(r => `<a href="${escapeAttr(r.url)}" target="_blank" rel="noreferrer">${escapeHtml(r.type)} · ${escapeHtml(r.url)}</a>`).join('')}</div>` : ''}
+      <div class="actions">
+        <button class="primary" id="fix-btn">复制给 Agent 询问修复建议</button>
+      </div>
+    `;
+    document.getElementById('fix-btn').addEventListener('click', () => requestFix(f));
+  }
+
+  async function requestFix(f) {
+    const res = await bridge.invoke('deps-audit.fix-request', { finding: f });
+    if (!res || !res.ok || !res.text) {
+      status.textContent = '请求失败：' + (res && res.message || '未知');
+      return;
+    }
+    showCopyModal(res.text);
+  }
+
+  async function showCopyModal(text) {
+    modalRoot.innerHTML = '';
+    const back = document.createElement('div');
+    back.className = 'modal-back';
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <h3>已为 Agent 准备好请求文本</h3>
+      <div class="meta" style="margin-bottom: 10px;">把下面这段直接粘到 PI-Desktop 的对话里，Agent 会先解释风险再等你确认修复方案（不会自动改任何文件）。</div>
+      <pre id="copy-target"></pre>
+      <div class="modal-actions">
+        <button id="copy-btn">复制到剪贴板</button>
+        <button id="close-btn" class="primary">关闭</button>
+      </div>
+    `;
+    back.appendChild(modal);
+    modalRoot.appendChild(back);
+    $('copy-target').textContent = text;
+    $('copy-btn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        $('copy-btn').textContent = '✓ 已复制';
+        setTimeout(() => { $('copy-btn').textContent = '复制到剪贴板'; }, 1500);
+      } catch (e) {
+        $('copy-btn').textContent = '复制失败：' + e.message;
+      }
+    });
+    $('close-btn').addEventListener('click', () => { modalRoot.innerHTML = ''; });
+  }
+
+  function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeAttr(s) { return escapeHtml(s); }
+  function cssEsc(s) { return String(s).replace(/(["\\])/g, '\\$1'); }
+
+  scanBtn.addEventListener('click', async () => {
+    if (!bridge || typeof bridge.invoke !== 'function') {
+      showError('pluginBridge.invoke 不可用，插件未正确加载。');
+      return;
+    }
+    clearBanners();
+    status.textContent = '扫描中…';
+    scanBtn.disabled = true;
+    try {
+      const result = await bridge.invoke('deps-audit.refresh', {});
+      if (result && result.ok) {
+        renderResult(result);
+      } else {
+        showError(formatError(result));
+      }
+    } catch (e) {
+      showError('调用失败：' + (e && e.message || e));
+    } finally {
+      scanBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
