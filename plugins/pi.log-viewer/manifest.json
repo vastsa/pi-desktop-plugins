@@ -17,7 +17,7 @@
     }
   },
   "author": "Tioit-Wang",
-  "categories": ["developer-tools", "productivity"],
+  "categories": ["developer-tools", "community"],
   "changelog": "Release 0.2.0：插件 id 定稿 pi.log-viewer；搜索与文本过滤分离（搜索高亮可跳转，过滤只显示/隐藏命中）；过滤视图虚拟滚动；等级配色设置；钉住最多 5 行对比；右键「清除筛选并跳转」；系统文件选择器打开 .log/.txt；首次打开示例引导日志；修复静态文件误报新增、顶部首行窗口空白与底部留白。",
   "safetyNotes": "仅通过宿主 fs.read 权限网关只读访问用户选定的日志文件；不写入、不联网。目录与拖入/选择文件授权仅存内存、随进程失效。页签/过滤/等级配色等状态保存在插件数据目录。",
   "main": "main.js",

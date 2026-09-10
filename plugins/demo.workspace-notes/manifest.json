@@ -11,6 +11,7 @@
   },
   "author": "PI-Desktop",
   "main": "main.js",
+  "categories": ["productivity", "template", "official"],
   "ui": {"panel": "renderer/index.html", "width": 480, "height": 420, "title": {"en": "Workspace Notes", "zh-CN": "工作区笔记"}},
   "contributes": {
     "commands": [{"id": "notes.open", "title": "Notes: Open Panel", "keywords": ["notes", "workspace"], "category": "Productivity"}],

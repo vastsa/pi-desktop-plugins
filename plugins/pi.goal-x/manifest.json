@@ -21,7 +21,7 @@
   "repository": "https://github.com/niansi1/pi-desktop-plugins",
   "categories": [
     "productivity",
-    "developer-tools"
+    "community"
   ],
   "changelog": "0.1.1: docked work-panel chrome, fail-closed storage, namespaced commands, appearance adapter. 0.1.0: workspace-scoped goal pools, focus, regular and Sisyphus modes, task trees, completion evidence, pause/block/resume/archive lifecycle, bilingual dashboard, Agent tools, and host-owned completion audits.",
   "safetyNotes": "Goal data stays in plugin-private settings. No workspace file, shell, clipboard, or network access. Completion auditing sends only bounded goal data and an untrusted completion claim to a signed-in model. Bounded session metadata is read locally only to derive opaque blocker turn identifiers and is never stored or sent to the auditor. The plugin never receives provider credentials.",

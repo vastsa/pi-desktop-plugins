@@ -20,6 +20,7 @@
   "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/com.vastsa.voice-assistant",
   "repository": "https://github.com/vastsa/pi-desktop-plugins",
   "main": "main.js",
+  "categories": ["productivity", "official"],
   "ui": {
     "panel": "renderer/index.html",
     "width": 560,

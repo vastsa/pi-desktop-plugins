@@ -19,7 +19,6 @@
   "author": "PI-Desktop",
   "categories": [
     "developer-tools",
-    "productivity",
     "official"
   ],
   "changelog": "Release 0.2.7: follow the app color mode only — never snap to the OS palette, which flashed when the two disagreed. Release 0.2.6: follows the app light/dark mode live in the work-panel view. Release 0.2.5: drop agent tools and the Git workflow skill — Git Lens is a human work-panel UI only. Release 0.2.5：去掉 AI 工具和 Git workflow skill，Git Lens 只给人用。 Release 0.2.4: command palette, toasts and the work-panel UI follow the app language (en / zh-CN) from the first paint. Release 0.2.3: compact work-panel UI — overview is a single count row; file/commit diffs open as a full-page sheet with Back. Release 0.2.0: docks only in the right work panel.",

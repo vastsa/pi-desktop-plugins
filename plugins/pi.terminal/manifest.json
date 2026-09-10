@@ -17,7 +17,7 @@
     }
   },
   "author": "PI-Desktop",
-  "categories": ["developer-tools", "productivity", "official"],
+  "categories": ["developer-tools", "official"],
   "changelog": "Release 0.1.6: on Windows, attach PowerShell to ConPTY inside the work panel instead of opening a separate console window. Release 0.1.5: follow the app color mode only — never snap to the OS palette, which flashed when the two disagreed. Release 0.1.4: follows the app light/dark mode live in the work-panel view, including the xterm canvas. Release 0.1.3: isolates PTY tabs per open project so switching workspaces cannot mix sessions. Release 0.1.2: docks only in the right work panel; the detached window is removed. Release 0.1.1: login-shell environment so GUI-launched sessions inherit PATH (pnpm, nvm, Homebrew, cargo, bun); denser Otty-like chrome with bottom tabs, find, and font-size controls. Release 0.1.0: first release. Multi-tab PTY sessions, cross-platform default shells (zsh / bash / PowerShell / optional Git Bash), theme and language following, and copy/paste.",
   "safetyNotes": "This plugin launches a real login shell as your user through a bundled PTY helper (forkpty on macOS/Linux, ConPTY on Windows). Anything you can run in a system terminal can run here, including destructive commands. It does not persist transcripts, passwords, or shell history beyond an in-memory scrollback that dies with the plugin process. Uninstalling or disabling the plugin kills every session. The AI is not given a tool that writes to the PTY; agent command execution continues to use the host Bash tool.",
   "main": "main.js",

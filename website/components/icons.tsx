@@ -14,13 +14,7 @@ import {
 } from "lucide-react";
 
 export function BrandMark({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 36 36" fill="none" aria-hidden="true">
-      <rect x="1" y="1" width="34" height="34" rx="10" fill="currentColor" />
-      <path d="M10 11.5h16M10 17.9h10.5M10 24.3h16" stroke="var(--brand-mark-line)" strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="25.3" cy="17.9" r="2.7" fill="var(--brand-mark-dot)" />
-    </svg>
-  );
+  return <img className={className} src="/pi-desktop-icon.png" alt="" aria-hidden="true" width={32} height={32} draggable={false} />;
 }
 
 const icons: Record<string, LucideIcon> = {

@@ -49,6 +49,7 @@ export function SiteFooter({ locale, availableLocales }: { locale: Locale; avail
           <Link href={localeHref("/plugins", locale)}>{copy.footer.marketplace}</Link>
           <Link href={localeHref("/docs", locale)}>{copy.footer.contributing}</Link>
           <a href={REPOSITORY_URL} target="_blank" rel="noreferrer">{copy.footer.source}</a>
+          <a href="https://aiuo.net" target="_blank" rel="noreferrer">AIUO.NET</a>
           <LanguageSwitcher locale={locale} label={copy.nav.language} availableLocales={availableLocales} />
         </div>
       </div>
