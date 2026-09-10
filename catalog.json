@@ -517,9 +517,9 @@
           "publishedAt": "2026-09-10T15:32:11Z",
           "changelog": "Release 1.0.2: add README screenshots (chat view and theme picker); force the warm code-block and inline-code palette against the host light-theme cascade (defensive specificity + !important). Release 1.0.1: fix parchment code-block and inline-code overrides against the host light-theme cascade. Release 1.0.0: first release. Warm parchment global theme built on the host design tokens: cream paper background with faint 22px grid, solid ink user bubbles with paper-colored text, soft paper assistant cards, warm code blocks and tables, monospace meta lines, and composer/message width alignment in both sidebar layouts.",
           "minPiDesktop": ">=0.4.3",
-          "shasum": "51c4b9f7fde4a7a76a4e0dc9e0dc0f57d8c26873d8102f847507592449cd23cb",
+          "shasum": "e859b2d9c384a5f0c0876d065996fb3a65186dad4a2a433ade9dab67a1da7e37",
           "url": "packages/pi.parchment-1.0.2.piplug",
-          "sizeBytes": 348338,
+          "sizeBytes": 348129,
           "permissions": [
             "ui.panel",
             "ui.theme"
