@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-10T15:08:48Z",
+  "updatedAt": "2026-09-10T15:32:11Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -514,12 +514,12 @@
       "versions": [
         {
           "version": "1.0.2",
-          "publishedAt": "2026-09-10T15:08:48Z",
-          "changelog": "Release 1.0.2: add README screenshots (chat view and theme picker). Release 1.0.1: fix parchment code-block and inline-code overrides against the host light-theme cascade. Release 1.0.0: first release. Warm parchment global theme built on the host design tokens: cream paper background with faint 22px grid, solid ink user bubbles with paper-colored text, soft paper assistant cards, warm code blocks and tables, monospace meta lines, and composer/message width alignment in both sidebar layouts.",
+          "publishedAt": "2026-09-10T15:32:11Z",
+          "changelog": "Release 1.0.2: add README screenshots (chat view and theme picker); force the warm code-block and inline-code palette against the host light-theme cascade (defensive specificity + !important). Release 1.0.1: fix parchment code-block and inline-code overrides against the host light-theme cascade. Release 1.0.0: first release. Warm parchment global theme built on the host design tokens: cream paper background with faint 22px grid, solid ink user bubbles with paper-colored text, soft paper assistant cards, warm code blocks and tables, monospace meta lines, and composer/message width alignment in both sidebar layouts.",
           "minPiDesktop": ">=0.4.3",
-          "shasum": "c0deb4d8e30f4d59e8671d687f9a2a3084475809bde0f5defd56a98ed07f9d51",
+          "shasum": "51c4b9f7fde4a7a76a4e0dc9e0dc0f57d8c26873d8102f847507592449cd23cb",
           "url": "packages/pi.parchment-1.0.2.piplug",
-          "sizeBytes": 347391,
+          "sizeBytes": 348338,
           "permissions": [
             "ui.panel",
             "ui.theme"
