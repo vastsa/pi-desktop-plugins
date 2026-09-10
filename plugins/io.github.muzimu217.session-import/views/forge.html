@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="pi-plugin-chrome" content="v2" />
+    <!--
+      PI-Desktop owns exactly a 46px drag band and a minimal three-button
+      window-control capsule. This panel uses pi-plugin-chrome=v3: page content
+      may paint through the band; fixed or sticky UI uses
+      var(--pi-plugin-titlebar-height, 46px).
+    -->
+    <meta name="pi-plugin-chrome" content="v3" />
     <title>Session Forge</title>
     <style>
       :root {
@@ -33,7 +39,7 @@
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        padding: calc(var(--pi-plugin-titlebar-height, 0px) + 12px) 14px 14px;
+        padding: 12px 14px 14px;
         font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
         background: var(--bg);
         color: var(--fg);

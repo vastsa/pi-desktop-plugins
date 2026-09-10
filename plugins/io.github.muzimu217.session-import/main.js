@@ -26,7 +26,7 @@ async function onLoad() {
     title: "Session Import: Open Panel",
     keywords: ["import", "导入", "会话"],
     run: async () => {
-      await pi.ui.openPanel({ title: "一体化会话导入" });
+      await pi.ui.openPanel();
     },
   });
 

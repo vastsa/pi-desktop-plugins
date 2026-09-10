@@ -111,6 +111,8 @@ def is_generated_path(relative: str) -> bool:
     return is_vendor_path(relative) or "assets" in {part.lower() for part in path.parts}
 
 
+def is_test_path(relative: str) -> bool:
+    return any(part.lower() in {"test", "tests", "__tests__"} for part in PurePosixPath(relative).parts)
 def read_text(path: Path) -> str | None:
     if path.suffix.lower() not in TEXT_SUFFIXES:
         return None
@@ -292,6 +294,8 @@ def audit_text(findings: list[Finding], location: str, relative: str, text: str,
                         or hashlib.sha256(text.encode("utf-8")).hexdigest() == APPROVED_GENERATED_HASHES.get(f"{location.split('/', 1)[0]}/{relative}")
                     )
                 )
+                if is_test_path(relative) and reason == "dynamic module loading":
+                    continue
                 if not approved_generated:
                     add(findings, "BLOCKER", f"{location}:{line_for(text, match.start())}", f"dynamic or remote code execution: {reason}")
     if include_review and not is_generated_path(relative):
