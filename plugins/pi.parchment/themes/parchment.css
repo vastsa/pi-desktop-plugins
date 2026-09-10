@@ -107,12 +107,15 @@ html, body, #root {
 }
 
 /* Code blocks: warm paper instead of cool gray */
-.prose-chat pre,
-.code-block {
+:root[data-theme="light"] .code-block {
   background: #efe7d4;
   color: #3a352c;
 }
-.prose-chat code {
+:root[data-theme="light"] .prose-chat pre {
+  background: #efe7d4;
+  color: #3a352c;
+}
+:root[data-theme="light"] .prose-chat code {
   background: rgba(42, 38, 32, 0.07);
   color: #2a2620;
 }
