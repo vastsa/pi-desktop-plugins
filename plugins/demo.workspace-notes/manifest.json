@@ -16,5 +16,8 @@
     "commands": [{"id": "notes.open", "title": "Notes: Open Panel", "keywords": ["notes", "workspace"], "category": "Productivity"}],
     "agentTools": [{"name": "save_note", "description": "Append a note to NOTES.md in the workspace", "risk": "high", "schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}]
   },
-  "permissions": ["ui.panel", "fs.read.workspace", "fs.write.workspace", "net.fetch", "shell.openExternal", "clipboard.read", "clipboard.write", "notify", "agent.tool.register"]
+  "permissions": ["ui.panel", "fs.read.workspace", "fs.write.workspace", "net.fetch", "shell.openExternal", "clipboard.read", "clipboard.write", "notify", "agent.tool.register"],
+  "engines": {
+    "piDesktop": ">=0.2.0"
+  }
 }

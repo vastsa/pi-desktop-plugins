@@ -17,8 +17,8 @@
     }
   },
   "author": "Goal X contributors",
-  "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.goal-x",
-  "repository": "https://github.com/vastsa/pi-desktop-plugins",
+  "homepage": "https://github.com/niansi1/pi-desktop-plugins/tree/main/plugins/pi.goal-x",
+  "repository": "https://github.com/niansi1/pi-desktop-plugins",
   "categories": [
     "productivity",
     "developer-tools"

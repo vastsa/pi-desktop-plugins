@@ -162,6 +162,13 @@ Request the minimum set:
 
 High-risk permissions are reviewed in the install UI. Auto-update will not silently expand permissions.
 
+## Security review gate
+Read [SECURITY.md](./SECURITY.md) before submitting a plugin. This repository does not accept backdoors, hidden data collection or exfiltration, remote code loading, unexplained obfuscation, hard-coded credentials, persistence, security-control changes, or destructive operations without explicit user confirmation.
+Run the fail-closed preflight after packing:
+```bash
+python3 scripts/security_audit.py --check-packages
+```
+Resolve every blocker. Manual-review signals are expected for legitimate high-risk capabilities, but they still require maintainer sign-off. For filesystem writes/deletes, network, credentials, native binaries, shell/PTY, SSH, background services, prompt injection, or desktop control, include a capability/data-flow matrix, negative-path tests, dependency provenance, and two independent maintainer approvals. Review both `plugins/<id>/` and the `.piplug` contents; a passing script or test suite is not proof that a plugin has no backdoor.
 ## PR checklist
 
 - [ ] Unique `id`
@@ -172,6 +179,8 @@ High-risk permissions are reviewed in the install UI. Auto-update will not silen
 - [ ] Package sha256 in catalog matches the `.piplug`
 - [ ] Tested via Load dev plugin and/or Install .piplug
 - [ ] No secrets in source or package
+- [ ] `python3 scripts/security_audit.py --check-packages` passes with zero blockers
+- [ ] High-risk changes have two independent maintainer approvals and a recorded capability/data-flow review
 
 ## After merge
 

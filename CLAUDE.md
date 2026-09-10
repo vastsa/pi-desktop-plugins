@@ -43,6 +43,9 @@ Plugins are **fully self-contained**: no shared runtime with the host or other p
 
 `main.js` runs in the plugin process with global `pi`: `pi.plugin.getSettings()/getDataPath()/getId()`, `pi.commands.register/unregister()`, `pi.ui.openPanel()/showToast()`, `pi.agent.registerTool/unregisterTool()`, plus permission-gated fs/clipboard/net/shell APIs. `onUnload` must unregister everything `onLoad` registered.
 
+### Security review
+Read `SECURITY.md` before approving plugin changes. No backdoors, hidden data exfiltration, credential theft, remote code loading, unexplained obfuscation, persistence, permission-gate bypasses, or destructive behavior without explicit user confirmation is acceptable. Run `python3 scripts/security_audit.py --check-packages`; zero blockers is required, but manual-review signals still require maintainer approval.
+Treat filesystem writes/deletes, network, credentials, native binaries, shells/PTY, SSH, background services, `agent.prompt.inject`, and `desktop.control` as high risk. Require source and packed-artifact review, negative-path tests, dependency provenance, a capability/data-flow record, and two independent maintainer approvals. See `SECURITY.md` for the full procedure.
 ### Appearance adapter — `plugins/shared/appearance/`
 
 Canonical source for following the host's color mode (light/dark) and locale (zh-CN/en). It is **not shipped in packages** — copy both files into each plugin's `renderer/` (all current plugins already do this):

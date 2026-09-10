@@ -16,7 +16,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Catalog helper tests
-        run: python3 tests/test_sync_catalog.py -v
+      - name: Security preflight
+        run: python3 scripts/security_audit.py --check-packages
+      - name: Python helper tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - name: Plugin tests
         run: node --test tests/*.test.mjs

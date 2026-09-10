@@ -17,5 +17,8 @@
     "agentTools": [{"name": "echo_text", "description": "Echo text back to the agent", "risk": "low", "schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}}],
     "settings": [{"key": "greeting", "type": "string", "default": "Hello from marketplace", "title": "Greeting"}]
   },
-  "permissions": ["ui.panel", "agent.tool.register", "notify"]
+  "permissions": ["ui.panel", "agent.tool.register", "notify"],
+  "engines": {
+    "piDesktop": ">=0.2.0"
+  }
 }

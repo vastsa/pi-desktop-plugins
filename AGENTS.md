@@ -47,6 +47,7 @@ No linter/formatter is configured.
 ```text
 bump version in manifest.json
 → python3 scripts/pack_plugin.py plugins/<id>
+→ python3 scripts/security_audit.py --check-packages
 → python3 scripts/rebuild_catalog.py
 → node --test tests/*.test.mjs
 → commit packages/<id>-<version>.piplug + catalog.json
@@ -120,6 +121,10 @@ permissions:
 
 Agent tools are exposed with the forced prefix `plugin_<id_safe>_<tool>`.
 
+## Security Review (Mandatory)
+Read [SECURITY.md](SECURITY.md) before reviewing or adding a plugin. Plugins run with user-local privileges; never approve a backdoor, hidden data exfiltration, credential theft, remote code loading, unexplained obfuscation, persistence, security-control changes, or destructive behavior without explicit user confirmation.
+Every new plugin and behavior-changing release requires a complete source and packed-artifact review. Classify the highest risk capability; high-risk plugins (filesystem writes/deletes, network, credentials, native code, shell/PTY, SSH, background services, prompt injection, or desktop control) require two independent maintainer reviews and negative-path tests.
+Run `python3 scripts/security_audit.py --check-packages` and resolve every blocker. The script is only a fail-closed preflight: its manual-review signals do not constitute approval. Verify permissions, data flow, path/symlink boundaries, user confirmations, dependency/native-binary provenance, package contents, and catalog SHA-256.
 ### Runtime API
 
 `main.js` runs in the plugin process with global `pi`:
@@ -233,6 +238,8 @@ Before reporting done:
 - [ ] `python3 scripts/pack_plugin.py plugins/<id>` succeeds
 - [ ] `python3 scripts/rebuild_catalog.py` succeeds
 - [ ] `node --test tests/*.test.mjs` passes (or new test added)
+- [ ] `python3 scripts/security_audit.py --check-packages` passes with zero blockers
+- [ ] High-risk changes have two independent maintainer approvals and a recorded capability/data-flow review
 - [ ] Package sha256 in catalog matches the `.piplug`
 - [ ] No secrets, local data, or unrelated changes are included
 - [ ] All logical changes committed with conventional format

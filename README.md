@@ -138,6 +138,8 @@ plugins/<id>/
 
 > **Tip**: Request the minimum set of permissions. High-risk permissions prompt the user at install time.
 
+## Security
+Plugin review is a release gate. See [SECURITY.md](./SECURITY.md) for the mandatory policy, blocker list, risk tiers, artifact checks, and vulnerability reporting process. New plugins and behavior-changing releases must pass `python3 scripts/security_audit.py --check-packages`; high-risk changes require two independent maintainer reviews.
 ## Contributing
 
 1. Fork this repository
