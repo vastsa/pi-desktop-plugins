@@ -1,0 +1,145 @@
+/* Parchment theme for PI-Desktop — warm paper look (base: light) */
+
+:root[data-theme=light] {
+  --ds-bg-primary: #f1ebdf;
+  --ds-bg-sidebar: #e9e1cf;
+  --ds-bg-secondary: #f6f1e5;
+  --ds-bg-tertiary: #e9e1cf;
+  --ds-bg-inset: #e3dac4;
+  --ds-bg-under: #efe8d8;
+  --ds-bg-elevated: rgba(255, 252, 245, 0.78);
+  --ds-bg-elevated-opaque: #fffcf5;
+  --ds-bg-hover: rgba(42, 38, 32, 0.05);
+  --ds-bg-active: rgba(42, 38, 32, 0.09);
+  --ds-bg-composer: #faf6ec;
+  --ds-bg-chip: rgba(42, 38, 32, 0.04);
+  --ds-bg-elevated-primary: rgba(255, 252, 245, 0.78);
+
+  --ds-text-primary: #2a2620;
+  --ds-text-secondary: rgba(42, 38, 32, 0.72);
+  --ds-text-muted: #7d7260;
+  --ds-text-faint: #b0a68f;
+
+  --ds-border-default: rgba(93, 79, 54, 0.22);
+  --ds-border-subtle: rgba(93, 79, 54, 0.12);
+  --ds-border-strong: rgba(93, 79, 54, 0.34);
+
+  --ds-tile: rgba(42, 38, 32, 0.035);
+  --ds-tile-hover: rgba(42, 38, 32, 0.06);
+  --ds-tile-deep: rgba(42, 38, 32, 0.08);
+
+  --ds-raised: #fffcf5;
+  --ds-raised-shadow: 0 1px 2px rgba(60, 50, 30, 0.1), 0 0 0 0.5px rgba(60, 50, 30, 0.06);
+
+  --ds-accent: #2a2620;
+  --ds-accent-hover: #4a443a;
+  --ds-accent-soft: #7d7260;
+
+  --ds-switch-track-off: rgba(42, 38, 32, 0.12);
+  --ds-switch-track-off-hover: rgba(42, 38, 32, 0.2);
+  --ds-switch-ring-off: rgba(42, 38, 32, 0.25);
+  --ds-switch-knob-off: #fffcf5;
+  --ds-switch-knob-on: #fffcf5;
+
+  --ds-success: #4c8b3f;
+  --ds-warning: #c76a1d;
+  --ds-error: #c94436;
+  --ds-info: #7d7260;
+  --ds-purple: #7c3aed;
+
+  --ds-shadow-dialog: 0 16px 48px rgba(60, 50, 30, 0.16);
+  --ds-shadow-composer: 0 3px 7.5px rgba(60, 50, 30, 0.05), 0 0 20px rgba(60, 50, 30, 0.07);
+  --ds-elevation-stroke: 0 0 0 0.5px rgba(93, 79, 54, 0.3);
+
+  --ds-sidebar-glass-tint: var(--ds-bg-sidebar);
+  --ds-sidebar-glass-sheen-top: rgba(255, 255, 255, 0.45);
+  --ds-sidebar-glass-sheen-bottom: rgba(255, 255, 255, 0.3);
+}
+
+/* Paper texture: faint graph-paper grid on the app background */
+html, body, #root {
+  background-color: var(--ds-bg-primary);
+  background-image:
+    linear-gradient(rgba(93, 79, 54, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(93, 79, 54, 0.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* User messages: solid ink bubble with paper-colored text */
+.message-row.user .message-bubble {
+  background: var(--ds-text-primary);
+  color: var(--ds-bg-primary);
+}
+.message-row.user .message-bubble a {
+  color: var(--ds-bg-primary);
+}
+.message-row.user .message-user-text {
+  color: inherit;
+}
+
+/* Assistant messages: soft paper card */
+.message-row.assistant .message-bubble {
+  background: #fffcf3;
+  border: 1px solid rgba(93, 79, 54, 0.18);
+  box-shadow: 0 1px 2px rgba(60, 50, 30, 0.05);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+.message-row.system .message-bubble,
+.message-row.tool .message-bubble {
+  background: rgba(255, 252, 243, 0.55);
+}
+
+/* Monospace meta lines (model name, tokens, cost, timestamps) */
+.message-meta,
+.message-meta-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* Composer: paper card feel */
+.composer-shell {
+  background: var(--ds-bg-composer);
+}
+.composer-input {
+  color: var(--ds-text-primary);
+}
+
+/* Code blocks: warm paper instead of cool gray */
+.prose-chat pre,
+.code-block {
+  background: #efe7d4;
+  color: #3a352c;
+}
+.prose-chat code {
+  background: rgba(42, 38, 32, 0.07);
+  color: #2a2620;
+}
+
+/* Tables */
+.prose-chat th {
+  color: var(--ds-text-primary);
+}
+
+/* Selection tint */
+::selection {
+  background: rgba(42, 38, 32, 0.85);
+  color: #fffcf5;
+}
+
+/* Width alignment: match assistant message cards to the composer width.
+   Host: thread-content 760px - 64px side padding = 696px, but composer-stack
+   is min(100%, var(--chat-composer-max-width)) = 768px (640px when the
+   sidebar is collapsed). Track the same variable so edges stay aligned
+   in both layouts. */
+.thread-content {
+  width: min(100%, var(--chat-composer-max-width, 768px));
+  padding-left: 0;
+  padding-right: 0;
+}
+.message-row.assistant .message-col,
+.message-row.system .message-col,
+.message-row.tool .message-col {
+  width: min(100%, var(--chat-composer-max-width, 768px));
+}
