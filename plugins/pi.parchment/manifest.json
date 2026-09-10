@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.parchment",
+  "name": "Parchment Theme",
+  "version": "1.0.0",
+  "description": "A warm parchment global theme: cream paper background with a faint grid, ink-colored user bubbles, paper assistant cards, and monospace meta lines. No features beyond styling.",
+  "i18n": {
+    "en": {
+      "name": "Parchment Theme",
+      "description": "A warm parchment global theme: cream paper background with a faint grid, ink-colored user bubbles, paper assistant cards, and monospace meta lines. No features beyond styling.",
+      "safetyNotes": "Pure styling. The plugin contributes one global theme (CSS only) and a small info panel. No network, file, clipboard, or agent access."
+    },
+    "zh-CN": {
+      "name": "羊皮纸主题",
+      "description": "暖色羊皮纸全局主题：米色纸面背景配淡网格，墨色用户气泡，纸色助手卡片，等宽字体元信息行。除样式外不提供任何功能。",
+      "safetyNotes": "纯样式插件。仅贡献一个全局主题（只有 CSS）和一个说明面板。无网络、文件、剪贴板或智能体权限。"
+    }
+  },
+  "author": "pkmcenter",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "width": 420,
+    "height": 320,
+    "title": {
+      "en": "Parchment Theme",
+      "zh-CN": "羊皮纸主题"
+    }
+  },
+  "contributes": {
+    "themes": [
+      {
+        "id": "parchment",
+        "label": "Parchment",
+        "base": "light",
+        "path": "themes/parchment.css"
+      }
+    ]
+  },
+  "categories": [
+    "community"
+  ],
+  "safetyNotes": "Pure styling. The plugin contributes one global theme (CSS only) and a small info panel. No network, file, clipboard, or agent access.",
+  "changelog": "Release 1.0.0: first release. Warm parchment global theme built on the host design tokens: cream paper background with faint 22px grid, solid ink user bubbles with paper-colored text, soft paper assistant cards, warm code blocks and tables, monospace meta lines, and composer/message width alignment in both sidebar layouts.",
+  "permissions": [
+    "ui.panel",
+    "ui.theme"
+  ],
+  "engines": {
+    "piDesktop": ">=0.4.3"
+  }
+}
