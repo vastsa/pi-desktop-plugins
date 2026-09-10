@@ -4,6 +4,16 @@ A warm parchment global theme for PI-Desktop: cream paper background with a fain
 
 PI-Desktop 全局主题插件：米色纸面背景配淡网格、实心墨色用户气泡、纸色助手卡片、等宽字体元信息行。纯样式，无额外功能。
 
+## Screenshots / 截图
+
+![Chat view with the Parchment theme applied / 应用主题后的聊天视图](https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/plugins/pi.parchment/docs/screenshots/01-chat-view.png)
+
+*Chat view — ink user bubble, paper assistant card, warm code blocks / 聊天视图 — 墨色用户气泡、纸色助手卡片、暖色代码块*
+
+![Theme picker — search "Parchment" / 主题选择器 — 搜索 "Parchment"](https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/plugins/pi.parchment/docs/screenshots/02-theme-picker.png)
+
+*Theme picker — Settings → Theme → "Parchment" / 主题选择器 — 设置 → 主题 → "Parchment"*
+
 ## What it does / 功能
 
 - One global theme, selectable in **Settings → Theme → search "Parchment" / 设置 → 主题 → 搜索 "Parchment"**.

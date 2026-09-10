@@ -106,18 +106,26 @@ html, body, #root {
   color: var(--ds-text-primary);
 }
 
-/* Code blocks: warm paper instead of cool gray */
-:root[data-theme="light"] .code-block {
-  background: #efe7d4;
-  color: #3a352c;
+/* Code blocks: warm paper instead of cool gray.
+   The host light theme wins the plain .code-block / .prose-chat pre cascade
+   (equal-or-higher specificity, host stylesheet loaded after theme CSS) and
+   pins the nested pre to `background: transparent !important`. Defend with
+   the host's own scope + an extra class + !important so the warm palette
+   applies regardless of stylesheet order; if the host sanitizer strips
+   !important, these selectors still outperform the 1.0.1 ones. */
+:root[data-theme="light"] .code-block,
+:root[data-theme="light"] .prose-chat .code-block {
+  background: #efe7d4 !important;
+  color: #3a352c !important;
 }
-:root[data-theme="light"] .prose-chat pre {
-  background: #efe7d4;
-  color: #3a352c;
+:root[data-theme="light"] .prose-chat pre,
+:root[data-theme="light"] .prose-chat .code-block pre {
+  background: #efe7d4 !important;
+  color: #3a352c !important;
 }
 :root[data-theme="light"] .prose-chat code {
-  background: rgba(42, 38, 32, 0.07);
-  color: #2a2620;
+  background: rgba(42, 38, 32, 0.07) !important;
+  color: #2a2620 !important;
 }
 
 /* Tables */
