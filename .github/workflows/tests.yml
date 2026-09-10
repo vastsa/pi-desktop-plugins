@@ -21,4 +21,4 @@ jobs:
       - name: Python helper tests
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
       - name: Plugin tests
-        run: node --test tests/*.test.mjs
+        run: node --test tests/*.test.mjs tests/*.test.js plugins/*/test/*.test.mjs
