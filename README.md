@@ -38,6 +38,7 @@ Contains plugin sources, installable `.piplug` packages, and the generated marke
 | **pi.clipboard-history** | Clipboard history capturing text during runtime, retained 30 days, one-click restore | Tioit-Wang |
 | **pi.log-viewer** | Large log viewer with streaming pagination, live tail, search highlighting and multi-file tabs | Tioit-Wang |
 | **pi.bianqian** | Markdown desktop sticky notes: multi-note, live preview, task lists, highlighter and trash | ZY |
+| **io.github.muzimu217.session-import** | Universal session import + forge: bring sessions in from ZCode, WorkBuddy, Claude Code, Codex, OpenCode and Pi, then distill them into project conventions and reusable practices | muzimu217 |
 
 ### Demos
 

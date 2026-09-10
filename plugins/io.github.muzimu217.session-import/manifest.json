@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.muzimu217.session-import",
+  "name": "Universal Session Import",
+  "version": "0.4.1",
+  "description": "一体化会话导入与熔炉：扫描本机的 ZCode、WorkBuddy、Claude Code、Codex、OpenCode、Pi 并导入会话；再读回这些会话，用宿主额度蒸馏成项目约定与可复用做法。",
+  "i18n": {
+    "en": {
+      "name": "Universal Session Import",
+      "description": "Import sessions from ZCode, WorkBuddy, Claude Code, Codex, OpenCode and Pi into PI-Desktop, then distill those sessions back into project conventions and reusable practices.",
+      "safetyNotes": "Reads each tool's local session database in read-only mode (Node node:sqlite, readOnly). Writes sessions through the host's session import API. The forge calls the host model using the host's own credentials and quota — this plugin never sees or stores API keys. fs.write is used only to save distilled output, scoped to AGENTS.md, *.md, docs/** and .agents/skills/** in the workspace. No network requests, no telemetry."
+    },
+    "zh-CN": {
+      "name": "一体化会话导入",
+      "description": "一体化会话导入与熔炉：扫描本机的 ZCode、WorkBuddy、Claude Code、Codex、OpenCode、Pi 并导入会话；再读回这些会话，用宿主额度蒸馏成项目约定与可复用做法。",
+      "safetyNotes": "以只读方式打开各工具的本地会话数据库（Node node:sqlite 的 readOnly 模式）；会话写入走宿主 session 导入接口。熔炉调用宿主模型，使用宿主自身的凭据与额度，本插件不接触也不保存任何 API Key。fs.write 仅用于保存蒸馏结果，范围限定在工作区内的 AGENTS.md、*.md、docs/**、.agents/skills/**。不发起任何网络请求，无遥测上报。"
+    }
+  },
+  "categories": ["developer-tools", "productivity", "import"],
+  "changelog": "Release 0.4.1：补齐市场元数据（i18n 双语名称/描述/安全说明、categories、changelog、safetyNotes）。0.4.0 新增会话熔炉（views/forge.html）：读回本插件导入的会话，用宿主 pi.agent.complete 蒸馏成项目约定、已验证做法与反复出现的坑并写入工作区；含语料预算裁剪（单会话 200k 字符上限）、ADR 0174 限速保护（8 次/60 秒）与宿主能力自检。同时修正 contributes.sessionSources 为对象数组，移除未使用的 fs.read。",
+  "safetyNotes": "以只读方式打开各工具的本地会话数据库；会话写入走宿主 session 导入接口。熔炉使用宿主自身额度调用模型，插件不接触 API Key。fs.write 仅用于保存蒸馏结果，范围限定在工作区内的 AGENTS.md、*.md、docs/**、.agents/skills/**。不发起网络请求，无遥测。",
+  "author": "muzimu217",
+  "main": "main.js",
+  "ui": {
+    "panel": "views/importer.html",
+    "width": 1040,
+    "height": 720,
+    "title": {
+      "en": "Session Import",
+      "zh-CN": "一体化会话导入"
+    }
+  },
+  "contributes": {
+    "sessionSources": [
+      { "id": "zcode", "label": { "en": "ZCode", "zh-CN": "ZCode" } },
+      { "id": "workbuddy", "label": { "en": "WorkBuddy", "zh-CN": "WorkBuddy" } },
+      { "id": "claude-code", "label": { "en": "Claude Code", "zh-CN": "Claude Code" } },
+      { "id": "codex", "label": { "en": "Codex", "zh-CN": "Codex" } },
+      { "id": "opencode", "label": { "en": "OpenCode", "zh-CN": "OpenCode" } },
+      { "id": "pi", "label": { "en": "Pi", "zh-CN": "Pi" } }
+    ],
+    "views": [
+      {
+        "id": "universal-session-import",
+        "title": {
+          "en": "Session Import",
+          "zh-CN": "一体化会话导入"
+        },
+        "icon": "list-checks",
+        "entry": "views/importer.html",
+        "order": 45
+      },
+      {
+        "id": "session-forge",
+        "title": {
+          "en": "Session Forge",
+          "zh-CN": "会话熔炉"
+        },
+        "icon": "sparkles",
+        "entry": "views/forge.html",
+        "order": 46
+      }
+    ],
+    "commands": [
+      {
+        "id": "session-import.open",
+        "title": "Session Import: Open Panel",
+        "keywords": ["import", "导入", "会话", "zcode", "workbuddy", "claude", "codex", "opencode"],
+        "category": "Import"
+      },
+      {
+        "id": "session-forge.open",
+        "title": "Session Forge: Distill Imported Sessions",
+        "keywords": ["forge", "蒸馏", "distill", "规则", "AGENTS.md", "skill"],
+        "category": "Import"
+      }
+    ],
+    "settings": [
+      {
+        "key": "forgeOutputPath",
+        "title": "蒸馏输出路径",
+        "description": "相对于工作区根目录。写入范围受插件声明的 fs.write 限制。",
+        "type": "string",
+        "default": "AGENTS.md",
+        "scope": "plugin"
+      },
+      {
+        "key": "forgeThinkingLevel",
+        "title": "蒸馏推理强度",
+        "type": "select",
+        "default": "high",
+        "enum": [
+          { "label": "off", "value": "off" },
+          { "label": "low", "value": "low" },
+          { "label": "medium", "value": "medium" },
+          { "label": "high (recommended)", "value": "high" }
+        ],
+        "scope": "plugin"
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "ui.view",
+    "session.read",
+    "session.read.own",
+    "agent.complete",
+    "models.list",
+    "fs.write"
+  ],
+  "fs": {
+    "write": {
+      "root": "workspace",
+      "scope": ["AGENTS.md", "*.md", "docs/**", ".agents/skills/**"]
+    }
+  },
+  "engines": {
+    "piDesktop": ">=0.14.3"
+  },
+  "activationEvents": [
+    "onCommand:session-import.open",
+    "onCommand:session-forge.open",
+    "onStartup"
+  ]
+}

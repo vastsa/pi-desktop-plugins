@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="pi-plugin-chrome" content="v2" />
+    <title>一体化会话导入</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #181818;
+        --surface: #212121;
+        --surface-hover: color-mix(in oklab, #ffffff 6%, transparent);
+        --fg: #ffffff;
+        --secondary: color-mix(in oklab, #ffffff 70%, transparent);
+        --muted: color-mix(in oklab, #ffffff 52%, transparent);
+        --border: color-mix(in oklab, #ffffff 10%, transparent);
+        --accent: #ffffff;
+        --on-accent: #181818;
+        --user-bubble: color-mix(in oklab, #4c8dff 16%, transparent);
+        --user-border: color-mix(in oklab, #4c8dff 35%, transparent);
+        --ok: #3ecf8e;
+        --err: #ff6b6b;
+      }
+      :root[data-base="light"] {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f6f7f8;
+        --surface-hover: color-mix(in oklab, #1a1c1f 5%, transparent);
+        --fg: #1a1c1f;
+        --secondary: color-mix(in oklab, #1a1c1f 74%, transparent);
+        --muted: #5d5d5d;
+        --border: color-mix(in oklab, #1a1c1f 10%, transparent);
+        --accent: #1a1c1f;
+        --on-accent: #ffffff;
+        --user-bubble: color-mix(in oklab, #4c8dff 12%, transparent);
+        --user-border: color-mix(in oklab, #4c8dff 30%, transparent);
+        --ok: #1f9d6b;
+        --err: #d64545;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100%;
+        padding: var(--pi-plugin-titlebar-height, 0px) 14px 14px;
+        font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        height: calc(100vh - var(--pi-plugin-titlebar-height, 0px) - 28px);
+      }
+      header.topbar {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      h1 { margin: 0; font-size: 15px; font-weight: 650; }
+      .hint { color: var(--muted); font-size: 11.5px; }
+      .spacer { flex: 1; }
+      button {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 12px;
+        background: var(--surface);
+        color: var(--fg);
+        cursor: pointer;
+        font: inherit;
+      }
+      button:hover { background: var(--surface-hover); }
+      button.primary {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: transparent;
+        font-weight: 600;
+      }
+      button.primary:disabled, button:disabled { opacity: 0.45; cursor: default; }
+      button.link {
+        background: none;
+        border: none;
+        color: var(--secondary);
+        text-decoration: underline;
+        padding: 2px 4px;
+      }
+      .source-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 8px;
+      }
+      .source-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .source-card:hover { background: var(--surface-hover); }
+      .source-card.active { border-color: var(--muted); }
+      .source-card.dim { opacity: 0.45; cursor: default; }
+      .source-card .sname { font-weight: 650; font-size: 13px; }
+      .source-card .scount { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+      .source-card .scount.ok { color: var(--ok); }
+      main.panes {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 330px 1fr;
+        gap: 12px;
+      }
+      .list-pane, .preview-pane {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .list-tools {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .list-tools input[type="search"] {
+        flex: 1;
+        min-width: 0;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        color: var(--fg);
+        font: inherit;
+        padding: 5px 8px;
+        outline: none;
+      }
+      #session-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .group-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 8px 4px;
+        position: sticky;
+        top: 0;
+        background: var(--surface);
+        z-index: 1;
+        border-radius: 8px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .group-head[aria-expanded="true"] .chev { transform: rotate(90deg); }
+      .chev {
+        display: inline-block;
+        width: 10px;
+        color: var(--muted);
+        font-size: 10px;
+        line-height: 1;
+        text-align: center;
+        transition: transform 0.22s ease;
+      }
+      .group-head .gname { font-weight: 650; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .group-head .gcount { color: var(--muted); font-size: 11px; white-space: nowrap; }
+      .group-head button { margin-left: auto; padding: 2px 8px; font-size: 11px; border-radius: 6px; }
+      .group-body {
+        display: grid;
+        grid-template-rows: 1fr;
+        opacity: 1;
+        transition: grid-template-rows 0.26s ease, opacity 0.18s ease;
+      }
+      .group-body > .group-body-inner {
+        overflow: hidden;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .group.collapsed .group-body {
+        grid-template-rows: 0fr;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .session-row {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px;
+        align-items: start;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+      .session-row:hover { background: var(--surface-hover); }
+      .session-row.active { border-color: var(--muted); background: var(--surface-hover); }
+      .session-row .title {
+        font-weight: 550;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+      .session-row .meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; }
+      .session-row input[type="checkbox"] { accent-color: var(--accent); margin-top: 2px; }
+      .preview-head { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+      .preview-head .t { font-weight: 650; font-size: 13.5px; }
+      .preview-head .m { color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+      #messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .msg { border-radius: 10px; padding: 9px 11px; }
+      .msg.user {
+        background: var(--user-bubble);
+        border: 1px solid var(--user-border);
+        align-self: flex-end;
+        max-width: 88%;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .msg.assistant {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        align-self: flex-start;
+        max-width: 94%;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .msg.tool {
+        align-self: flex-start;
+        max-width: 94%;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 0;
+        overflow: hidden;
+      }
+      .msg.tool summary {
+        cursor: pointer;
+        padding: 6px 10px;
+        font-size: 12px;
+        color: var(--secondary);
+        list-style: none;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .msg.tool summary::-webkit-details-marker { display: none; }
+      .msg.tool[open] summary { border-bottom: 1px solid var(--border); }
+      .tool-status { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); }
+      .tool-status.success { color: var(--ok); }
+      .tool-status.error { color: var(--err); }
+      .msg.tool pre {
+        margin: 0;
+        padding: 8px 10px;
+        font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        color: var(--secondary);
+        max-height: 220px;
+        overflow-y: auto;
+      }
+      .empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: var(--muted);
+        text-align: center;
+        padding: 20px;
+      }
+      .empty .big { font-size: 14px; color: var(--secondary); }
+      .empty code {
+        font: 11px ui-monospace, Menlo, monospace;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 6px;
+        overflow-wrap: anywhere;
+      }
+      footer.bar { display: flex; align-items: center; gap: 10px; }
+      #status { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #status.ok { color: var(--ok); }
+      #status.err { color: var(--err); }
+      .count { color: var(--muted); font-size: 12px; }
+      .hidden { display: none !important; }
+      @container (max-width: 760px) {
+        main.panes { grid-template-columns: 1fr; grid-template-rows: 40% 1fr; }
+      }
+      main.panes { container-type: inline-size; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <h1>一体化会话导入</h1>
+        <span class="hint">扫描本机安装的编程工具，选择来源后勾选会话导入</span>
+        <span class="spacer"></span>
+        <button class="primary" id="scan-btn">扫描本机工具</button>
+      </header>
+
+      <div class="source-grid" id="source-grid"></div>
+
+      <main class="panes hidden" id="panes">
+        <section class="list-pane">
+          <div class="list-tools">
+            <input type="search" id="filter" placeholder="搜索标题或项目…" />
+            <button class="link" id="select-all">全选</button>
+            <button class="link" id="clear-all">清除</button>
+          </div>
+          <div id="session-list" role="listbox" aria-label="会话列表"></div>
+        </section>
+
+        <section class="preview-pane">
+          <div class="empty" id="preview-empty">在左侧选择一个会话进行预览</div>
+          <div class="preview-head hidden" id="preview-head">
+            <div class="t" id="pv-title"></div>
+            <div class="m" id="pv-meta"></div>
+          </div>
+          <div id="messages" class="hidden"></div>
+        </section>
+      </main>
+
+      <footer class="bar">
+        <span class="count" id="count">已选 0 / 0</span>
+        <button id="import-btn" disabled>导入为会话</button>
+        <span id="status"></span>
+      </footer>
+    </div>
+
+    <script>
+      "use strict";
+      const bridge = window.pluginBridge;
+      const $ = (id) => document.getElementById(id);
+      const state = {
+        adapters: [],
+        sources: new Map(), // source -> {found, count}
+        sessions: [],
+        activeSource: null,
+        selected: new Set(),
+        activeKey: null,
+        cache: new Map(), // `${source}:${externalId}` -> converted session
+      };
+
+      const applyAppearance = (appearance) => {
+        const base = appearance?.base;
+        document.documentElement.dataset.base = base === "light" || base === "dark"
+          ? base
+          : window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      };
+      bridge?.on("appearance:changed", applyAppearance);
+      bridge?.invoke("app.getAppearance").then(applyAppearance).catch(() => applyAppearance(null));
+
+      const fmtDate = (iso) => {
+        const d = new Date(iso);
+        return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+      };
+      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      const setStatus = (text, kind = "") => {
+        const el = $("status");
+        el.textContent = text;
+        el.className = kind;
+      };
+      const updateCount = () => {
+        $("count").textContent = `已选 ${state.selected.size} / ${state.sessions.length}`;
+        $("import-btn").disabled = state.selected.size === 0;
+      };
+
+      async function scanSources() {
+        $("scan-btn").disabled = true;
+        const grid = $("source-grid");
+        grid.innerHTML = "";
+        $("panes").classList.add("hidden");
+        setStatus("正在扫描本机工具…");
+        state.sources = new Map();
+        state.activeSource = null;
+        state.selected.clear();
+        state.cache.clear();
+
+        const cards = [];
+        for (const a of state.adapters) {
+          const card = document.createElement("div");
+          card.className = "source-card dim";
+          card.innerHTML = `<div class="sname">${esc(a.label)}</div><div class="scount">检测中…</div>`;
+          card.addEventListener("click", () => openSource(a.source));
+          grid.appendChild(card);
+          cards.push({ adapter: a, card });
+        }
+        await Promise.all(
+          cards.map(async ({ adapter, card }) => {
+            let res;
+            try {
+              res = await bridge.invoke("import.scanSource", { source: adapter.source });
+            } catch {
+              res = { found: false, count: 0 };
+            }
+            state.sources.set(adapter.source, res);
+            card.classList.remove("dim");
+            if (res.found) {
+              card.querySelector(".scount").textContent = `${res.count} 个会话`;
+              card.querySelector(".scount").classList.add("ok");
+            } else {
+              card.querySelector(".scount").textContent = "未检测到";
+            }
+          }),
+        );
+        setStatus("扫描完成：点击上方工具选择来源", "ok");
+      }
+
+      function openSource(source) {
+        const info = state.sources.get(source);
+        if (!info?.found) return;
+        state.activeSource = source;
+        state.selected.clear();
+        state.activeKey = null;
+        state.sessions = [];
+        document.querySelectorAll(".source-card").forEach((card, i) => {
+          card.classList.toggle("active", state.adapters[i]?.source === source);
+        });
+        $("panes").classList.remove("hidden");
+        $("session-list").innerHTML = "";
+        renderPreviewEmpty();
+        setStatus("正在载入会话列表…");
+        bridge
+          .invoke("import.sessions", { source })
+          .then((res) => {
+            state.sessions = res.sessions;
+            renderList();
+            renderPreviewEmpty();
+            updateCount();
+            setStatus(`${res.sessions.length} 个会话`);
+          })
+          .catch((error) => setStatus(`载入失败：${error}`, "err"));
+      }
+
+      const matchesFilter = (s, q) =>
+        !q || s.title.toLowerCase().includes(q) || (s.projectPath ?? "").toLowerCase().includes(q);
+
+      const COLLAPSE_KEY = "pi-universal-import.collapsedProjects";
+      let collapsedProjects = new Set();
+      try {
+        collapsedProjects = new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || "[]"));
+      } catch {
+        collapsedProjects = new Set();
+      }
+      const saveCollapsed = () => {
+        try {
+          localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...collapsedProjects]));
+        } catch {
+          // persistence is best-effort; collapse still works in-session
+        }
+      };
+
+      function renderList() {
+        const q = $("filter").value.trim().toLowerCase();
+        const list = $("session-list");
+        list.innerHTML = "";
+        const visible = state.sessions.filter((s) => matchesFilter(s, q));
+        const groups = new Map();
+        for (const s of visible) {
+          const key = s.projectPath ?? "";
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(s);
+        }
+        for (const [projectPath, sessions] of groups) {
+          const groupKey = projectPath || "__none__";
+          const isCollapsed = collapsedProjects.has(groupKey);
+
+          const group = document.createElement("div");
+          group.className = "group " + (isCollapsed ? "collapsed" : "expanded");
+
+          const head = document.createElement("div");
+          head.className = "group-head";
+          head.setAttribute("role", "button");
+          head.setAttribute("tabindex", "0");
+          head.setAttribute("aria-expanded", String(!isCollapsed));
+          head.title = projectPath || "";
+          const name = projectPath
+            ? projectPath.replace(/[\\/]+$/, "").split(/[\\/]/).pop()
+            : "未关联项目";
+          head.innerHTML = `<span class="chev">▶</span><span class="gname">${esc(name)}</span><span class="gcount">${sessions.length} 个会话</span>`;
+
+          const allSelected = sessions.every((s) => state.selected.has(s.externalId));
+          const btn = document.createElement("button");
+          btn.textContent = allSelected ? "取消全选" : "全选该项目";
+          // Selecting a whole project must not toggle the accordion.
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            for (const s of sessions) {
+              allSelected ? state.selected.delete(s.externalId) : state.selected.add(s.externalId);
+            }
+            renderList();
+            updateCount();
+          });
+          head.appendChild(btn);
+
+          const toggleCollapse = () => {
+            const nowCollapsed = !group.classList.contains("collapsed");
+            group.classList.toggle("collapsed", nowCollapsed);
+            group.classList.toggle("expanded", !nowCollapsed);
+            head.setAttribute("aria-expanded", String(!nowCollapsed));
+            nowCollapsed ? collapsedProjects.add(groupKey) : collapsedProjects.delete(groupKey);
+            saveCollapsed();
+          };
+          head.addEventListener("click", toggleCollapse);
+          head.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleCollapse();
+            }
+          });
+
+          const body = document.createElement("div");
+          body.className = "group-body";
+          const inner = document.createElement("div");
+          inner.className = "group-body-inner";
+
+          for (const s of sessions) {
+            const row = document.createElement("div");
+            row.className = "session-row" + (s.externalId === state.activeKey ? " active" : "");
+            row.setAttribute("role", "option");
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked = state.selected.has(s.externalId);
+            cb.addEventListener("click", (e) => e.stopPropagation());
+            cb.addEventListener("change", () => {
+              cb.checked ? state.selected.add(s.externalId) : state.selected.delete(s.externalId);
+              updateCount();
+            });
+            const text = document.createElement("div");
+            text.innerHTML = `<div class="title">${esc(s.title)}</div>
+              <div class="meta"><span>${fmtDate(s.updatedAt)}</span><span>·</span><span>${s.messageCount} 条</span></div>`;
+            row.append(cb, text);
+            row.addEventListener("click", () => selectSession(s));
+            inner.appendChild(row);
+          }
+
+          body.appendChild(inner);
+          group.append(head, body);
+          list.appendChild(group);
+        }
+      }
+
+      function renderPreviewEmpty() {
+        $("preview-empty").classList.remove("hidden");
+        $("preview-head").classList.add("hidden");
+        $("messages").classList.add("hidden");
+        $("messages").innerHTML = "";
+      }
+
+      async function selectSession(summary) {
+        state.activeKey = summary.externalId;
+        renderList();
+        $("preview-empty").classList.add("hidden");
+        $("preview-head").classList.remove("hidden");
+        $("messages").classList.remove("hidden");
+        $("messages").innerHTML = "";
+        setStatus("正在载入会话…");
+        try {
+          const cacheKey = `${state.activeSource}:${summary.externalId}`;
+          let converted = state.cache.get(cacheKey);
+          if (!converted) {
+            const res = await bridge.invoke("import.convertBatch", {
+              source: state.activeSource,
+              items: [summary],
+            });
+            converted = res.sessions[0];
+            state.cache.set(cacheKey, converted);
+          }
+          $("pv-title").textContent = converted.session.title;
+          $("pv-meta").textContent = [
+            converted.session.projectPath ?? "未关联项目",
+            converted.session.modelId ?? "未知模型",
+            `${converted.messages.length} 条消息`,
+            `更新于 ${fmtDate(converted.session.updatedAt)}`,
+          ].join(" · ");
+          const box = $("messages");
+          for (const m of converted.messages) {
+            if (m.role === "tool") {
+              const details = document.createElement("details");
+              details.className = "msg tool";
+              const mark = m.toolStatus === "error" ? "❌" : "🔧";
+              details.innerHTML = `<summary><span>${mark} ${esc(m.toolName)}</span>
+                <span class="tool-status ${esc(m.toolStatus)}">${esc(m.toolStatus)}</span></summary>`;
+              const pre = document.createElement("pre");
+              pre.textContent = [
+                m.toolArgs != null ? "args: " + JSON.stringify(m.toolArgs, null, 2) : null,
+                m.toolResult ? "result: " + m.toolResult : null,
+              ].filter(Boolean).join("\n\n");
+              details.appendChild(pre);
+              box.appendChild(details);
+            } else {
+              const div = document.createElement("div");
+              div.className = `msg ${m.role}`;
+              div.textContent = m.content;
+              box.appendChild(div);
+            }
+          }
+          setStatus(`已载入 ${converted.messages.length} 条消息`);
+        } catch (error) {
+          setStatus(`载入失败：${error}`, "err");
+        }
+      }
+
+      async function importSelected() {
+        const summaries = state.sessions.filter((s) => state.selected.has(s.externalId));
+        if (summaries.length === 0) return;
+        $("import-btn").disabled = true;
+        setStatus(`正在导入 ${summaries.length} 个会话…`);
+        try {
+          let caps = { officialSessionApi: false };
+          try {
+            caps = await bridge.invoke("import.capabilities");
+          } catch {}
+          if (caps.officialSessionApi) {
+            // Official pi.session.importBatch path (#169 P0/P1)
+            const r = await bridge.invoke("import.commit", {
+              source: state.activeSource,
+              items: summaries,
+            });
+            const parts = [`已导入 ${r.imported} 个会话`];
+            if (r.skipped) parts.push(`跳过 ${r.skipped} 个重复/不可读`);
+            if (r.failed?.length) parts.push(`${r.failed.length} 个失败`);
+            setStatus(
+              `${parts.join("，")}——左侧会话列表即刻可见`,
+              r.failed?.length ? "err" : "ok",
+            );
+          } else {
+            // Legacy dev-build bridge fallback (local patched host only)
+            const res = await bridge.invoke("import.convertBatch", {
+              source: state.activeSource,
+              items: summaries,
+            });
+            let imported = 0;
+            let skipped = 0;
+            for (const conv of res.sessions) {
+              const r = await bridge.invoke("session.import", conv);
+              if (r?.imported) imported += 1;
+              else skipped += 1;
+            }
+            if (res.unreadable) skipped += res.unreadable;
+            setStatus(
+              `已导入 ${imported} 个会话（跳过 ${skipped} 个重复/不可读）——左侧项目列表即刻可见`,
+              "ok",
+            );
+          }
+        } catch (error) {
+          setStatus(`导入失败：${error}`, "err");
+        } finally {
+          $("import-btn").disabled = state.selected.size === 0;
+        }
+      }
+
+      $("scan-btn").addEventListener("click", scanSources);
+      $("import-btn").addEventListener("click", importSelected);
+      $("filter").addEventListener("input", renderList);
+      $("select-all").addEventListener("click", () => {
+        const q = $("filter").value.trim().toLowerCase();
+        for (const s of state.sessions) if (matchesFilter(s, q)) state.selected.add(s.externalId);
+        renderList();
+        updateCount();
+      });
+      $("clear-all").addEventListener("click", () => {
+        state.selected.clear();
+        renderList();
+        updateCount();
+      });
+
+      (async () => {
+        state.adapters = await bridge.invoke("import.adapters");
+      })();
+    </script>
+  </body>
+</html>
