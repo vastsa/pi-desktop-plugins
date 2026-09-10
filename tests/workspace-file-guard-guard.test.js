@@ -25,10 +25,9 @@ const project = win ? "D:\\example-project" : "/data/example-project";
 const scratch = path.join(home, ".pi-desktop", "scratch", "session-1");
 const systemTemp = os.tmpdir();
 const osDrive = systemDrive();
-const pluginCwd = path.join(os.tmpdir(), "pi-wfg-plugin-cwd");
+const pluginCwd = fs.mkdtempSync(path.join(systemTemp, "pi-wfg-plugin-cwd-"));
 
 const previousCwd = process.cwd();
-fs.mkdirSync(pluginCwd, { recursive: true });
 process.chdir(pluginCwd);
 try {
   const inside = classify(path.join(project, "src", "main.js"), project, { scratch });
@@ -150,6 +149,46 @@ try {
   });
   assert(!namedTemp.allowed, "OS temp stays forbidden even when explicit");
 
+  const filesystemRoot = path.parse(project).root;
+  const unsafeRoot = classify(path.join(home, "Downloads", "root-escape.txt"), filesystemRoot, {
+    scratch,
+  });
+  assert(!unsafeRoot.allowed, "filesystem root must not be accepted as a project root");
+
+  const relativeRoot = resolveToolRoot({ explicit: "." });
+  assert(!relativeRoot.ok, "explicit project roots must be absolute");
+
+  const unsafeScratch = classify(path.join(home, "Downloads", "scratch-escape.txt"), project, {
+    scratch: filesystemRoot,
+  });
+  assert(!unsafeScratch.allowed, "unsafe scratch overrides must not broaden the allowed area");
+
+  const symlinkBase = fs.mkdtempSync(path.join(systemTemp, "pi-wfg-symlink-"));
+  try {
+    const symlinkProject = path.join(symlinkBase, "project");
+    const symlinkOutside = path.join(symlinkBase, "outside");
+    fs.mkdirSync(symlinkProject);
+    fs.mkdirSync(symlinkOutside);
+    const link = path.join(symlinkProject, "link");
+    let symlinkCreated = false;
+    try {
+      fs.symlinkSync(symlinkOutside, link, win ? "junction" : "dir");
+      symlinkCreated = true;
+    } catch {
+      // Some Windows environments do not grant symlink creation to tests.
+    }
+    if (symlinkCreated) {
+      const symlinkTarget = classify(path.join(link, "junk.txt"), symlinkProject, { scratch });
+      assert(!symlinkTarget.allowed, "symlink targets must be rejected");
+    }
+  } finally {
+    fs.rmSync(symlinkBase, { recursive: true, force: true });
+  }
+
+  if (process.platform === "darwin") {
+    assert(!classify(path.join(home, "desktop", "lowercase.txt"), project, { scratch }).allowed, "macOS media paths are case-insensitive");
+    assert(!classify("/private/etc/hosts", project, { scratch }).allowed, "macOS private system aliases must be blocked");
+  }
   let missingRootThrew = false;
   try {
     defaultProjectRoot({});
@@ -166,6 +205,30 @@ try {
   }
   assert(cmdQuoteThrew, "cmd dialect must reject embedded quotes");
 
+  const bashDangerous = "/tmp/$(touch pwned)/$HOME/`whoami`";
+  const bashScript = formatEnv({ TMP: bashDangerous }, "bash");
+  assert(
+    bashScript === `export TMP='${bashDangerous}'\n`,
+    "bash assignments must use literal-safe quoting"
+  );
+
+  const powershellDangerous = "C:/temp/$(whoami)/$env:PATH";
+  const powershellScript = formatEnv({ TMP: powershellDangerous }, "powershell");
+  assert(
+    powershellScript === `$env:TMP = '${powershellDangerous}'\n`,
+    "PowerShell assignments must use literal-safe quoting"
+  );
+
+  for (const value of ["C:/x/%PATH%", "C:/x/!PATH!", "C:/x/line\r\nnext"]) {
+    let unsafeCmdThrew = false;
+    try {
+      formatEnv({ TMP: value }, "cmd");
+    } catch (error) {
+      unsafeCmdThrew = /cannot contain/.test(String(error.message));
+    }
+    assert(unsafeCmdThrew, "cmd assignments must reject expansion and control characters");
+  }
+
   if (win) {
     const viaEnv = classify("%USERPROFILE%\\Downloads\\dump.bin", project, { scratch });
     assert(!viaEnv.allowed, "env-expanded Downloads should be forbidden");
@@ -174,4 +237,5 @@ try {
   console.log("ok");
 } finally {
   process.chdir(previousCwd);
+  fs.rmSync(pluginCwd, { recursive: true, force: true });
 }

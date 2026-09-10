@@ -105,6 +105,8 @@ async function toolTmpLayout(args) {
 }
 
 async function onLoad() {
+  const registered = [];
+  try {
   await pi.agent.registerTool({
     name: "project_root",
     description:
@@ -113,11 +115,12 @@ async function onLoad() {
     schema: {
       type: "object",
       properties: {
-        root: { type: "string", description: "Optional project root override" },
+        root: { type: "string", description: "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." }
       },
     },
     execute: (args) => toolProjectRoot(args),
   });
+  registered.push("project_root");
 
   await pi.agent.registerTool({
     name: "check_path",
@@ -128,7 +131,7 @@ async function onLoad() {
       type: "object",
       properties: {
         path: { type: "string", description: "Path that would be written" },
-        root: { type: "string", description: "Optional project root override" },
+        root: { type: "string", description: "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." },
         explicit: {
           type: "boolean",
           description:
@@ -139,6 +142,7 @@ async function onLoad() {
     },
     execute: (args) => toolCheckPath(args),
   });
+  registered.push("check_path");
 
   await pi.agent.registerTool({
     name: "temp_env",
@@ -148,7 +152,7 @@ async function onLoad() {
     schema: {
       type: "object",
       properties: {
-        root: { type: "string", description: "Optional project root override" },
+        root: { type: "string", description: "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." },
         shell: {
           type: "string",
           enum: ["powershell", "cmd", "bash", "json"],
@@ -158,6 +162,7 @@ async function onLoad() {
     },
     execute: (args) => toolTempEnv(args),
   });
+  registered.push("temp_env");
 
   await pi.agent.registerTool({
     name: "tmp_layout",
@@ -167,11 +172,22 @@ async function onLoad() {
     schema: {
       type: "object",
       properties: {
-        root: { type: "string", description: "Optional project root override" },
+        root: { type: "string", description: "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." }
       },
     },
     execute: (args) => toolTmpLayout(args),
   });
+  registered.push("tmp_layout");
+  } catch (error) {
+    for (const name of registered.reverse()) {
+      try {
+        await pi.agent.unregisterTool(name);
+      } catch {
+        // best-effort rollback
+      }
+    }
+    throw error;
+  }
 }
 
 async function onUnload() {

@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const TMP_DIRNAME = ".tmp";
 const WIN = process.platform === "win32";
+const CASE_INSENSITIVE = WIN || process.platform === "darwin";
 
 function expandEnv(input) {
   let out = String(input ?? "");
@@ -55,7 +56,7 @@ function resolvePath(input, base) {
 
 function compareKey(target) {
   const normalized = path.normalize(String(target || ""));
-  return WIN ? normalized.toLowerCase() : normalized;
+  return CASE_INSENSITIVE ? normalized.toLowerCase() : normalized;
 }
 
 function isRelativeTo(target, root) {
@@ -67,12 +68,42 @@ function isRelativeTo(target, root) {
   if (path.isAbsolute(rel)) return false;
   const prefix = `..${path.sep}`;
   if (rel === ".." || rel.startsWith(prefix)) return false;
-  if (WIN) {
+  if (CASE_INSENSITIVE) {
     const relCi = path.relative(compareKey(resolvedRoot), compareKey(resolvedTarget));
     if (relCi === "") return true;
     if (path.isAbsolute(relCi) || relCi === ".." || relCi.startsWith(prefix)) return false;
   }
   return true;
+}
+
+function canonicalPath(target) {
+  const resolved = resolvePath(target);
+  let current = resolved;
+  const tail = [];
+  while (true) {
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch (error) {
+      if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") return { ok: false };
+      const parent = path.dirname(current);
+      if (parent === current) return { ok: false };
+      tail.unshift(path.basename(current));
+      current = parent;
+      continue;
+    }
+    let real;
+    try {
+      real = fs.realpathSync(current);
+    } catch {
+      return { ok: false };
+    }
+    return {
+      ok: true,
+      path: path.resolve(real, ...tail),
+      hadSymlink: stat.isSymbolicLink() || compareKey(real) !== compareKey(current),
+    };
+  }
 }
 
 function driveOf(target) {
@@ -123,9 +154,13 @@ function codexHome() {
 }
 
 function scratchRoot() {
+  const fallback = resolvePath(path.join(piHome(), "scratch"));
   const fromEnv = process.env.PI_SCRATCH_DIR;
-  if (fromEnv && String(fromEnv).trim()) return resolvePath(fromEnv);
-  return resolvePath(path.join(piHome(), "scratch"));
+  if (fromEnv && String(fromEnv).trim()) {
+    const selected = safeScratchCandidate(fromEnv);
+    if (selected) return selected;
+  }
+  return safeScratchCandidate(fallback) || fallback;
 }
 
 function readXdgUserDirs(h) {
@@ -133,6 +168,8 @@ function readXdgUserDirs(h) {
   const out = {};
   let text = "";
   try {
+    const stat = fs.statSync(file);
+    if (!stat.isFile() || stat.size > 64 * 1024) return out;
     text = fs.readFileSync(file, "utf8");
   } catch {
     return out;
@@ -241,6 +278,52 @@ function junkRoots() {
   ];
   return uniquePaths(roots);
 }
+function isFilesystemRoot(target) {
+  const resolved = resolvePath(target);
+  return compareKey(resolved) === compareKey(path.parse(resolved).root);
+}
+
+function isReservedRoot(target) {
+  const resolved = resolvePath(target);
+  return junkRoots().some((junk) => {
+    const info = canonicalPath(junk);
+    return info.ok && compareKey(info.path) === compareKey(resolved);
+  });
+}
+
+function validateProjectRoot(input) {
+  const expanded = expandUser(input);
+  if (!isAbsolutePath(expanded)) {
+    return { ok: false, error: "project root must be an absolute path" };
+  }
+  const resolved = resolvePath(expanded);
+  const info = canonicalPath(resolved);
+  if (!info.ok || info.hadSymlink) {
+    return { ok: false, error: "project root cannot be safely canonicalized" };
+  }
+  if (isFilesystemRoot(info.path) || isReservedRoot(info.path)) {
+    return { ok: false, error: "project root is a reserved system or junk directory" };
+  }
+  return { ok: true, projectRoot: resolved };
+}
+
+function safeScratchCandidate(input) {
+  const expanded = expandUser(input);
+  if (!isAbsolutePath(expanded)) return null;
+  const resolved = resolvePath(expanded);
+  const info = canonicalPath(resolved);
+  if (!info.ok || info.hadSymlink || isFilesystemRoot(info.path)) return null;
+  const blocked = junkRoots().some((junk) => {
+    const junkInfo = canonicalPath(junk);
+    return junkInfo.ok && isRelativeTo(info.path, junkInfo.path);
+  });
+  return blocked ? null : resolved;
+}
+
+function safeRelativeTo(target, root) {
+  const info = canonicalPath(root);
+  return info.ok && isRelativeTo(target, info.path);
+}
 
 function allowedExceptions() {
   return uniquePaths([
@@ -263,18 +346,18 @@ function isToolInternal(target) {
     path.join(piHome(), "logs"),
     path.join(piHome(), "cache"),
   ]);
-  return roots.some((root) => isRelativeTo(target, root));
+  return roots.some((root) => safeRelativeTo(target, root));
 }
 
 function defaultProjectRoot({ workspace, explicit } = {}) {
-  if (explicit) return resolvePath(explicit);
-  if (workspace) return resolvePath(workspace);
-  throw new Error("workspace unavailable; pass root or open a workspace");
+  const resolved = resolveToolRoot({ workspace, explicit });
+  if (!resolved.ok) throw new Error(resolved.error);
+  return resolved.projectRoot;
 }
 
 function resolveToolRoot({ explicit, workspace } = {}) {
-  if (explicit) return { ok: true, projectRoot: resolvePath(explicit) };
-  if (workspace) return { ok: true, projectRoot: resolvePath(workspace) };
+  const candidate = explicit || workspace;
+  if (candidate) return validateProjectRoot(candidate);
   return {
     ok: false,
     error: "workspace unavailable; pass root or open a workspace",
@@ -294,7 +377,7 @@ function tmpLayout(projectRoot) {
 
 function envAssignments({ projectRoot, scratch } = {}) {
   const layout = tmpLayout(projectRoot);
-  const ephemeral = scratch ? resolvePath(scratch) : layout.tmp;
+  const ephemeral = scratch ? safeScratchCandidate(scratch) || scratchRoot() : layout.tmp;
   const cache = layout.cache;
   return {
     TMP: ephemeral,
@@ -317,35 +400,90 @@ function defaultShell() {
   return WIN ? "powershell" : "bash";
 }
 
+function validateEnvKey(key) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    throw new Error(`invalid environment variable name: ${key}`);
+  }
+}
+
+function bashQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+function powershellQuote(value) {
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
 function formatEnv(mapping, shell) {
   const dialect = shell || defaultShell();
+  const entries = Object.entries(mapping);
+  for (const [key] of entries) validateEnvKey(key);
   if (dialect === "json") return `${JSON.stringify(mapping, null, 2)}\n`;
   if (dialect === "powershell") {
-    return `${Object.entries(mapping)
-      .map(([key, value]) => `$env:${key} = ${JSON.stringify(value)}`)
+    return `${entries
+      .map(([key, value]) => `$env:${key} = ${powershellQuote(value)}`)
       .join("\n")}\n`;
   }
   if (dialect === "cmd") {
-    for (const value of Object.values(mapping)) {
-      if (String(value).includes('"')) {
-        throw new Error("cmd env assignments cannot contain double quotes");
+    for (const [, value] of entries) {
+      if (/["%!\0\r\n]/.test(String(value))) {
+        throw new Error(
+          "cmd env assignments cannot contain double quotes, percent signs, exclamation marks, or control characters"
+        );
       }
     }
-    return `${Object.entries(mapping)
+    return `${entries
       .map(([key, value]) => `set "${key}=${value}"`)
       .join("\r\n")}\r\n`;
   }
-  return `${Object.entries(mapping)
-    .map(([key, value]) => `export ${key}=${JSON.stringify(value)}`)
+  return `${entries
+    .map(([key, value]) => `export ${key}=${bashQuote(value)}`)
     .join("\n")}\n`;
 }
 
 function classify(inputPath, projectRoot, options = {}) {
   const root = resolvePath(projectRoot);
+  const rootPolicy = validateProjectRoot(projectRoot);
+  const scratch = options.scratch
+    ? safeScratchCandidate(options.scratch) || scratchRoot()
+    : scratchRoot();
   const target = resolvePath(inputPath, root);
-  const scratch = options.scratch ? resolvePath(options.scratch) : scratchRoot();
+  if (!rootPolicy.ok) {
+    return {
+      path: target,
+      projectRoot: root,
+      scratch,
+      allowed: false,
+      reasons: [rootPolicy.error],
+    };
+  }
 
-  if (isRelativeTo(target, root)) {
+  const targetInfo = canonicalPath(target);
+  const rootInfo = canonicalPath(root);
+  const scratchInfo = canonicalPath(scratch);
+  if (!targetInfo.ok || !rootInfo.ok || !scratchInfo.ok) {
+    return {
+      path: target,
+      projectRoot: root,
+      scratch,
+      allowed: false,
+      reasons: ["path could not be safely canonicalized"],
+    };
+  }
+  if (targetInfo.hadSymlink) {
+    return {
+      path: target,
+      projectRoot: root,
+      scratch,
+      allowed: false,
+      reasons: ["path contains a symbolic link"],
+    };
+  }
+
+  const canonicalTarget = targetInfo.path;
+  const canonicalRoot = rootInfo.path;
+  const canonicalScratch = scratchInfo.path;
+  if (isRelativeTo(canonicalTarget, canonicalRoot)) {
     return {
       path: target,
       projectRoot: root,
@@ -355,7 +493,7 @@ function classify(inputPath, projectRoot, options = {}) {
     };
   }
 
-  if (isRelativeTo(target, scratch)) {
+  if (isRelativeTo(canonicalTarget, canonicalScratch)) {
     return {
       path: target,
       projectRoot: root,
@@ -365,7 +503,7 @@ function classify(inputPath, projectRoot, options = {}) {
     };
   }
 
-  if (allowedExceptions().some((exception) => isRelativeTo(target, exception))) {
+  if (allowedExceptions().some((exception) => safeRelativeTo(canonicalTarget, exception))) {
     return {
       path: target,
       projectRoot: root,
@@ -378,8 +516,8 @@ function classify(inputPath, projectRoot, options = {}) {
   }
 
   const reasons = ["outside project root"];
-  const targetDrive = driveOf(target);
-  const rootDrive = driveOf(root);
+  const targetDrive = driveOf(canonicalTarget);
+  const rootDrive = driveOf(canonicalRoot);
   const osDrive = systemDrive();
 
   if (targetDrive && rootDrive && targetDrive !== rootDrive) {
@@ -389,12 +527,12 @@ function classify(inputPath, projectRoot, options = {}) {
     }
   }
 
-  if (isToolInternal(target)) {
+  if (isToolInternal(canonicalTarget)) {
     reasons.push("PI/Codex internal temp/log/visualization path");
   }
 
   for (const junk of junkRoots()) {
-    if (isRelativeTo(target, junk)) {
+    if (safeRelativeTo(canonicalTarget, junk)) {
       reasons.push(`system/user junk path ${junk}`);
       break;
     }

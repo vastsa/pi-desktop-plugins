@@ -1,7 +1,12 @@
 "use strict";
 
+const fs = require("node:fs");
 const path = require("node:path");
-const { toolCheckPath, toolProjectRoot } = require("../plugins/pi.workspace-file-guard/main");
+const {
+  onLoad,
+  toolCheckPath,
+  toolProjectRoot,
+} = require("../plugins/pi.workspace-file-guard/main");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -20,7 +25,14 @@ async function withPi(impl, fn) {
 
 async function run() {
   const workspace = process.platform === "win32" ? "D:\\example-project" : "/data/example-project";
-
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "plugins", "pi.workspace-file-guard", "manifest.json"), "utf8")
+  );
+  assert(manifest.version === "0.2.5", "manifest version must match the reviewed release");
+  assert(
+    JSON.stringify(manifest.permissions) === JSON.stringify(["agent.prompt.inject", "agent.tool.register"]),
+    "manifest permissions must remain minimal and exact"
+  );
   await withPi(
     {
       workspace: {
@@ -56,7 +68,38 @@ async function run() {
       );
     }
   );
-
+  const registered = [];
+  const unregistered = [];
+  let registerError = null;
+  await withPi(
+    {
+      agent: {
+        async registerTool(tool) {
+          registered.push(tool.name);
+          if (tool.name === "temp_env") throw new Error("simulated registration failure");
+        },
+        async unregisterTool(name) {
+          unregistered.push(name);
+        },
+      },
+    },
+    async () => {
+      try {
+        await onLoad();
+      } catch (error) {
+        registerError = error;
+      }
+    }
+  );
+  assert(registerError && /simulated/.test(registerError.message), "onLoad must surface registration failures");
+  assert(
+    JSON.stringify(registered) === JSON.stringify(["project_root", "check_path", "temp_env"]),
+    "onLoad must track registrations"
+  );
+  assert(
+    JSON.stringify(unregistered) === JSON.stringify(["check_path", "project_root"]),
+    "onLoad must roll back registered tools in reverse order"
+  );
   console.log("ok");
 }
 

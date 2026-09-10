@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "id": "pi.workspace-file-guard",
   "name": "Workspace File Guard",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Works on any machine: Windows, macOS, Linux, any drive letter, any username.",
   "i18n": {
     "en": {
       "name": "Workspace File Guard",
       "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Never spill onto the system volume, Desktop, Downloads, Documents or system temp.",
-      "safetyNotes": "Behavioral confinement only. The plugin classifies paths and injects agent rules; it does not lock disks, change ACLs, or access the network."
+      "safetyNotes": "Behavioral confinement only. The plugin reads the local XDG user-dirs configuration to classify paths, injects agent rules, and does not write files or access the network."
     },
     "zh-CN": {
       "name": "工作区文件护栏",
       "description": "把测试、临时、草稿、日志、缓存等垃圾文件关在当前工作区或 PI scratch 里。任意机器、任意盘符、任意用户名都可用，不写死 C: 或本机路径。",
-      "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。"
+      "safetyNotes": "这是行为约束，不是磁盘锁。插件会读取本机 XDG 用户目录配置来分类路径，注入 Agent 规则，不写入文件、不改 ACL、不联网。"
     }
   },
   "author": "xingleiwu",
@@ -28,7 +28,7 @@
         "schema": {
           "type": "object",
           "properties": {
-            "root": { "type": "string", "description": "Optional project root override" }
+            "root": { "type": "string", "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." }
           }
         }
       },
@@ -40,7 +40,7 @@
           "type": "object",
           "properties": {
             "path": { "type": "string", "description": "Path that would be written" },
-            "root": { "type": "string", "description": "Optional project root override" },
+            "root": { "type": "string", "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." },
             "explicit": {
               "type": "boolean",
               "description": "Set true only when the user clearly named this destination"
@@ -56,7 +56,7 @@
         "schema": {
           "type": "object",
           "properties": {
-            "root": { "type": "string", "description": "Optional project root override" },
+            "root": { "type": "string", "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." },
             "shell": {
               "type": "string",
               "enum": ["powershell", "cmd", "bash", "json"],
@@ -72,7 +72,7 @@
         "schema": {
           "type": "object",
           "properties": {
-            "root": { "type": "string", "description": "Optional project root override" }
+            "root": { "type": "string", "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection." }
           }
         }
       }
@@ -81,7 +81,7 @@
   "permissions": ["agent.prompt.inject", "agent.tool.register"],
   "engines": { "piDesktop": ">=0.2.0" },
   "categories": ["productivity"],
-  "changelog": "0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
-  "safetyNotes": "Behavioral confinement only. The plugin classifies paths and injects agent rules; it does not lock disks, change ACLs, or access the network.",
+  "changelog": "0.2.5: Quote generated bash and PowerShell assignments safely, reject unsafe cmd values, enforce canonical root/scratch and symlink boundaries, include negative-path tests in CI, and sync the package. 0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
+  "safetyNotes": "Behavioral confinement only. The plugin reads the local XDG user-dirs configuration to classify paths, injects agent rules, and does not write files or access the network.",
   "activationEvents": ["onStartup"]
 }
