@@ -1,107 +1,107 @@
 # PI-Desktop Plugins
 
+[中文版 / Chinese](./README.zh-CN.md)
+
 Official plugin marketplace repository for [PI-Desktop](https://github.com/vastsa/PI-Desktop).
+Contains plugin sources, installable `.piplug` packages, and the generated marketplace catalog.
 
-PI-Desktop 是一个现代化、AI 驱动的桌面环境，本仓库是其**官方插件市场仓库**，包含插件源码、可安装的 `.piplug` 包以及市场目录索引。
+> `plugins.aiuo.net` is not live yet. The PI-Desktop client fetches `catalog.json` from GitHub raw. Until the registry launches, every release is: pack → rebuild catalog → commit / merge to `main`.
 
-> `plugins.aiuo.net` 尚未上线。在此之前，客户端继续从本仓库的 GitHub raw `catalog.json` 安装插件；发布流程仍是打包 + 重建目录 + 提交 PR / 合入 `main`。
+## Repository Layout
 
-## 📦 仓库内容
+| Path | Description |
+|------|-------------|
+| `catalog.json` | Marketplace index fetched by PI-Desktop clients |
+| `packages/*.piplug` | Packed plugin packages users download and install |
+| `plugins/<id>/` | Plugin source directories, one folder per plugin |
+| `scripts/` | Build helpers (`pack_plugin.py`, `rebuild_catalog.py`) |
 
-| 路径 | 说明 |
-|------|------|
-| `catalog.json` | 市场目录索引，由 PI-Desktop 客户端读取，展示可安装的插件列表 |
-| `packages/*.piplug` | 打包好的插件安装包，用户安装时下载的就是这些文件 |
-| `plugins/<id>/` | 插件源码目录，每个插件一个文件夹 |
-| `scripts/` | 开发辅助脚本（打包、重建目录等） |
+## Available Plugins
 
-## 🎯 可用插件
+### Official (maintained by PI-Desktop team)
 
-### 官方插件（PI-Desktop 团队维护）
+| Plugin | Description | Author |
+|--------|-------------|--------|
+| **pi.todo** | Lightweight todo app with four-quadrant matrix and simple list layouts, due reminders and AI tool integration | PI-Desktop |
+| **pi.token-insights** | Token usage dashboard tracking PI-Desktop, Claude Code, Codex and other tools | PI-Desktop |
+| **pi.gitlens** | GitLens-style local Git management docked in the work panel (human UI only, no agent tools) | PI-Desktop |
+| **pi.ssh-manager** | Local-first SSH host management with AI remote command tool, transient panel passwords and no persisted credentials | PI-Desktop |
+| **pi.terminal** | Interactive terminal docked in the work panel; multi-tab, cross-platform shell | PI-Desktop |
 
-| 插件 | 说明 | 作者 |
-|------|------|------|
-| **pi.todo** | 小清新待办：四象限矩阵 + 简单列表双布局，支持到期提醒与 AI 工具集成 | PI-Desktop |
-| **pi.token-insights** | Token 用量分析仪表盘：追踪 PI-Desktop、Claude Code、Codex 等工具的 Token 消耗 | PI-Desktop |
-| **pi.gitlens** | GitLens 风格的本地 Git 管理，停靠在右侧工作面板（仅人机 UI，无 Agent 工具） | PI-Desktop |
-| **pi.ssh-manager** | 本地优先的 SSH 主机管理与 AI 远程命令工具，支持面板临时密码且不持久化凭据 | PI-Desktop |
-| **pi.terminal** | 受 Otty 启发的交互式终端，只停靠在右侧工作面板；多标签、跨平台 shell | PI-Desktop |
+### Community
 
-### 社区插件
+| Plugin | Description | Author |
+|--------|-------------|--------|
+| **pi.scratch-calc** | Scratch calculator with multi-line history, percentage/power/π/e and dark mode | Tioit-Wang |
+| **pi.super-domain-man** | Multi-platform DNS record management and SSL certificate monitoring/issuance | Tioit-Wang |
+| **pi.markdown** | Local Markdown notes with WYSIWYG editing, table of contents, code highlighting, Mermaid / KaTeX | Tioit-Wang |
+| **pi.clipboard-history** | Clipboard history capturing text during runtime, retained 30 days, one-click restore | Tioit-Wang |
+| **pi.log-viewer** | Large log viewer with streaming pagination, live tail, search highlighting and multi-file tabs | Tioit-Wang |
+| **pi.bianqian** | Markdown desktop sticky notes: multi-note, live preview, task lists, highlighter and trash | ZY |
 
-| 插件 | 说明 | 作者 |
-|------|------|------|
-| **pi.scratch-calc** | 草稿计算器：多行演算、历史记录、百分比/乘方/π/e 支持，暗色模式 | Tioit-Wang |
-| **pi.super-domain-man** | 超级域名侠：多平台 DNS 记录管理与 SSL 证书监控/申请工具 | Tioit-Wang |
-| **pi.markdown** | 本地 Markdown 笔记：所见即所得编辑、目录大纲、代码高亮、Mermaid / KaTeX | Tioit-Wang |
-| **pi.clipboard-history** | 剪贴板历史：运行期间捕获文本，保留 30 天，一键还原 | Tioit-Wang |
-| **pi.log-viewer** | 大日志查看器：流式分页、实时跟随、搜索高亮、多文件页签 | Tioit-Wang |
-| **pi.bianqian** | Markdown 桌面便签：多便签、实时预览、任务列表、荧光笔与回收站 | ZY |
+### Demos
 
-### 示例插件（学习参考）
+| Plugin | Description |
+|--------|-------------|
+| **demo.hello** | Minimal example: panel + command + tool registration |
+| **demo.workspace-summary** | Practical template: scan workspace and generate a summary |
+| **demo.workspace-notes** | High-risk capability demo: file read/write + network requests |
 
-| 插件 | 说明 |
-|------|------|
-| **demo.hello** | 最小示例：面板 + 命令 + 工具注册 |
-| **demo.workspace-summary** | 实用模板：扫描工作区并生成摘要 |
-| **demo.workspace-notes** | 高风险能力演示：文件读写 + 网络请求 |
+## Install Plugins
 
-## 🚀 安装插件
+1. Open PI-Desktop → **Plugins**
+2. Go to the **Marketplace** page
+3. Click **Refresh from repository** to load the latest catalog
+4. Browse and install plugins
 
-1. 打开 PI-Desktop → **插件**
-2. 进入 **市场** 页面
-3. 点击 **从仓库刷新** 加载最新目录
-4. 浏览并安装插件
-
-官方 catalog 地址：
+Catalog URL:
 
 ```text
 https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json
 ```
 
-## 🛠️ 开发自己的插件
+## Develop Your Own Plugin
 
-### 快速开始
+### Quick Start
 
 ```bash
-# 1) Fork + 克隆仓库
+# 1) Fork + clone
 git clone https://github.com/<you>/pi-desktop-plugins.git
 cd pi-desktop-plugins
 
-# 2) 复制模板开始开发
+# 2) Copy a template
 cp -R plugins/demo.workspace-summary plugins/my.plugin-id
 
-# 3) 修改插件内容
-#    - 更新 manifest.json 中的 id/name/version/description
-#    - 实现 main.js 逻辑
-#    - 创建 renderer/index.html（可选，用于面板 UI）
+# 3) Edit manifest + code
+#    - Update id/name/version/description in manifest.json
+#    - Implement main.js
+#    - Create renderer/index.html (optional panel UI)
 
-# 4) 打包插件
+# 4) Pack
 python3 scripts/pack_plugin.py plugins/my.plugin-id
 
-# 5) 重建市场目录
+# 5) Rebuild catalog
 python3 scripts/rebuild_catalog.py
 
-# 6) 在 PI-Desktop 中测试
-#    - 使用「加载开发插件」功能
-#    - 或直接安装生成的 .piplug 文件
+# 6) Test in PI-Desktop
+#    - Use "Load dev plugin" or install the .piplug directly
 ```
 
-### 目录结构
+### Plugin Structure
 
 ```
 plugins/<id>/
-├── manifest.json      # 必需：插件元信息
-├── main.js            # 必需：插件入口
-├── renderer/          # 可选：面板 UI
+├── manifest.json      # Required: plugin metadata
+├── main.js            # Required: CJS entry, exports onLoad()/onUnload()
+├── renderer/          # Optional: panel UI
 │   ├── index.html
 │   ├── style.css
 │   └── script.js
-├── README.md          # 推荐：插件说明文档
-└── skills/            # 可选：AI Agent 工具定义
+├── README.md          # Recommended: shown in marketplace detail
+└── skills/            # Optional: AI agent tool definitions
 ```
 
-### manifest.json 关键字段
+### Key manifest.json Fields
 
 ```json
 {
@@ -109,7 +109,11 @@ plugins/<id>/
   "id": "my.plugin-id",
   "name": "My Plugin",
   "version": "0.1.0",
-  "description": "插件功能描述",
+  "description": "What it does",
+  "i18n": {
+    "en": { "name": "My Plugin", "description": "What it does" },
+    "zh-CN": { "name": "我的插件", "description": "插件功能描述" }
+  },
   "author": "your-name",
   "main": "main.js",
   "categories": ["productivity"],
@@ -118,38 +122,38 @@ plugins/<id>/
 }
 ```
 
-### 常用权限
+### Common Permissions
 
-| 权限 | 用途 |
-|------|------|
-| `ui.panel` | 打开隔离面板 |
-| `fs.read.workspace` | 读取工作区文件 |
-| `fs.write.workspace` | 修改工作区文件 |
-| `clipboard.read` / `clipboard.write` | 剪贴板读写 |
-| `notify` | 本地通知 |
-| `net.fetch` | 外部网络请求 |
-| `shell.openExternal` | 打开外部链接 |
-| `agent.tool.register` | 注册 AI Agent 工具 |
+| Permission | Use |
+|------------|-----|
+| `ui.panel` | Open isolated panel |
+| `fs.read.workspace` | Read workspace files |
+| `fs.write.workspace` | Modify workspace files |
+| `clipboard.read` / `clipboard.write` | Clipboard access |
+| `notify` | Local notifications |
+| `net.fetch` | Outbound network requests |
+| `shell.openExternal` | Open external links |
+| `agent.tool.register` | Register AI agent tools |
 
-> **提示**：只申请所需的最小权限集。高风险权限会在安装时提示用户确认。
+> **Tip**: Request the minimum set of permissions. High-risk permissions prompt the user at install time.
 
-## 📋 贡献流程
+## Contributing
 
-1. Fork 本仓库
-2. 从示例模板创建你的插件
-3. 在 PI-Desktop 中充分测试
-4. 提交 Pull Request（确保 `id` 唯一、使用语义化版本号、文档清晰）
+1. Fork this repository
+2. Create your plugin from a demo template
+3. Test thoroughly in PI-Desktop
+4. Submit a Pull Request (ensure unique `id`, semver versioning, clear docs)
 
-详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
-## 📦 打包约束
+## Packaging Constraints
 
-- 包根目录必须包含 `manifest.json`
-- 不允许符号链接或路径穿越
-- 使用 store-compressed zip 格式打包为 `.piplug`
-- 最大包体积 50MB
-- 不要期望宿主端 `npm install`，请自行打包依赖
+- Package root must contain `manifest.json`
+- No symlinks or path traversal
+- Store-compressed `.piplug` format
+- Max package size: 50 MB
+- Bundle your own dependencies — no host-side `npm install`
 
-## 📄 License
+## License
 
 MIT
