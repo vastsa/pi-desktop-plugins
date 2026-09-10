@@ -198428,6 +198428,2061 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     }
   });
 
+  // node_modules/@lezer/common/dist/index.js
+  function checkSide(side, pos, from5, to) {
+    switch (side) {
+      case -2:
+        return from5 < pos;
+      case -1:
+        return to >= pos && from5 < pos;
+      case 0:
+        return from5 < pos && to > pos;
+      case 1:
+        return from5 <= pos && to > pos;
+      case 2:
+        return to > pos;
+      case 4:
+        return true;
+    }
+  }
+  function resolveNode(node3, pos, side, overlays) {
+    var _a2;
+    while (node3.from == node3.to || (side < 1 ? node3.from >= pos : node3.from > pos) || (side > -1 ? node3.to <= pos : node3.to < pos)) {
+      let parent4 = !overlays && node3 instanceof TreeNode2 && node3.index < 0 ? null : node3.parent;
+      if (!parent4)
+        return node3;
+      node3 = parent4;
+    }
+    let mode = overlays ? 0 : IterMode.IgnoreOverlays;
+    if (overlays)
+      for (let scan = node3, parent4 = scan.parent; parent4; scan = parent4, parent4 = scan.parent) {
+        if (scan instanceof TreeNode2 && scan.index < 0 && ((_a2 = parent4.enter(pos, side, mode)) === null || _a2 === void 0 ? void 0 : _a2.from) != scan.from)
+          node3 = parent4;
+      }
+    for (; ; ) {
+      let inner4 = node3.enter(pos, side, mode);
+      if (!inner4)
+        return node3;
+      node3 = inner4;
+    }
+  }
+  function getChildren(node3, type9, before, after) {
+    let cur2 = node3.cursor(), result = [];
+    if (!cur2.firstChild())
+      return result;
+    if (before != null)
+      for (let found2 = false; !found2; ) {
+        found2 = cur2.type.is(before);
+        if (!cur2.nextSibling())
+          return result;
+      }
+    for (; ; ) {
+      if (after != null && cur2.type.is(after))
+        return result;
+      if (cur2.type.is(type9))
+        result.push(cur2.node);
+      if (!cur2.nextSibling())
+        return after == null ? result : [];
+    }
+  }
+  function matchNodeContext(node3, context, i9 = context.length - 1) {
+    for (let p4 = node3; i9 >= 0; p4 = p4.parent) {
+      if (!p4)
+        return false;
+      if (!p4.type.isAnonymous) {
+        if (context[i9] && context[i9] != p4.name)
+          return false;
+        i9--;
+      }
+    }
+    return true;
+  }
+  function iterStack(heads) {
+    if (!heads.length)
+      return null;
+    let pick2 = 0, picked = heads[0];
+    for (let i9 = 1; i9 < heads.length; i9++) {
+      let node3 = heads[i9];
+      if (node3.from > picked.from || node3.to < picked.to) {
+        picked = node3;
+        pick2 = i9;
+      }
+    }
+    let next4 = picked instanceof TreeNode2 && picked.index < 0 ? null : picked.parent;
+    let newHeads = heads.slice();
+    if (next4)
+      newHeads[pick2] = next4;
+    else
+      newHeads.splice(pick2, 1);
+    return new StackIterator(newHeads, picked);
+  }
+  function stackIterator(tree, pos, side) {
+    let inner4 = tree.resolveInner(pos, side), layers = null;
+    for (let scan = inner4 instanceof TreeNode2 ? inner4 : inner4.context.parent; scan; scan = scan.parent) {
+      if (scan.index < 0) {
+        let parent4 = scan.parent;
+        (layers || (layers = [inner4])).push(parent4.resolve(pos, side));
+        scan = parent4;
+      } else {
+        let mount2 = MountedTree.get(scan.tree);
+        if (mount2 && mount2.overlay && mount2.overlay[0].from <= pos && mount2.overlay[mount2.overlay.length - 1].to >= pos) {
+          let root5 = new TreeNode2(mount2.tree, mount2.overlay[0].from + scan.from, -1, scan);
+          (layers || (layers = [inner4])).push(resolveNode(root5, pos, side, false));
+        }
+      }
+    }
+    return layers ? iterStack(layers) : inner4;
+  }
+  function hasChild(tree) {
+    return tree.children.some((ch5) => ch5 instanceof TreeBuffer || !ch5.type.isAnonymous || hasChild(ch5));
+  }
+  function buildTree5(data7) {
+    var _a2;
+    let { buffer: buffer3, nodeSet: nodeSet2, maxBufferLength = DefaultBufferLength, reused = [], minRepeatType = nodeSet2.types.length } = data7;
+    let cursor4 = Array.isArray(buffer3) ? new FlatBufferCursor(buffer3, buffer3.length) : buffer3;
+    let types8 = nodeSet2.types;
+    let contextHash = 0, lookAhead = 0;
+    function takeNode(parentStart, minPos, children3, positions3, inRepeat, depth) {
+      let { id: id42, start: start4, end: end3, size: size5 } = cursor4;
+      let lookAheadAtStart = lookAhead, contextAtStart = contextHash;
+      if (size5 < 0) {
+        cursor4.next();
+        if (size5 == -1) {
+          let node4 = reused[id42];
+          children3.push(node4);
+          positions3.push(start4 - parentStart);
+          return;
+        } else if (size5 == -3) {
+          contextHash = id42;
+          return;
+        } else if (size5 == -4) {
+          lookAhead = id42;
+          return;
+        } else {
+          throw new RangeError(`Unrecognized record size: ${size5}`);
+        }
+      }
+      let type9 = types8[id42], node3, buffer4;
+      let startPos = start4 - parentStart;
+      if (end3 - start4 <= maxBufferLength && (buffer4 = findBufferSize(cursor4.pos - minPos, inRepeat))) {
+        let data8 = new Uint16Array(buffer4.size - buffer4.skip);
+        let endPos = cursor4.pos - buffer4.size, index2 = data8.length;
+        while (cursor4.pos > endPos)
+          index2 = copyToBuffer(buffer4.start, data8, index2);
+        node3 = new TreeBuffer(data8, end3 - buffer4.start, nodeSet2);
+        startPos = buffer4.start - parentStart;
+      } else {
+        let endPos = cursor4.pos - size5;
+        cursor4.next();
+        let localChildren = [], localPositions = [];
+        let localInRepeat = id42 >= minRepeatType ? id42 : -1;
+        let lastGroup = 0, lastEnd = end3;
+        while (cursor4.pos > endPos) {
+          if (localInRepeat >= 0 && cursor4.id == localInRepeat && cursor4.size >= 0) {
+            if (cursor4.end <= lastEnd - maxBufferLength) {
+              makeRepeatLeaf(localChildren, localPositions, start4, lastGroup, cursor4.end, lastEnd, localInRepeat, lookAheadAtStart, contextAtStart);
+              lastGroup = localChildren.length;
+              lastEnd = cursor4.end;
+            }
+            cursor4.next();
+          } else if (depth > 2500) {
+            takeFlatNode(start4, endPos, localChildren, localPositions);
+          } else {
+            takeNode(start4, endPos, localChildren, localPositions, localInRepeat, depth + 1);
+          }
+        }
+        if (localInRepeat >= 0 && lastGroup > 0 && lastGroup < localChildren.length)
+          makeRepeatLeaf(localChildren, localPositions, start4, lastGroup, start4, lastEnd, localInRepeat, lookAheadAtStart, contextAtStart);
+        localChildren.reverse();
+        localPositions.reverse();
+        if (localInRepeat > -1 && lastGroup > 0) {
+          let make = makeBalanced(type9, contextAtStart);
+          node3 = balanceRange(type9, localChildren, localPositions, 0, localChildren.length, 0, end3 - start4, make, make);
+        } else {
+          node3 = makeTree(type9, localChildren, localPositions, end3 - start4, lookAheadAtStart - end3, contextAtStart);
+        }
+      }
+      children3.push(node3);
+      positions3.push(startPos);
+    }
+    function takeFlatNode(parentStart, minPos, children3, positions3) {
+      let nodes5 = [];
+      let nodeCount2 = 0, stopAt = -1;
+      while (cursor4.pos > minPos) {
+        let { id: id42, start: start4, end: end3, size: size5 } = cursor4;
+        if (size5 > 4) {
+          cursor4.next();
+        } else if (stopAt > -1 && start4 < stopAt) {
+          break;
+        } else {
+          if (stopAt < 0)
+            stopAt = end3 - maxBufferLength;
+          nodes5.push(id42, start4, end3);
+          nodeCount2++;
+          cursor4.next();
+        }
+      }
+      if (nodeCount2) {
+        let buffer4 = new Uint16Array(nodeCount2 * 4);
+        let start4 = nodes5[nodes5.length - 2];
+        for (let i9 = nodes5.length - 3, j4 = 0; i9 >= 0; i9 -= 3) {
+          buffer4[j4++] = nodes5[i9];
+          buffer4[j4++] = nodes5[i9 + 1] - start4;
+          buffer4[j4++] = nodes5[i9 + 2] - start4;
+          buffer4[j4++] = j4;
+        }
+        children3.push(new TreeBuffer(buffer4, nodes5[2] - start4, nodeSet2));
+        positions3.push(start4 - parentStart);
+      }
+    }
+    function makeBalanced(type9, contextHash2) {
+      return (children3, positions3, length3) => {
+        let lookAhead2 = 0, lastI = children3.length - 1, last4, lookAheadProp;
+        if (lastI >= 0 && (last4 = children3[lastI]) instanceof Tree) {
+          if (!lastI && last4.type == type9 && last4.length == length3)
+            return last4;
+          if (lookAheadProp = last4.prop(NodeProp.lookAhead))
+            lookAhead2 = positions3[lastI] + last4.length + lookAheadProp;
+        }
+        return makeTree(type9, children3, positions3, length3, lookAhead2, contextHash2);
+      };
+    }
+    function makeRepeatLeaf(children3, positions3, base6, i9, from5, to, type9, lookAhead2, contextHash2) {
+      let localChildren = [], localPositions = [];
+      while (children3.length > i9) {
+        localChildren.push(children3.pop());
+        localPositions.push(positions3.pop() + base6 - from5);
+      }
+      children3.push(makeTree(nodeSet2.types[type9], localChildren, localPositions, to - from5, lookAhead2 - to, contextHash2));
+      positions3.push(from5 - base6);
+    }
+    function makeTree(type9, children3, positions3, length3, lookAhead2, contextHash2, props) {
+      if (contextHash2) {
+        let pair2 = [NodeProp.contextHash, contextHash2];
+        props = props ? [pair2].concat(props) : [pair2];
+      }
+      if (lookAhead2 > 25) {
+        let pair2 = [NodeProp.lookAhead, lookAhead2];
+        props = props ? [pair2].concat(props) : [pair2];
+      }
+      return new Tree(type9, children3, positions3, length3, props);
+    }
+    function findBufferSize(maxSize, inRepeat) {
+      let fork = cursor4.fork();
+      let size5 = 0, start4 = 0, skip = 0, minStart = fork.end - maxBufferLength;
+      let result = { size: 0, start: 0, skip: 0 };
+      scan: for (let minPos = fork.pos - maxSize; fork.pos > minPos; ) {
+        let nodeSize3 = fork.size;
+        if (fork.id == inRepeat && nodeSize3 >= 0) {
+          result.size = size5;
+          result.start = start4;
+          result.skip = skip;
+          skip += 4;
+          size5 += 4;
+          fork.next();
+          continue;
+        }
+        let startPos = fork.pos - nodeSize3;
+        if (nodeSize3 < 0 || startPos < minPos || fork.start < minStart)
+          break;
+        let localSkipped = fork.id >= minRepeatType ? 4 : 0;
+        let nodeStart2 = fork.start;
+        fork.next();
+        while (fork.pos > startPos) {
+          if (fork.size < 0) {
+            if (fork.size == -3 || fork.size == -4)
+              localSkipped += 4;
+            else
+              break scan;
+          } else if (fork.id >= minRepeatType) {
+            localSkipped += 4;
+          }
+          fork.next();
+        }
+        start4 = nodeStart2;
+        size5 += nodeSize3;
+        skip += localSkipped;
+      }
+      if (inRepeat < 0 || size5 == maxSize) {
+        result.size = size5;
+        result.start = start4;
+        result.skip = skip;
+      }
+      return result.size > 4 ? result : void 0;
+    }
+    function copyToBuffer(bufferStart, buffer4, index2) {
+      let { id: id42, start: start4, end: end3, size: size5 } = cursor4;
+      cursor4.next();
+      if (size5 >= 0 && id42 < minRepeatType) {
+        let startIndex = index2;
+        if (size5 > 4) {
+          let endPos = cursor4.pos - (size5 - 4);
+          while (cursor4.pos > endPos)
+            index2 = copyToBuffer(bufferStart, buffer4, index2);
+        }
+        buffer4[--index2] = startIndex;
+        buffer4[--index2] = end3 - bufferStart;
+        buffer4[--index2] = start4 - bufferStart;
+        buffer4[--index2] = id42;
+      } else if (size5 == -3) {
+        contextHash = id42;
+      } else if (size5 == -4) {
+        lookAhead = id42;
+      }
+      return index2;
+    }
+    let children2 = [], positions2 = [];
+    while (cursor4.pos > 0)
+      takeNode(data7.start || 0, data7.bufferStart || 0, children2, positions2, -1, 0);
+    let length2 = (_a2 = data7.length) !== null && _a2 !== void 0 ? _a2 : children2.length ? positions2[0] + children2[0].length : 0;
+    return new Tree(types8[data7.topID], children2.reverse(), positions2.reverse(), length2);
+  }
+  function nodeSize(balanceType, node3) {
+    if (!balanceType.isAnonymous || node3 instanceof TreeBuffer || node3.type != balanceType)
+      return 1;
+    let size5 = nodeSizeCache.get(node3);
+    if (size5 == null) {
+      size5 = 1;
+      for (let child of node3.children) {
+        if (child.type != balanceType || !(child instanceof Tree)) {
+          size5 = 1;
+          break;
+        }
+        size5 += nodeSize(balanceType, child);
+      }
+      nodeSizeCache.set(node3, size5);
+    }
+    return size5;
+  }
+  function balanceRange(balanceType, children2, positions2, from5, to, start4, length2, mkTop, mkTree) {
+    let total = 0;
+    for (let i9 = from5; i9 < to; i9++)
+      total += nodeSize(balanceType, children2[i9]);
+    let maxChild = Math.ceil(
+      total * 1.5 / 8
+      /* Balance.BranchFactor */
+    );
+    let localChildren = [], localPositions = [];
+    function divide(children3, positions3, from6, to2, offset3) {
+      for (let i9 = from6; i9 < to2; ) {
+        let groupFrom = i9, groupStart = positions3[i9], groupSize = nodeSize(balanceType, children3[i9]);
+        i9++;
+        for (; i9 < to2; i9++) {
+          let nextSize = nodeSize(balanceType, children3[i9]);
+          if (groupSize + nextSize >= maxChild)
+            break;
+          groupSize += nextSize;
+        }
+        if (i9 == groupFrom + 1) {
+          if (groupSize > maxChild) {
+            let only = children3[groupFrom];
+            divide(only.children, only.positions, 0, only.children.length, positions3[groupFrom] + offset3);
+            continue;
+          }
+          localChildren.push(children3[groupFrom]);
+        } else {
+          let length3 = positions3[i9 - 1] + children3[i9 - 1].length - groupStart;
+          localChildren.push(balanceRange(balanceType, children3, positions3, groupFrom, i9, groupStart, length3, null, mkTree));
+        }
+        localPositions.push(groupStart + offset3 - start4);
+      }
+    }
+    divide(children2, positions2, from5, to, 0);
+    return (mkTop || mkTree)(localChildren, localPositions, length2);
+  }
+  function parseMixed(nest) {
+    return (parse9, input, fragments, ranges) => new MixedParse(parse9, nest, input, fragments, ranges);
+  }
+  function checkRanges(ranges) {
+    if (!ranges.length || ranges.some((r6) => r6.from >= r6.to))
+      throw new RangeError("Invalid inner parse ranges given: " + JSON.stringify(ranges));
+  }
+  function checkCover(covered, from5, to) {
+    for (let range3 of covered) {
+      if (range3.from >= to)
+        break;
+      if (range3.to > from5)
+        return range3.from <= from5 && range3.to >= to ? 2 : 1;
+    }
+    return 0;
+  }
+  function sliceBuf(buf, startI, endI, nodes5, positions2, off) {
+    if (startI < endI) {
+      let from5 = buf.buffer[startI + 1];
+      nodes5.push(buf.slice(startI, endI, from5));
+      positions2.push(from5 - off);
+    }
+  }
+  function materialize(cursor4) {
+    let { node: node3 } = cursor4, stack = [];
+    let buffer3 = node3.context.buffer;
+    do {
+      stack.push(cursor4.index);
+      cursor4.parent();
+    } while (!cursor4.tree);
+    let base6 = cursor4.tree, i9 = base6.children.indexOf(buffer3);
+    let buf = base6.children[i9], b3 = buf.buffer, newStack = [i9];
+    function split2(startI, endI, type9, innerOffset, length2, stackPos) {
+      let targetI = stack[stackPos];
+      let children2 = [], positions2 = [];
+      sliceBuf(buf, startI, targetI, children2, positions2, innerOffset);
+      let from5 = b3[targetI + 1], to = b3[targetI + 2];
+      newStack.push(children2.length);
+      let child = stackPos ? split2(targetI + 4, b3[targetI + 3], buf.set.types[b3[targetI]], from5, to - from5, stackPos - 1) : node3.toTree();
+      children2.push(child);
+      positions2.push(from5 - innerOffset);
+      sliceBuf(buf, b3[targetI + 3], endI, children2, positions2, innerOffset);
+      return new Tree(type9, children2, positions2, length2);
+    }
+    base6.children[i9] = split2(0, b3.length, NodeType.none, 0, buf.length, stack.length - 1);
+    for (let index2 of newStack) {
+      let tree = cursor4.tree.children[index2], pos = cursor4.tree.positions[index2];
+      cursor4.yield(new TreeNode2(tree, pos + cursor4.from, index2, cursor4._tree));
+    }
+  }
+  function punchRanges(outer, ranges) {
+    let copy6 = null, current2 = ranges;
+    for (let i9 = 1, j4 = 0; i9 < outer.length; i9++) {
+      let gapFrom = outer[i9 - 1].to, gapTo = outer[i9].from;
+      for (; j4 < current2.length; j4++) {
+        let r6 = current2[j4];
+        if (r6.from >= gapTo)
+          break;
+        if (r6.to <= gapFrom)
+          continue;
+        if (!copy6)
+          current2 = copy6 = ranges.slice();
+        if (r6.from < gapFrom) {
+          copy6[j4] = new Range2(r6.from, gapFrom);
+          if (r6.to > gapTo)
+            copy6.splice(j4 + 1, 0, new Range2(gapTo, r6.to));
+        } else if (r6.to > gapTo) {
+          copy6[j4--] = new Range2(gapTo, r6.to);
+        } else {
+          copy6.splice(j4--, 1);
+        }
+      }
+    }
+    return current2;
+  }
+  function findCoverChanges(a3, b3, from5, to) {
+    let iA = 0, iB = 0, inA = false, inB = false, pos = -1e9;
+    let result = [];
+    for (; ; ) {
+      let nextA = iA == a3.length ? 1e9 : inA ? a3[iA].to : a3[iA].from;
+      let nextB = iB == b3.length ? 1e9 : inB ? b3[iB].to : b3[iB].from;
+      if (inA != inB) {
+        let start4 = Math.max(pos, from5), end3 = Math.min(nextA, nextB, to);
+        if (start4 < end3)
+          result.push(new Range2(start4, end3));
+      }
+      pos = Math.min(nextA, nextB);
+      if (pos == 1e9)
+        break;
+      if (nextA == pos) {
+        if (!inA)
+          inA = true;
+        else {
+          inA = false;
+          iA++;
+        }
+      }
+      if (nextB == pos) {
+        if (!inB)
+          inB = true;
+        else {
+          inB = false;
+          iB++;
+        }
+      }
+    }
+    return result;
+  }
+  function enterFragments(mounts, ranges) {
+    let result = [];
+    for (let { pos, mount: mount2, frag } of mounts) {
+      let startPos = pos + (mount2.overlay ? mount2.overlay[0].from : 0), endPos = startPos + mount2.tree.length;
+      let from5 = Math.max(frag.from, startPos), to = Math.min(frag.to, endPos);
+      if (mount2.overlay) {
+        let overlay = mount2.overlay.map((r6) => new Range2(r6.from + pos, r6.to + pos));
+        let changes = findCoverChanges(ranges, overlay, from5, to);
+        for (let i9 = 0, pos2 = from5; ; i9++) {
+          let last4 = i9 == changes.length, end3 = last4 ? to : changes[i9].from;
+          if (end3 > pos2)
+            result.push(new TreeFragment(pos2, end3, mount2.tree, -startPos, frag.from >= pos2 || frag.openStart, frag.to <= end3 || frag.openEnd));
+          if (last4)
+            break;
+          pos2 = changes[i9].to;
+        }
+      } else {
+        result.push(new TreeFragment(from5, to, mount2.tree, -startPos, frag.from >= startPos || frag.openStart, frag.to <= endPos || frag.openEnd));
+      }
+    }
+    return result;
+  }
+  var DefaultBufferLength, nextPropID, Range2, NodeProp, MountedTree, noProps, NodeType, NodeSet, CachedNode, CachedInnerNode, IterMode, Tree, FlatBufferCursor, TreeBuffer, BaseNode, TreeNode2, BufferContext, BufferNode, StackIterator, TreeCursor, nodeSizeCache, NodeWeakMap, TreeFragment, Parser4, StringInput, InnerParse, ActiveOverlay, stoppedInner, MixedParse, StructureCursor, FragmentCursor;
+  var init_dist3 = __esm({
+    "node_modules/@lezer/common/dist/index.js"() {
+      DefaultBufferLength = 1024;
+      nextPropID = 0;
+      Range2 = class {
+        constructor(from5, to) {
+          this.from = from5;
+          this.to = to;
+        }
+      };
+      NodeProp = class {
+        /**
+        Create a new node prop type.
+        */
+        constructor(config5 = {}) {
+          this.id = nextPropID++;
+          this.perNode = !!config5.perNode;
+          this.deserialize = config5.deserialize || (() => {
+            throw new Error("This node type doesn't define a deserialize function");
+          });
+          this.combine = config5.combine || null;
+        }
+        /**
+        This is meant to be used with
+        [`NodeSet.extend`](#common.NodeSet.extend) or
+        [`LRParser.configure`](#lr.ParserConfig.props) to compute
+        prop values for each node type in the set. Takes a [match
+        object](#common.NodeType^match) or function that returns undefined
+        if the node type doesn't get this prop, and the prop's value if
+        it does.
+        */
+        add(match4) {
+          if (this.perNode)
+            throw new RangeError("Can't add per-node props to node types");
+          if (typeof match4 != "function")
+            match4 = NodeType.match(match4);
+          return (type9) => {
+            let result = match4(type9);
+            return result === void 0 ? null : [this, result];
+          };
+        }
+      };
+      NodeProp.closedBy = new NodeProp({ deserialize: (str2) => str2.split(" ") });
+      NodeProp.openedBy = new NodeProp({ deserialize: (str2) => str2.split(" ") });
+      NodeProp.group = new NodeProp({ deserialize: (str2) => str2.split(" ") });
+      NodeProp.isolate = new NodeProp({ deserialize: (value2) => {
+        if (value2 && value2 != "rtl" && value2 != "ltr" && value2 != "auto")
+          throw new RangeError("Invalid value for isolate: " + value2);
+        return value2 || "auto";
+      } });
+      NodeProp.contextHash = new NodeProp({ perNode: true });
+      NodeProp.lookAhead = new NodeProp({ perNode: true });
+      NodeProp.mounted = new NodeProp({ perNode: true });
+      MountedTree = class {
+        constructor(tree, overlay, parser58, bracketed3 = false) {
+          this.tree = tree;
+          this.overlay = overlay;
+          this.parser = parser58;
+          this.bracketed = bracketed3;
+        }
+        /**
+        @internal
+        */
+        static get(tree) {
+          return tree && tree.props && tree.props[NodeProp.mounted.id];
+        }
+      };
+      noProps = /* @__PURE__ */ Object.create(null);
+      NodeType = class _NodeType {
+        /**
+        @internal
+        */
+        constructor(name2, props, id42, flags = 0) {
+          this.name = name2;
+          this.props = props;
+          this.id = id42;
+          this.flags = flags;
+        }
+        /**
+        Define a node type.
+        */
+        static define(spec2) {
+          let props = spec2.props && spec2.props.length ? /* @__PURE__ */ Object.create(null) : noProps;
+          let flags = (spec2.top ? 1 : 0) | (spec2.skipped ? 2 : 0) | (spec2.error ? 4 : 0) | (spec2.name == null ? 8 : 0);
+          let type9 = new _NodeType(spec2.name || "", props, spec2.id, flags);
+          if (spec2.props)
+            for (let src of spec2.props) {
+              if (!Array.isArray(src))
+                src = src(type9);
+              if (src) {
+                if (src[0].perNode)
+                  throw new RangeError("Can't store a per-node prop on a node type");
+                props[src[0].id] = src[1];
+              }
+            }
+          return type9;
+        }
+        /**
+        Retrieves a node prop for this type. Will return `undefined` if
+        the prop isn't present on this node.
+        */
+        prop(prop) {
+          return this.props[prop.id];
+        }
+        /**
+        True when this is the top node of a grammar.
+        */
+        get isTop() {
+          return (this.flags & 1) > 0;
+        }
+        /**
+        True when this node is produced by a skip rule.
+        */
+        get isSkipped() {
+          return (this.flags & 2) > 0;
+        }
+        /**
+        Indicates whether this is an error node.
+        */
+        get isError() {
+          return (this.flags & 4) > 0;
+        }
+        /**
+        When true, this node type doesn't correspond to a user-declared
+        named node, for example because it is used to cache repetition.
+        */
+        get isAnonymous() {
+          return (this.flags & 8) > 0;
+        }
+        /**
+        Returns true when this node's name or one of its
+        [groups](#common.NodeProp^group) matches the given string.
+        */
+        is(name2) {
+          if (typeof name2 == "string") {
+            if (this.name == name2)
+              return true;
+            let group2 = this.prop(NodeProp.group);
+            return group2 ? group2.indexOf(name2) > -1 : false;
+          }
+          return this.id == name2;
+        }
+        /**
+        Create a function from node types to arbitrary values by
+        specifying an object whose property names are node or
+        [group](#common.NodeProp^group) names. Often useful with
+        [`NodeProp.add`](#common.NodeProp.add). You can put multiple
+        names, separated by spaces, in a single property name to map
+        multiple node names to a single value.
+        */
+        static match(map10) {
+          let direct = /* @__PURE__ */ Object.create(null);
+          for (let prop in map10)
+            for (let name2 of prop.split(" "))
+              direct[name2] = map10[prop];
+          return (node3) => {
+            for (let groups = node3.prop(NodeProp.group), i9 = -1; i9 < (groups ? groups.length : 0); i9++) {
+              let found2 = direct[i9 < 0 ? node3.name : groups[i9]];
+              if (found2)
+                return found2;
+            }
+          };
+        }
+      };
+      NodeType.none = new NodeType(
+        "",
+        /* @__PURE__ */ Object.create(null),
+        0,
+        8
+        /* NodeFlag.Anonymous */
+      );
+      NodeSet = class _NodeSet {
+        /**
+        Create a set with the given types. The `id` property of each
+        type should correspond to its position within the array.
+        */
+        constructor(types8) {
+          this.types = types8;
+          for (let i9 = 0; i9 < types8.length; i9++)
+            if (types8[i9].id != i9)
+              throw new RangeError("Node type ids should correspond to array positions when creating a node set");
+        }
+        /**
+        Create a copy of this set with some node properties added. The
+        arguments to this method can be created with
+        [`NodeProp.add`](#common.NodeProp.add).
+        */
+        extend(...props) {
+          let newTypes = [];
+          for (let type9 of this.types) {
+            let newProps = null;
+            for (let source of props) {
+              let add5 = source(type9);
+              if (add5) {
+                if (!newProps)
+                  newProps = Object.assign({}, type9.props);
+                let value2 = add5[1], prop = add5[0];
+                if (prop.combine && prop.id in newProps)
+                  value2 = prop.combine(newProps[prop.id], value2);
+                newProps[prop.id] = value2;
+              }
+            }
+            newTypes.push(newProps ? new NodeType(type9.name, newProps, type9.id, type9.flags) : type9);
+          }
+          return new _NodeSet(newTypes);
+        }
+      };
+      CachedNode = /* @__PURE__ */ new WeakMap();
+      CachedInnerNode = /* @__PURE__ */ new WeakMap();
+      (function(IterMode2) {
+        IterMode2[IterMode2["ExcludeBuffers"] = 1] = "ExcludeBuffers";
+        IterMode2[IterMode2["IncludeAnonymous"] = 2] = "IncludeAnonymous";
+        IterMode2[IterMode2["IgnoreMounts"] = 4] = "IgnoreMounts";
+        IterMode2[IterMode2["IgnoreOverlays"] = 8] = "IgnoreOverlays";
+        IterMode2[IterMode2["EnterBracketed"] = 16] = "EnterBracketed";
+      })(IterMode || (IterMode = {}));
+      Tree = class _Tree {
+        /**
+        Construct a new tree. See also [`Tree.build`](#common.Tree^build).
+        */
+        constructor(type9, children2, positions2, length2, props) {
+          this.type = type9;
+          this.children = children2;
+          this.positions = positions2;
+          this.length = length2;
+          this.props = null;
+          if (props && props.length) {
+            this.props = /* @__PURE__ */ Object.create(null);
+            for (let [prop, value2] of props)
+              this.props[typeof prop == "number" ? prop : prop.id] = value2;
+          }
+        }
+        /**
+        @internal
+        */
+        toString() {
+          let mounted = MountedTree.get(this);
+          if (mounted && !mounted.overlay)
+            return mounted.tree.toString();
+          let children2 = "";
+          for (let ch5 of this.children) {
+            let str2 = ch5.toString();
+            if (str2) {
+              if (children2)
+                children2 += ",";
+              children2 += str2;
+            }
+          }
+          return !this.type.name ? children2 : (/\W/.test(this.type.name) && !this.type.isError ? JSON.stringify(this.type.name) : this.type.name) + (children2.length ? "(" + children2 + ")" : "");
+        }
+        /**
+        Get a [tree cursor](#common.TreeCursor) positioned at the top of
+        the tree. Mode can be used to [control](#common.IterMode) which
+        nodes the cursor visits.
+        */
+        cursor(mode = 0) {
+          return new TreeCursor(this.topNode, mode);
+        }
+        /**
+        Get a [tree cursor](#common.TreeCursor) pointing into this tree
+        at the given position and side (see
+        [`moveTo`](#common.TreeCursor.moveTo).
+        */
+        cursorAt(pos, side = 0, mode = 0) {
+          let scope = CachedNode.get(this) || this.topNode;
+          let cursor4 = new TreeCursor(scope);
+          cursor4.moveTo(pos, side);
+          CachedNode.set(this, cursor4._tree);
+          return cursor4;
+        }
+        /**
+        Get a [syntax node](#common.SyntaxNode) object for the top of the
+        tree.
+        */
+        get topNode() {
+          return new TreeNode2(this, 0, 0, null);
+        }
+        /**
+        Get the [syntax node](#common.SyntaxNode) at the given position.
+        If `side` is -1, this will move into nodes that end at the
+        position. If 1, it'll move into nodes that start at the
+        position. With 0, it'll only enter nodes that cover the position
+        from both sides.
+        
+        Note that this will not enter
+        [overlays](#common.MountedTree.overlay), and you often want
+        [`resolveInner`](#common.Tree.resolveInner) instead.
+        */
+        resolve(pos, side = 0) {
+          let node3 = resolveNode(CachedNode.get(this) || this.topNode, pos, side, false);
+          CachedNode.set(this, node3);
+          return node3;
+        }
+        /**
+        Like [`resolve`](#common.Tree.resolve), but will enter
+        [overlaid](#common.MountedTree.overlay) nodes, producing a syntax node
+        pointing into the innermost overlaid tree at the given position
+        (with parent links going through all parent structure, including
+        the host trees).
+        */
+        resolveInner(pos, side = 0) {
+          let node3 = resolveNode(CachedInnerNode.get(this) || this.topNode, pos, side, true);
+          CachedInnerNode.set(this, node3);
+          return node3;
+        }
+        /**
+        In some situations, it can be useful to iterate through all
+        nodes around a position, including those in overlays that don't
+        directly cover the position. This method gives you an iterator
+        that will produce all nodes, from small to big, around the given
+        position.
+        */
+        resolveStack(pos, side = 0) {
+          return stackIterator(this, pos, side);
+        }
+        /**
+        Iterate over the tree and its children, calling `enter` for any
+        node that touches the `from`/`to` region (if given) before
+        running over such a node's children, and `leave` (if given) when
+        leaving the node. When `enter` returns `false`, that node will
+        not have its children iterated over (or `leave` called).
+        */
+        iterate(spec2) {
+          let { enter, leave, from: from5 = 0, to = this.length } = spec2;
+          let mode = spec2.mode || 0, anon = (mode & IterMode.IncludeAnonymous) > 0;
+          for (let c5 = this.cursor(mode | IterMode.IncludeAnonymous); ; ) {
+            let entered = false;
+            if (c5.from <= to && c5.to >= from5 && (!anon && c5.type.isAnonymous || enter(c5) !== false)) {
+              if (c5.firstChild())
+                continue;
+              entered = true;
+            }
+            for (; ; ) {
+              if (entered && leave && (anon || !c5.type.isAnonymous))
+                leave(c5);
+              if (c5.nextSibling())
+                break;
+              if (!c5.parent())
+                return;
+              entered = true;
+            }
+          }
+        }
+        /**
+        Get the value of the given [node prop](#common.NodeProp) for this
+        node. Works with both per-node and per-type props.
+        */
+        prop(prop) {
+          return !prop.perNode ? this.type.prop(prop) : this.props ? this.props[prop.id] : void 0;
+        }
+        /**
+        Returns the node's [per-node props](#common.NodeProp.perNode) in a
+        format that can be passed to the [`Tree`](#common.Tree)
+        constructor.
+        */
+        get propValues() {
+          let result = [];
+          if (this.props)
+            for (let id42 in this.props)
+              result.push([+id42, this.props[id42]]);
+          return result;
+        }
+        /**
+        Balance the direct children of this tree, producing a copy of
+        which may have children grouped into subtrees with type
+        [`NodeType.none`](#common.NodeType^none).
+        */
+        balance(config5 = {}) {
+          return this.children.length <= 8 ? this : balanceRange(NodeType.none, this.children, this.positions, 0, this.children.length, 0, this.length, (children2, positions2, length2) => new _Tree(this.type, children2, positions2, length2, this.propValues), config5.makeTree || ((children2, positions2, length2) => new _Tree(NodeType.none, children2, positions2, length2)));
+        }
+        /**
+        Build a tree from a postfix-ordered buffer of node information,
+        or a cursor over such a buffer.
+        */
+        static build(data7) {
+          return buildTree5(data7);
+        }
+      };
+      Tree.empty = new Tree(NodeType.none, [], [], 0);
+      FlatBufferCursor = class _FlatBufferCursor {
+        constructor(buffer3, index2) {
+          this.buffer = buffer3;
+          this.index = index2;
+        }
+        get id() {
+          return this.buffer[this.index - 4];
+        }
+        get start() {
+          return this.buffer[this.index - 3];
+        }
+        get end() {
+          return this.buffer[this.index - 2];
+        }
+        get size() {
+          return this.buffer[this.index - 1];
+        }
+        get pos() {
+          return this.index;
+        }
+        next() {
+          this.index -= 4;
+        }
+        fork() {
+          return new _FlatBufferCursor(this.buffer, this.index);
+        }
+      };
+      TreeBuffer = class _TreeBuffer {
+        /**
+        Create a tree buffer.
+        */
+        constructor(buffer3, length2, set6) {
+          this.buffer = buffer3;
+          this.length = length2;
+          this.set = set6;
+        }
+        /**
+        @internal
+        */
+        get type() {
+          return NodeType.none;
+        }
+        /**
+        @internal
+        */
+        toString() {
+          let result = [];
+          for (let index2 = 0; index2 < this.buffer.length; ) {
+            result.push(this.childString(index2));
+            index2 = this.buffer[index2 + 3];
+          }
+          return result.join(",");
+        }
+        /**
+        @internal
+        */
+        childString(index2) {
+          let id42 = this.buffer[index2], endIndex = this.buffer[index2 + 3];
+          let type9 = this.set.types[id42], result = type9.name;
+          if (/\W/.test(result) && !type9.isError)
+            result = JSON.stringify(result);
+          index2 += 4;
+          if (endIndex == index2)
+            return result;
+          let children2 = [];
+          while (index2 < endIndex) {
+            children2.push(this.childString(index2));
+            index2 = this.buffer[index2 + 3];
+          }
+          return result + "(" + children2.join(",") + ")";
+        }
+        /**
+        @internal
+        */
+        findChild(startIndex, endIndex, dir2, pos, side) {
+          let { buffer: buffer3 } = this, pick2 = -1;
+          for (let i9 = startIndex; i9 != endIndex; i9 = buffer3[i9 + 3]) {
+            if (checkSide(side, pos, buffer3[i9 + 1], buffer3[i9 + 2])) {
+              pick2 = i9;
+              if (dir2 > 0)
+                break;
+            }
+          }
+          return pick2;
+        }
+        /**
+        @internal
+        */
+        slice(startI, endI, from5) {
+          let b3 = this.buffer;
+          let copy6 = new Uint16Array(endI - startI), len2 = 0;
+          for (let i9 = startI, j4 = 0; i9 < endI; ) {
+            copy6[j4++] = b3[i9++];
+            copy6[j4++] = b3[i9++] - from5;
+            let to = copy6[j4++] = b3[i9++] - from5;
+            copy6[j4++] = b3[i9++] - startI;
+            len2 = Math.max(len2, to);
+          }
+          return new _TreeBuffer(copy6, len2, this.set);
+        }
+      };
+      BaseNode = class {
+        cursor(mode = 0) {
+          return new TreeCursor(this, mode);
+        }
+        getChild(type9, before = null, after = null) {
+          let r6 = getChildren(this, type9, before, after);
+          return r6.length ? r6[0] : null;
+        }
+        getChildren(type9, before = null, after = null) {
+          return getChildren(this, type9, before, after);
+        }
+        resolve(pos, side = 0) {
+          return resolveNode(this, pos, side, false);
+        }
+        resolveInner(pos, side = 0) {
+          return resolveNode(this, pos, side, true);
+        }
+        matchContext(context) {
+          return matchNodeContext(this.parent, context);
+        }
+        enterUnfinishedNodesBefore(pos) {
+          let scan = this.childBefore(pos), node3 = this;
+          while (scan) {
+            let last4 = scan.lastChild;
+            if (!last4 || last4.to != scan.to)
+              break;
+            if (last4.type.isError && last4.from == last4.to) {
+              node3 = scan;
+              scan = last4.prevSibling;
+            } else {
+              scan = last4;
+            }
+          }
+          return node3;
+        }
+        get node() {
+          return this;
+        }
+        get next() {
+          return this.parent;
+        }
+      };
+      TreeNode2 = class _TreeNode extends BaseNode {
+        constructor(_tree, from5, index2, _parent) {
+          super();
+          this._tree = _tree;
+          this.from = from5;
+          this.index = index2;
+          this._parent = _parent;
+        }
+        get type() {
+          return this._tree.type;
+        }
+        get name() {
+          return this._tree.type.name;
+        }
+        get to() {
+          return this.from + this._tree.length;
+        }
+        nextChild(i9, dir2, pos, side, mode = 0) {
+          for (let parent4 = this; ; ) {
+            for (let { children: children2, positions: positions2 } = parent4._tree, e3 = dir2 > 0 ? children2.length : -1; i9 != e3; i9 += dir2) {
+              let next4 = children2[i9], start4 = positions2[i9] + parent4.from, mounted;
+              if (!(mode & IterMode.EnterBracketed && next4 instanceof Tree && (mounted = MountedTree.get(next4)) && !mounted.overlay && mounted.bracketed && pos >= start4 && pos <= start4 + next4.length) && !checkSide(side, pos, start4, start4 + next4.length))
+                continue;
+              if (next4 instanceof TreeBuffer) {
+                if (mode & IterMode.ExcludeBuffers)
+                  continue;
+                let index2 = next4.findChild(0, next4.buffer.length, dir2, pos - start4, side);
+                if (index2 > -1)
+                  return new BufferNode(new BufferContext(parent4, next4, i9, start4), null, index2);
+              } else if (mode & IterMode.IncludeAnonymous || (!next4.type.isAnonymous || hasChild(next4))) {
+                let mounted2;
+                if (!(mode & IterMode.IgnoreMounts) && (mounted2 = MountedTree.get(next4)) && !mounted2.overlay)
+                  return new _TreeNode(mounted2.tree, start4, i9, parent4);
+                let inner4 = new _TreeNode(next4, start4, i9, parent4);
+                return mode & IterMode.IncludeAnonymous || !inner4.type.isAnonymous ? inner4 : inner4.nextChild(dir2 < 0 ? next4.children.length - 1 : 0, dir2, pos, side, mode);
+              }
+            }
+            if (mode & IterMode.IncludeAnonymous || !parent4.type.isAnonymous)
+              return null;
+            if (parent4.index >= 0)
+              i9 = parent4.index + dir2;
+            else
+              i9 = dir2 < 0 ? -1 : parent4._parent._tree.children.length;
+            parent4 = parent4._parent;
+            if (!parent4)
+              return null;
+          }
+        }
+        get firstChild() {
+          return this.nextChild(
+            0,
+            1,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        get lastChild() {
+          return this.nextChild(
+            this._tree.children.length - 1,
+            -1,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        childAfter(pos) {
+          return this.nextChild(
+            0,
+            1,
+            pos,
+            2
+            /* Side.After */
+          );
+        }
+        childBefore(pos) {
+          return this.nextChild(
+            this._tree.children.length - 1,
+            -1,
+            pos,
+            -2
+            /* Side.Before */
+          );
+        }
+        prop(prop) {
+          return this._tree.prop(prop);
+        }
+        enter(pos, side, mode = 0) {
+          let mounted;
+          if (!(mode & IterMode.IgnoreOverlays) && (mounted = MountedTree.get(this._tree)) && mounted.overlay) {
+            let rPos = pos - this.from, enterBracketed = mode & IterMode.EnterBracketed && mounted.bracketed;
+            for (let { from: from5, to } of mounted.overlay) {
+              if ((side > 0 || enterBracketed ? from5 <= rPos : from5 < rPos) && (side < 0 || enterBracketed ? to >= rPos : to > rPos))
+                return new _TreeNode(mounted.tree, mounted.overlay[0].from + this.from, -1, this);
+            }
+          }
+          return this.nextChild(0, 1, pos, side, mode);
+        }
+        nextSignificantParent() {
+          let val = this;
+          while (val.type.isAnonymous && val._parent)
+            val = val._parent;
+          return val;
+        }
+        get parent() {
+          return this._parent ? this._parent.nextSignificantParent() : null;
+        }
+        get nextSibling() {
+          return this._parent && this.index >= 0 ? this._parent.nextChild(
+            this.index + 1,
+            1,
+            0,
+            4
+            /* Side.DontCare */
+          ) : null;
+        }
+        get prevSibling() {
+          return this._parent && this.index >= 0 ? this._parent.nextChild(
+            this.index - 1,
+            -1,
+            0,
+            4
+            /* Side.DontCare */
+          ) : null;
+        }
+        get tree() {
+          return this._tree;
+        }
+        toTree() {
+          return this._tree;
+        }
+        /**
+        @internal
+        */
+        toString() {
+          return this._tree.toString();
+        }
+      };
+      BufferContext = class {
+        constructor(parent4, buffer3, index2, start4) {
+          this.parent = parent4;
+          this.buffer = buffer3;
+          this.index = index2;
+          this.start = start4;
+        }
+      };
+      BufferNode = class _BufferNode extends BaseNode {
+        get name() {
+          return this.type.name;
+        }
+        get from() {
+          return this.context.start + this.context.buffer.buffer[this.index + 1];
+        }
+        get to() {
+          return this.context.start + this.context.buffer.buffer[this.index + 2];
+        }
+        constructor(context, _parent, index2) {
+          super();
+          this.context = context;
+          this._parent = _parent;
+          this.index = index2;
+          this.type = context.buffer.set.types[context.buffer.buffer[index2]];
+        }
+        child(dir2, pos, side) {
+          let { buffer: buffer3 } = this.context;
+          let index2 = buffer3.findChild(this.index + 4, buffer3.buffer[this.index + 3], dir2, pos - this.context.start, side);
+          return index2 < 0 ? null : new _BufferNode(this.context, this, index2);
+        }
+        get firstChild() {
+          return this.child(
+            1,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        get lastChild() {
+          return this.child(
+            -1,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        childAfter(pos) {
+          return this.child(
+            1,
+            pos,
+            2
+            /* Side.After */
+          );
+        }
+        childBefore(pos) {
+          return this.child(
+            -1,
+            pos,
+            -2
+            /* Side.Before */
+          );
+        }
+        prop(prop) {
+          return this.type.prop(prop);
+        }
+        enter(pos, side, mode = 0) {
+          if (mode & IterMode.ExcludeBuffers)
+            return null;
+          let { buffer: buffer3 } = this.context;
+          let index2 = buffer3.findChild(this.index + 4, buffer3.buffer[this.index + 3], side > 0 ? 1 : -1, pos - this.context.start, side);
+          return index2 < 0 ? null : new _BufferNode(this.context, this, index2);
+        }
+        get parent() {
+          return this._parent || this.context.parent.nextSignificantParent();
+        }
+        externalSibling(dir2) {
+          return this._parent ? null : this.context.parent.nextChild(
+            this.context.index + dir2,
+            dir2,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        get nextSibling() {
+          let { buffer: buffer3 } = this.context;
+          let after = buffer3.buffer[this.index + 3];
+          if (after < (this._parent ? buffer3.buffer[this._parent.index + 3] : buffer3.buffer.length))
+            return new _BufferNode(this.context, this._parent, after);
+          return this.externalSibling(1);
+        }
+        get prevSibling() {
+          let { buffer: buffer3 } = this.context;
+          let parentStart = this._parent ? this._parent.index + 4 : 0;
+          if (this.index == parentStart)
+            return this.externalSibling(-1);
+          return new _BufferNode(this.context, this._parent, buffer3.findChild(
+            parentStart,
+            this.index,
+            -1,
+            0,
+            4
+            /* Side.DontCare */
+          ));
+        }
+        get tree() {
+          return null;
+        }
+        toTree() {
+          let children2 = [], positions2 = [];
+          let { buffer: buffer3 } = this.context;
+          let startI = this.index + 4, endI = buffer3.buffer[this.index + 3];
+          if (endI > startI) {
+            let from5 = buffer3.buffer[this.index + 1];
+            children2.push(buffer3.slice(startI, endI, from5));
+            positions2.push(0);
+          }
+          return new Tree(this.type, children2, positions2, this.to - this.from);
+        }
+        /**
+        @internal
+        */
+        toString() {
+          return this.context.buffer.childString(this.index);
+        }
+      };
+      StackIterator = class {
+        constructor(heads, node3) {
+          this.heads = heads;
+          this.node = node3;
+        }
+        get next() {
+          return iterStack(this.heads);
+        }
+      };
+      TreeCursor = class {
+        /**
+        Shorthand for `.type.name`.
+        */
+        get name() {
+          return this.type.name;
+        }
+        /**
+        @internal
+        */
+        constructor(node3, mode = 0) {
+          this.buffer = null;
+          this.stack = [];
+          this.index = 0;
+          this.bufferNode = null;
+          this.mode = mode & ~IterMode.EnterBracketed;
+          if (node3 instanceof TreeNode2) {
+            this.yieldNode(node3);
+          } else {
+            this._tree = node3.context.parent;
+            this.buffer = node3.context;
+            for (let n2 = node3._parent; n2; n2 = n2._parent)
+              this.stack.unshift(n2.index);
+            this.bufferNode = node3;
+            this.yieldBuf(node3.index);
+          }
+        }
+        yieldNode(node3) {
+          if (!node3)
+            return false;
+          this._tree = node3;
+          this.type = node3.type;
+          this.from = node3.from;
+          this.to = node3.to;
+          return true;
+        }
+        yieldBuf(index2, type9) {
+          this.index = index2;
+          let { start: start4, buffer: buffer3 } = this.buffer;
+          this.type = type9 || buffer3.set.types[buffer3.buffer[index2]];
+          this.from = start4 + buffer3.buffer[index2 + 1];
+          this.to = start4 + buffer3.buffer[index2 + 2];
+          return true;
+        }
+        /**
+        @internal
+        */
+        yield(node3) {
+          if (!node3)
+            return false;
+          if (node3 instanceof TreeNode2) {
+            this.buffer = null;
+            return this.yieldNode(node3);
+          }
+          this.buffer = node3.context;
+          return this.yieldBuf(node3.index, node3.type);
+        }
+        /**
+        @internal
+        */
+        toString() {
+          return this.buffer ? this.buffer.buffer.childString(this.index) : this._tree.toString();
+        }
+        /**
+        @internal
+        */
+        enterChild(dir2, pos, side) {
+          if (!this.buffer)
+            return this.yield(this._tree.nextChild(dir2 < 0 ? this._tree._tree.children.length - 1 : 0, dir2, pos, side, this.mode));
+          let { buffer: buffer3 } = this.buffer;
+          let index2 = buffer3.findChild(this.index + 4, buffer3.buffer[this.index + 3], dir2, pos - this.buffer.start, side);
+          if (index2 < 0)
+            return false;
+          this.stack.push(this.index);
+          return this.yieldBuf(index2);
+        }
+        /**
+        Move the cursor to this node's first child. When this returns
+        false, the node has no child, and the cursor has not been moved.
+        */
+        firstChild() {
+          return this.enterChild(
+            1,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        /**
+        Move the cursor to this node's last child.
+        */
+        lastChild() {
+          return this.enterChild(
+            -1,
+            0,
+            4
+            /* Side.DontCare */
+          );
+        }
+        /**
+        Move the cursor to the first child that ends after `pos`.
+        */
+        childAfter(pos) {
+          return this.enterChild(
+            1,
+            pos,
+            2
+            /* Side.After */
+          );
+        }
+        /**
+        Move to the last child that starts before `pos`.
+        */
+        childBefore(pos) {
+          return this.enterChild(
+            -1,
+            pos,
+            -2
+            /* Side.Before */
+          );
+        }
+        /**
+        Move the cursor to the child around `pos`. If side is -1 the
+        child may end at that position, when 1 it may start there. This
+        will also enter [overlaid](#common.MountedTree.overlay)
+        [mounted](#common.NodeProp^mounted) trees unless `overlays` is
+        set to false.
+        */
+        enter(pos, side, mode = this.mode) {
+          if (!this.buffer)
+            return this.yield(this._tree.enter(pos, side, mode));
+          return mode & IterMode.ExcludeBuffers ? false : this.enterChild(1, pos, side);
+        }
+        /**
+        Move to the node's parent node, if this isn't the top node.
+        */
+        parent() {
+          if (!this.buffer)
+            return this.yieldNode(this.mode & IterMode.IncludeAnonymous ? this._tree._parent : this._tree.parent);
+          if (this.stack.length)
+            return this.yieldBuf(this.stack.pop());
+          let parent4 = this.mode & IterMode.IncludeAnonymous ? this.buffer.parent : this.buffer.parent.nextSignificantParent();
+          this.buffer = null;
+          return this.yieldNode(parent4);
+        }
+        /**
+        @internal
+        */
+        sibling(dir2) {
+          if (!this.buffer)
+            return !this._tree._parent ? false : this.yield(this._tree.index < 0 ? null : this._tree._parent.nextChild(this._tree.index + dir2, dir2, 0, 4, this.mode));
+          let { buffer: buffer3 } = this.buffer, d6 = this.stack.length - 1;
+          if (dir2 < 0) {
+            let parentStart = d6 < 0 ? 0 : this.stack[d6] + 4;
+            if (this.index != parentStart)
+              return this.yieldBuf(buffer3.findChild(
+                parentStart,
+                this.index,
+                -1,
+                0,
+                4
+                /* Side.DontCare */
+              ));
+          } else {
+            let after = buffer3.buffer[this.index + 3];
+            if (after < (d6 < 0 ? buffer3.buffer.length : buffer3.buffer[this.stack[d6] + 3]))
+              return this.yieldBuf(after);
+          }
+          return d6 < 0 ? this.yield(this.buffer.parent.nextChild(this.buffer.index + dir2, dir2, 0, 4, this.mode)) : false;
+        }
+        /**
+        Move to this node's next sibling, if any.
+        */
+        nextSibling() {
+          return this.sibling(1);
+        }
+        /**
+        Move to this node's previous sibling, if any.
+        */
+        prevSibling() {
+          return this.sibling(-1);
+        }
+        atLastNode(dir2) {
+          let index2, parent4, { buffer: buffer3 } = this;
+          if (buffer3) {
+            if (dir2 > 0) {
+              if (this.index < buffer3.buffer.buffer.length)
+                return false;
+            } else {
+              for (let i9 = 0; i9 < this.index; i9++)
+                if (buffer3.buffer.buffer[i9 + 3] < this.index)
+                  return false;
+            }
+            ({ index: index2, parent: parent4 } = buffer3);
+          } else {
+            ({ index: index2, _parent: parent4 } = this._tree);
+          }
+          for (; parent4; { index: index2, _parent: parent4 } = parent4) {
+            if (index2 > -1)
+              for (let i9 = index2 + dir2, e3 = dir2 < 0 ? -1 : parent4._tree.children.length; i9 != e3; i9 += dir2) {
+                let child = parent4._tree.children[i9];
+                if (this.mode & IterMode.IncludeAnonymous || child instanceof TreeBuffer || !child.type.isAnonymous || hasChild(child))
+                  return false;
+              }
+          }
+          return true;
+        }
+        move(dir2, enter) {
+          if (enter && this.enterChild(
+            dir2,
+            0,
+            4
+            /* Side.DontCare */
+          ))
+            return true;
+          for (; ; ) {
+            if (this.sibling(dir2))
+              return true;
+            if (this.atLastNode(dir2) || !this.parent())
+              return false;
+          }
+        }
+        /**
+        Move to the next node in a
+        [pre-order](https://en.wikipedia.org/wiki/Tree_traversal#Pre-order,_NLR)
+        traversal, going from a node to its first child or, if the
+        current node is empty or `enter` is false, its next sibling or
+        the next sibling of the first parent node that has one.
+        */
+        next(enter = true) {
+          return this.move(1, enter);
+        }
+        /**
+        Move to the next node in a last-to-first pre-order traversal. A
+        node is followed by its last child or, if it has none, its
+        previous sibling or the previous sibling of the first parent
+        node that has one.
+        */
+        prev(enter = true) {
+          return this.move(-1, enter);
+        }
+        /**
+        Move the cursor to the innermost node that covers `pos`. If
+        `side` is -1, it will enter nodes that end at `pos`. If it is 1,
+        it will enter nodes that start at `pos`.
+        */
+        moveTo(pos, side = 0) {
+          while (this.from == this.to || (side < 1 ? this.from >= pos : this.from > pos) || (side > -1 ? this.to <= pos : this.to < pos))
+            if (!this.parent())
+              break;
+          while (this.enterChild(1, pos, side)) {
+          }
+          return this;
+        }
+        /**
+        Get a [syntax node](#common.SyntaxNode) at the cursor's current
+        position.
+        */
+        get node() {
+          if (!this.buffer)
+            return this._tree;
+          let cache6 = this.bufferNode, result = null, depth = 0;
+          if (cache6 && cache6.context == this.buffer) {
+            scan: for (let index2 = this.index, d6 = this.stack.length; d6 >= 0; ) {
+              for (let c5 = cache6; c5; c5 = c5._parent)
+                if (c5.index == index2) {
+                  if (index2 == this.index)
+                    return c5;
+                  result = c5;
+                  depth = d6 + 1;
+                  break scan;
+                }
+              index2 = this.stack[--d6];
+            }
+          }
+          for (let i9 = depth; i9 < this.stack.length; i9++)
+            result = new BufferNode(this.buffer, result, this.stack[i9]);
+          return this.bufferNode = new BufferNode(this.buffer, result, this.index);
+        }
+        /**
+        Get the [tree](#common.Tree) that represents the current node, if
+        any. Will return null when the node is in a [tree
+        buffer](#common.TreeBuffer).
+        */
+        get tree() {
+          return this.buffer ? null : this._tree._tree;
+        }
+        /**
+        Iterate over the current node and all its descendants, calling
+        `enter` when entering a node and `leave`, if given, when leaving
+        one. When `enter` returns `false`, any children of that node are
+        skipped, and `leave` isn't called for it.
+        */
+        iterate(enter, leave) {
+          for (let depth = 0; ; ) {
+            let mustLeave = false;
+            if (this.type.isAnonymous || enter(this) !== false) {
+              if (this.firstChild()) {
+                depth++;
+                continue;
+              }
+              if (!this.type.isAnonymous)
+                mustLeave = true;
+            }
+            for (; ; ) {
+              if (mustLeave && leave)
+                leave(this);
+              mustLeave = this.type.isAnonymous;
+              if (!depth)
+                return;
+              if (this.nextSibling())
+                break;
+              this.parent();
+              depth--;
+              mustLeave = true;
+            }
+          }
+        }
+        /**
+        Test whether the current node matches a given context—a sequence
+        of direct parent node names. Empty strings in the context array
+        are treated as wildcards.
+        */
+        matchContext(context) {
+          if (!this.buffer)
+            return matchNodeContext(this.node.parent, context);
+          let { buffer: buffer3 } = this.buffer, { types: types8 } = buffer3.set;
+          for (let i9 = context.length - 1, d6 = this.stack.length - 1; i9 >= 0; d6--) {
+            if (d6 < 0)
+              return matchNodeContext(this._tree, context, i9);
+            let type9 = types8[buffer3.buffer[this.stack[d6]]];
+            if (!type9.isAnonymous) {
+              if (context[i9] && context[i9] != type9.name)
+                return false;
+              i9--;
+            }
+          }
+          return true;
+        }
+      };
+      nodeSizeCache = /* @__PURE__ */ new WeakMap();
+      NodeWeakMap = class {
+        constructor() {
+          this.map = /* @__PURE__ */ new WeakMap();
+        }
+        setBuffer(buffer3, index2, value2) {
+          let inner4 = this.map.get(buffer3);
+          if (!inner4)
+            this.map.set(buffer3, inner4 = /* @__PURE__ */ new Map());
+          inner4.set(index2, value2);
+        }
+        getBuffer(buffer3, index2) {
+          let inner4 = this.map.get(buffer3);
+          return inner4 && inner4.get(index2);
+        }
+        /**
+        Set the value for this syntax node.
+        */
+        set(node3, value2) {
+          if (node3 instanceof BufferNode)
+            this.setBuffer(node3.context.buffer, node3.index, value2);
+          else if (node3 instanceof TreeNode2)
+            this.map.set(node3.tree, value2);
+        }
+        /**
+        Retrieve value for this syntax node, if it exists in the map.
+        */
+        get(node3) {
+          return node3 instanceof BufferNode ? this.getBuffer(node3.context.buffer, node3.index) : node3 instanceof TreeNode2 ? this.map.get(node3.tree) : void 0;
+        }
+        /**
+        Set the value for the node that a cursor currently points to.
+        */
+        cursorSet(cursor4, value2) {
+          if (cursor4.buffer)
+            this.setBuffer(cursor4.buffer.buffer, cursor4.index, value2);
+          else
+            this.map.set(cursor4.tree, value2);
+        }
+        /**
+        Retrieve the value for the node that a cursor currently points
+        to.
+        */
+        cursorGet(cursor4) {
+          return cursor4.buffer ? this.getBuffer(cursor4.buffer.buffer, cursor4.index) : this.map.get(cursor4.tree);
+        }
+      };
+      TreeFragment = class _TreeFragment {
+        /**
+        Construct a tree fragment. You'll usually want to use
+        [`addTree`](#common.TreeFragment^addTree) and
+        [`applyChanges`](#common.TreeFragment^applyChanges) instead of
+        calling this directly.
+        */
+        constructor(from5, to, tree, offset3, openStart = false, openEnd = false) {
+          this.from = from5;
+          this.to = to;
+          this.tree = tree;
+          this.offset = offset3;
+          this.open = (openStart ? 1 : 0) | (openEnd ? 2 : 0);
+        }
+        /**
+        Whether the start of the fragment represents the start of a
+        parse, or the end of a change. (In the second case, it may not
+        be safe to reuse some nodes at the start, depending on the
+        parsing algorithm.)
+        */
+        get openStart() {
+          return (this.open & 1) > 0;
+        }
+        /**
+        Whether the end of the fragment represents the end of a
+        full-document parse, or the start of a change.
+        */
+        get openEnd() {
+          return (this.open & 2) > 0;
+        }
+        /**
+        Create a set of fragments from a freshly parsed tree, or update
+        an existing set of fragments by replacing the ones that overlap
+        with a tree with content from the new tree. When `partial` is
+        true, the parse is treated as incomplete, and the resulting
+        fragment has [`openEnd`](#common.TreeFragment.openEnd) set to
+        true.
+        */
+        static addTree(tree, fragments = [], partial = false) {
+          let result = [new _TreeFragment(0, tree.length, tree, 0, false, partial)];
+          for (let f2 of fragments)
+            if (f2.to > tree.length)
+              result.push(f2);
+          return result;
+        }
+        /**
+        Apply a set of edits to an array of fragments, removing or
+        splitting fragments as necessary to remove edited ranges, and
+        adjusting offsets for fragments that moved.
+        */
+        static applyChanges(fragments, changes, minGap = 128) {
+          if (!changes.length)
+            return fragments;
+          let result = [];
+          let fI = 1, nextF = fragments.length ? fragments[0] : null;
+          for (let cI = 0, pos = 0, off = 0; ; cI++) {
+            let nextC = cI < changes.length ? changes[cI] : null;
+            let nextPos = nextC ? nextC.fromA : 1e9;
+            if (nextPos - pos >= minGap)
+              while (nextF && nextF.from < nextPos) {
+                let cut = nextF;
+                if (pos >= cut.from || nextPos <= cut.to || off) {
+                  let fFrom = Math.max(cut.from, pos) - off, fTo = Math.min(cut.to, nextPos) - off;
+                  cut = fFrom >= fTo ? null : new _TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0, !!nextC);
+                }
+                if (cut)
+                  result.push(cut);
+                if (nextF.to > nextPos)
+                  break;
+                nextF = fI < fragments.length ? fragments[fI++] : null;
+              }
+            if (!nextC)
+              break;
+            pos = nextC.toA;
+            off = nextC.toA - nextC.toB;
+          }
+          return result;
+        }
+      };
+      Parser4 = class {
+        /**
+        Start a parse, returning a [partial parse](#common.PartialParse)
+        object. [`fragments`](#common.TreeFragment) can be passed in to
+        make the parse incremental.
+        
+        By default, the entire input is parsed. You can pass `ranges`,
+        which should be a sorted array of non-empty, non-overlapping
+        ranges, to parse only those ranges. The tree returned in that
+        case will start at `ranges[0].from`.
+        */
+        startParse(input, fragments, ranges) {
+          if (typeof input == "string")
+            input = new StringInput(input);
+          ranges = !ranges ? [new Range2(0, input.length)] : ranges.length ? ranges.map((r6) => new Range2(r6.from, r6.to)) : [new Range2(0, 0)];
+          return this.createParse(input, fragments || [], ranges);
+        }
+        /**
+        Run a full parse, returning the resulting tree.
+        */
+        parse(input, fragments, ranges) {
+          let parse9 = this.startParse(input, fragments, ranges);
+          for (; ; ) {
+            let done = parse9.advance();
+            if (done)
+              return done;
+          }
+        }
+      };
+      StringInput = class {
+        constructor(string7) {
+          this.string = string7;
+        }
+        get length() {
+          return this.string.length;
+        }
+        chunk(from5) {
+          return this.string.slice(from5);
+        }
+        get lineChunks() {
+          return false;
+        }
+        read(from5, to) {
+          return this.string.slice(from5, to);
+        }
+      };
+      InnerParse = class {
+        constructor(parser58, parse9, overlay, bracketed3, target, from5) {
+          this.parser = parser58;
+          this.parse = parse9;
+          this.overlay = overlay;
+          this.bracketed = bracketed3;
+          this.target = target;
+          this.from = from5;
+        }
+      };
+      ActiveOverlay = class {
+        constructor(parser58, predicate, mounts, index2, start4, bracketed3, target, prev2) {
+          this.parser = parser58;
+          this.predicate = predicate;
+          this.mounts = mounts;
+          this.index = index2;
+          this.start = start4;
+          this.bracketed = bracketed3;
+          this.target = target;
+          this.prev = prev2;
+          this.depth = 0;
+          this.ranges = [];
+        }
+      };
+      stoppedInner = new NodeProp({ perNode: true });
+      MixedParse = class {
+        constructor(base6, nest, input, fragments, ranges) {
+          this.nest = nest;
+          this.input = input;
+          this.fragments = fragments;
+          this.ranges = ranges;
+          this.inner = [];
+          this.innerDone = 0;
+          this.baseTree = null;
+          this.stoppedAt = null;
+          this.baseParse = base6;
+        }
+        advance() {
+          if (this.baseParse) {
+            let done2 = this.baseParse.advance();
+            if (!done2)
+              return null;
+            this.baseParse = null;
+            this.baseTree = done2;
+            this.startInner();
+            if (this.stoppedAt != null)
+              for (let inner5 of this.inner)
+                inner5.parse.stopAt(this.stoppedAt);
+          }
+          if (this.innerDone == this.inner.length) {
+            let result = this.baseTree;
+            if (this.stoppedAt != null)
+              result = new Tree(result.type, result.children, result.positions, result.length, result.propValues.concat([[stoppedInner, this.stoppedAt]]));
+            return result;
+          }
+          let inner4 = this.inner[this.innerDone], done = inner4.parse.advance();
+          if (done) {
+            this.innerDone++;
+            let props = Object.assign(/* @__PURE__ */ Object.create(null), inner4.target.props);
+            props[NodeProp.mounted.id] = new MountedTree(done, inner4.overlay, inner4.parser, inner4.bracketed);
+            inner4.target.props = props;
+          }
+          return null;
+        }
+        get parsedPos() {
+          if (this.baseParse)
+            return 0;
+          let pos = this.input.length;
+          for (let i9 = this.innerDone; i9 < this.inner.length; i9++) {
+            if (this.inner[i9].from < pos)
+              pos = Math.min(pos, this.inner[i9].parse.parsedPos);
+          }
+          return pos;
+        }
+        stopAt(pos) {
+          this.stoppedAt = pos;
+          if (this.baseParse)
+            this.baseParse.stopAt(pos);
+          else
+            for (let i9 = this.innerDone; i9 < this.inner.length; i9++)
+              this.inner[i9].parse.stopAt(pos);
+        }
+        startInner() {
+          let fragmentCursor = new FragmentCursor(this.fragments);
+          let overlay = null;
+          let covered = null;
+          let cursor4 = new TreeCursor(new TreeNode2(this.baseTree, this.ranges[0].from, 0, null), IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
+          scan: for (let nest, isCovered; ; ) {
+            let enter = true, range3;
+            if (this.stoppedAt != null && cursor4.from >= this.stoppedAt) {
+              enter = false;
+            } else if (fragmentCursor.hasNode(cursor4)) {
+              if (overlay) {
+                let match4 = overlay.mounts.find((m3) => m3.frag.from <= cursor4.from && m3.frag.to >= cursor4.to && m3.mount.overlay);
+                if (match4)
+                  for (let r6 of match4.mount.overlay) {
+                    let from5 = r6.from + match4.pos, to = r6.to + match4.pos;
+                    if (from5 >= cursor4.from && to <= cursor4.to && !overlay.ranges.some((r7) => r7.from < to && r7.to > from5))
+                      overlay.ranges.push({ from: from5, to });
+                  }
+              }
+              enter = false;
+            } else if (covered && (isCovered = checkCover(covered.ranges, cursor4.from, cursor4.to))) {
+              enter = isCovered != 2;
+            } else if (!cursor4.type.isAnonymous && (nest = this.nest(cursor4, this.input)) && (cursor4.from < cursor4.to || !nest.overlay)) {
+              if (!cursor4.tree) {
+                materialize(cursor4);
+                if (overlay)
+                  overlay.depth++;
+                if (covered)
+                  covered.depth++;
+              }
+              let oldMounts = fragmentCursor.findMounts(cursor4.from, nest.parser);
+              if (typeof nest.overlay == "function") {
+                overlay = new ActiveOverlay(nest.parser, nest.overlay, oldMounts, this.inner.length, cursor4.from, !!nest.bracketed, cursor4.tree, overlay);
+              } else {
+                let ranges = punchRanges(this.ranges, nest.overlay || (cursor4.from < cursor4.to ? [new Range2(cursor4.from, cursor4.to)] : []));
+                if (ranges.length)
+                  checkRanges(ranges);
+                if (ranges.length || !nest.overlay)
+                  this.inner.push(new InnerParse(nest.parser, ranges.length ? nest.parser.startParse(this.input, enterFragments(oldMounts, ranges), ranges) : nest.parser.startParse(""), nest.overlay ? nest.overlay.map((r6) => new Range2(r6.from - cursor4.from, r6.to - cursor4.from)) : null, !!nest.bracketed, cursor4.tree, ranges.length ? ranges[0].from : cursor4.from));
+                if (!nest.overlay)
+                  enter = false;
+                else if (ranges.length)
+                  covered = { ranges, depth: 0, prev: covered };
+              }
+            } else if (overlay && (range3 = overlay.predicate(cursor4))) {
+              if (range3 === true)
+                range3 = new Range2(cursor4.from, cursor4.to);
+              if (range3.from < range3.to) {
+                let last4 = overlay.ranges.length - 1;
+                if (last4 >= 0 && overlay.ranges[last4].to == range3.from)
+                  overlay.ranges[last4] = { from: overlay.ranges[last4].from, to: range3.to };
+                else
+                  overlay.ranges.push(range3);
+              }
+            }
+            if (enter && cursor4.firstChild()) {
+              if (overlay)
+                overlay.depth++;
+              if (covered)
+                covered.depth++;
+            } else {
+              for (; ; ) {
+                if (cursor4.nextSibling())
+                  break;
+                if (!cursor4.parent())
+                  break scan;
+                if (overlay && !--overlay.depth) {
+                  let ranges = punchRanges(this.ranges, overlay.ranges);
+                  if (ranges.length) {
+                    checkRanges(ranges);
+                    this.inner.splice(overlay.index, 0, new InnerParse(overlay.parser, overlay.parser.startParse(this.input, enterFragments(overlay.mounts, ranges), ranges), overlay.ranges.map((r6) => new Range2(r6.from - overlay.start, r6.to - overlay.start)), overlay.bracketed, overlay.target, ranges[0].from));
+                  }
+                  overlay = overlay.prev;
+                }
+                if (covered && !--covered.depth)
+                  covered = covered.prev;
+              }
+            }
+          }
+        }
+      };
+      StructureCursor = class {
+        constructor(root5, offset3) {
+          this.offset = offset3;
+          this.done = false;
+          this.cursor = root5.cursor(IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
+        }
+        // Move to the first node (in pre-order) that starts at or after `pos`.
+        moveTo(pos) {
+          let { cursor: cursor4 } = this, p4 = pos - this.offset;
+          while (!this.done && cursor4.from < p4) {
+            if (cursor4.to >= pos && cursor4.enter(p4, 1, IterMode.IgnoreOverlays | IterMode.ExcludeBuffers)) ;
+            else if (cursor4.to <= pos) {
+              if (!cursor4.next(false))
+                this.done = true;
+            } else {
+              break;
+            }
+          }
+        }
+        hasNode(cursor4) {
+          this.moveTo(cursor4.from);
+          if (!this.done && this.cursor.from + this.offset == cursor4.from && this.cursor.tree) {
+            for (let tree = this.cursor.tree; ; ) {
+              if (tree == cursor4.tree)
+                return true;
+              if (tree.children.length && tree.positions[0] == 0 && tree.children[0] instanceof Tree)
+                tree = tree.children[0];
+              else
+                break;
+            }
+          }
+          return false;
+        }
+      };
+      FragmentCursor = class {
+        constructor(fragments) {
+          var _a2;
+          this.fragments = fragments;
+          this.curTo = 0;
+          this.fragI = 0;
+          if (fragments.length) {
+            let first3 = this.curFrag = fragments[0];
+            this.curTo = (_a2 = first3.tree.prop(stoppedInner)) !== null && _a2 !== void 0 ? _a2 : first3.to;
+            this.inner = new StructureCursor(first3.tree, -first3.offset);
+          } else {
+            this.curFrag = this.inner = null;
+          }
+        }
+        hasNode(node3) {
+          while (this.curFrag && node3.from >= this.curTo)
+            this.nextFrag();
+          return this.curFrag && this.curFrag.from <= node3.from && this.curTo >= node3.to && this.inner.hasNode(node3);
+        }
+        nextFrag() {
+          var _a2;
+          this.fragI++;
+          if (this.fragI == this.fragments.length) {
+            this.curFrag = this.inner = null;
+          } else {
+            let frag = this.curFrag = this.fragments[this.fragI];
+            this.curTo = (_a2 = frag.tree.prop(stoppedInner)) !== null && _a2 !== void 0 ? _a2 : frag.to;
+            this.inner = new StructureCursor(frag.tree, -frag.offset);
+          }
+        }
+        findMounts(pos, parser58) {
+          var _a2;
+          let result = [];
+          if (this.inner) {
+            this.inner.cursor.moveTo(pos, 1);
+            for (let pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
+              let mount2 = (_a2 = pos2.tree) === null || _a2 === void 0 ? void 0 : _a2.prop(NodeProp.mounted);
+              if (mount2 && mount2.parser == parser58) {
+                for (let i9 = this.fragI; i9 < this.fragments.length; i9++) {
+                  let frag = this.fragments[i9];
+                  if (frag.from >= pos2.to)
+                    break;
+                  if (frag.tree == this.curFrag.tree)
+                    result.push({
+                      frag,
+                      pos: pos2.from - frag.offset,
+                      mount: mount2
+                    });
+                }
+              }
+            }
+          }
+          return result;
+        }
+      };
+    }
+  });
+
   // node_modules/@marijn/find-cluster-break/src/index.js
   function isExtendingChar(code5) {
     if (code5 < 768) return false;
@@ -199128,8 +201183,8 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     }
     return strict === true ? -1 : string7.length;
   }
-  var Text2, TextLeaf, TextNode3, RawTextCursor, PartialTextCursor, LineCursor, Line, DefaultSplit, MapMode, ChangeDesc, ChangeSet, SectionIter, SelectionRange2, EditorSelection, nextID2, Facet, FacetProvider, initField, StateField, Prec_, Prec, PrecExtension, Compartment, CompartmentInstance, Configuration, languageData, allowMultipleSelections, lineSeparator, changeFilter, transactionFilter, transactionExtender, readOnly, Annotation2, AnnotationType, StateEffectType, StateEffect, Transaction, none2, CharCategory, nonASCIISingleCaseWordChar, wordChar, EditorState, RangeValue, Range2, Chunk, RangeSet, RangeSetBuilder, LayerCursor, HeapCursor, SpanCursor;
-  var init_dist3 = __esm({
+  var Text2, TextLeaf, TextNode3, RawTextCursor, PartialTextCursor, LineCursor, Line, DefaultSplit, MapMode, ChangeDesc, ChangeSet, SectionIter, SelectionRange2, EditorSelection, nextID2, Facet, FacetProvider, initField, StateField, Prec_, Prec, PrecExtension, Compartment, CompartmentInstance, Configuration, languageData, allowMultipleSelections, lineSeparator, changeFilter, transactionFilter, transactionExtender, readOnly, Annotation2, AnnotationType, StateEffectType, StateEffect, Transaction, none2, CharCategory, nonASCIISingleCaseWordChar, wordChar, EditorState, RangeValue, Range3, Chunk, RangeSet, RangeSetBuilder, LayerCursor, HeapCursor, SpanCursor;
+  var init_dist4 = __esm({
     "node_modules/@codemirror/state/dist/index.js"() {
       init_src37();
       Text2 = class _Text {
@@ -201230,13 +203285,13 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
         Create a [range](https://codemirror.net/6/docs/ref/#state.Range) with this value.
         */
         range(from5, to = from5) {
-          return Range2.create(from5, to, this);
+          return Range3.create(from5, to, this);
         }
       };
       RangeValue.prototype.startSide = RangeValue.prototype.endSide = 0;
       RangeValue.prototype.point = false;
       RangeValue.prototype.mapMode = MapMode.TrackDel;
-      Range2 = class _Range {
+      Range3 = class _Range {
         constructor(from5, to, value2) {
           this.from = from5;
           this.to = to;
@@ -201381,7 +203436,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
             } else {
               if (!filter9 || filterFrom > cur2.to || filterTo < cur2.from || filter9(cur2.from, cur2.to, cur2.value)) {
                 if (!builder2.addInner(cur2.from, cur2.to, cur2.value))
-                  spill.push(Range2.create(cur2.from, cur2.to, cur2.value));
+                  spill.push(Range3.create(cur2.from, cur2.to, cur2.value));
               }
               cur2.next();
             }
@@ -201524,7 +203579,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
         */
         static of(ranges, sort3 = false) {
           let build = new RangeSetBuilder();
-          for (let range3 of ranges instanceof Range2 ? [ranges] : sort3 ? lazySort(ranges) : ranges)
+          for (let range3 of ranges instanceof Range3 ? [ranges] : sort3 ? lazySort(ranges) : ranges)
             build.add(range3.from, range3.to, range3.value);
           return build.finish();
         }
@@ -204746,9 +206801,9 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     return activeLineGutterHighlighter;
   }
   var nav, doc, ie_edge, ie_upto10, ie_11up, ie3, gecko, chrome, webkit, safari, ios, browser, noAttrs, WidgetType, BlockType, Decoration, MarkDecoration, LineDecoration, PointDecoration, BlockWrapper, DOMSelectionState, preventScrollSupported, scratchRange, DOMPos, Direction2, LTR, RTL, LowTypes, ArabicTypes, Brackets, BracketStack, BidiRE, BidiSpan, types, movedOver, clickAddsSelectionRange, dragMovesSelection$1, mouseSelectionStyle, exceptionSink, updateListener, inputHandler, focusChangeEffect, clipboardInputFilter, clipboardOutputFilter, perLineTextDirection, nativeSelectionHidden, scrollHandler, ScrollTarget, scrollIntoView, setEditContextFormatting, editable, nextPluginID, viewPlugin, ViewPlugin, PluginInstance, editorAttributes, contentAttributes, decorations, blockWrappers, outerDecorations, atomicRanges, bidiIsolatedRanges, scrollMargins, styleModule, ChangedRange, ViewUpdate, noChildren, Tile, CompositeTile, DocTile, BlockWrapperTile, LineTile, MarkTile, TextTile, WidgetTile, WidgetBufferTile, TilePointer, OpenWrapper, TileBuilder, TextStream, buckets, TileCache, TileUpdate, lineBaseAttrs, NullWidget, BreakWidget, DocView, DecorationComparator$1, WrapperComparator, BlockGapWidget, PosAssoc, InlineCoordsScan, LineBreakPlaceholder, DOMReader, DOMPoint, DOMChange, InputState, PendingKeys, EmacsyPendingKeys, modifierCodes, dragScrollMargin, MouseSelection, handlers, observers, brokenClipboardAPI, BadMouseDetail, lastMouseDown, lastMouseDownCount, lastMouseDownTime, lastLinewiseCopy, isFocusChange, appliedFirefoxHack, wrappingWhiteSpace, heightChangeFlag, HeightOracle, MeasuredHeights, BlockInfo, QueryType, Epsilon, HeightMap, SpaceDeco, HeightMapBlock, HeightMapText, HeightMapGap, HeightMapBranch, relevantWidgetHeight, NodeBuilder, DecorationComparator2, LineGap, LineGapWidget, ViewState, Viewport, IdScaler, BigScaler, theme, darkTheme, baseThemeID, baseLightID, baseDarkID, lightDarkIDs, baseTheme$1, observeOptions, useCharData, DOMObserver, EditContextManager, EditorView, MaxBidiLine, BadMeasure, CachedOrder, currentPlatform, handleKeyEvents, keymap, Keymaps, storedPrefix, PrefixTimeout, currentKeyEvent, RectangleMarker, LayerView, layerOrder, selectionConfig, cursorLayer, selectionLayer, selectionBg, hideNativeSelection, setDropCursorPos, dropCursorPos, drawDropCursor, MatchDecorator, UnicodeRegexpSupport, Specials, Names, _supportsTabSize, specialCharConfig, _plugin, DefaultPlaceholder, SpecialCharWidget, TabWidget, lineDeco, activeLineHighlighter, MaxOff, keys3, showCrosshair, Outside, TooltipViewManager, tooltipConfig, knownHeight, tooltipPlugin, baseTheme, noOffset, showTooltip, showHoverTooltip, HoverTooltipHost, showHoverTooltipHost, hoverPlugin, HoverPlugin, tooltipMargin, closeHoverTooltipEffect, panelConfig, panelPlugin, PanelGroup, showPanel, dialogField, openDialogEffect, closeDialogEffect, GutterMarker, gutterLineClass, gutterWidgetClass, defaults5, activeGutters, unfixGutters, gutterView, UpdateContext, SingleGutterView, GutterElement, lineNumberMarkers, lineNumberWidgetMarker, lineNumberConfig, NumberMarker, lineNumberGutter, activeLineGutterMarker, activeLineGutterHighlighter;
-  var init_dist4 = __esm({
+  var init_dist5 = __esm({
     "node_modules/@codemirror/view/dist/index.js"() {
-      init_dist3();
+      init_dist4();
       init_style_mod();
       init_w3c_keyname();
       init_crelt();
@@ -212764,2061 +214819,6 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     }
   });
 
-  // node_modules/@lezer/common/dist/index.js
-  function checkSide(side, pos, from5, to) {
-    switch (side) {
-      case -2:
-        return from5 < pos;
-      case -1:
-        return to >= pos && from5 < pos;
-      case 0:
-        return from5 < pos && to > pos;
-      case 1:
-        return from5 <= pos && to > pos;
-      case 2:
-        return to > pos;
-      case 4:
-        return true;
-    }
-  }
-  function resolveNode(node3, pos, side, overlays) {
-    var _a2;
-    while (node3.from == node3.to || (side < 1 ? node3.from >= pos : node3.from > pos) || (side > -1 ? node3.to <= pos : node3.to < pos)) {
-      let parent4 = !overlays && node3 instanceof TreeNode2 && node3.index < 0 ? null : node3.parent;
-      if (!parent4)
-        return node3;
-      node3 = parent4;
-    }
-    let mode = overlays ? 0 : IterMode.IgnoreOverlays;
-    if (overlays)
-      for (let scan = node3, parent4 = scan.parent; parent4; scan = parent4, parent4 = scan.parent) {
-        if (scan instanceof TreeNode2 && scan.index < 0 && ((_a2 = parent4.enter(pos, side, mode)) === null || _a2 === void 0 ? void 0 : _a2.from) != scan.from)
-          node3 = parent4;
-      }
-    for (; ; ) {
-      let inner4 = node3.enter(pos, side, mode);
-      if (!inner4)
-        return node3;
-      node3 = inner4;
-    }
-  }
-  function getChildren(node3, type9, before, after) {
-    let cur2 = node3.cursor(), result = [];
-    if (!cur2.firstChild())
-      return result;
-    if (before != null)
-      for (let found2 = false; !found2; ) {
-        found2 = cur2.type.is(before);
-        if (!cur2.nextSibling())
-          return result;
-      }
-    for (; ; ) {
-      if (after != null && cur2.type.is(after))
-        return result;
-      if (cur2.type.is(type9))
-        result.push(cur2.node);
-      if (!cur2.nextSibling())
-        return after == null ? result : [];
-    }
-  }
-  function matchNodeContext(node3, context, i9 = context.length - 1) {
-    for (let p4 = node3; i9 >= 0; p4 = p4.parent) {
-      if (!p4)
-        return false;
-      if (!p4.type.isAnonymous) {
-        if (context[i9] && context[i9] != p4.name)
-          return false;
-        i9--;
-      }
-    }
-    return true;
-  }
-  function iterStack(heads) {
-    if (!heads.length)
-      return null;
-    let pick2 = 0, picked = heads[0];
-    for (let i9 = 1; i9 < heads.length; i9++) {
-      let node3 = heads[i9];
-      if (node3.from > picked.from || node3.to < picked.to) {
-        picked = node3;
-        pick2 = i9;
-      }
-    }
-    let next4 = picked instanceof TreeNode2 && picked.index < 0 ? null : picked.parent;
-    let newHeads = heads.slice();
-    if (next4)
-      newHeads[pick2] = next4;
-    else
-      newHeads.splice(pick2, 1);
-    return new StackIterator(newHeads, picked);
-  }
-  function stackIterator(tree, pos, side) {
-    let inner4 = tree.resolveInner(pos, side), layers = null;
-    for (let scan = inner4 instanceof TreeNode2 ? inner4 : inner4.context.parent; scan; scan = scan.parent) {
-      if (scan.index < 0) {
-        let parent4 = scan.parent;
-        (layers || (layers = [inner4])).push(parent4.resolve(pos, side));
-        scan = parent4;
-      } else {
-        let mount2 = MountedTree.get(scan.tree);
-        if (mount2 && mount2.overlay && mount2.overlay[0].from <= pos && mount2.overlay[mount2.overlay.length - 1].to >= pos) {
-          let root5 = new TreeNode2(mount2.tree, mount2.overlay[0].from + scan.from, -1, scan);
-          (layers || (layers = [inner4])).push(resolveNode(root5, pos, side, false));
-        }
-      }
-    }
-    return layers ? iterStack(layers) : inner4;
-  }
-  function hasChild(tree) {
-    return tree.children.some((ch5) => ch5 instanceof TreeBuffer || !ch5.type.isAnonymous || hasChild(ch5));
-  }
-  function buildTree5(data7) {
-    var _a2;
-    let { buffer: buffer3, nodeSet: nodeSet2, maxBufferLength = DefaultBufferLength, reused = [], minRepeatType = nodeSet2.types.length } = data7;
-    let cursor4 = Array.isArray(buffer3) ? new FlatBufferCursor(buffer3, buffer3.length) : buffer3;
-    let types8 = nodeSet2.types;
-    let contextHash = 0, lookAhead = 0;
-    function takeNode(parentStart, minPos, children3, positions3, inRepeat, depth) {
-      let { id: id42, start: start4, end: end3, size: size5 } = cursor4;
-      let lookAheadAtStart = lookAhead, contextAtStart = contextHash;
-      if (size5 < 0) {
-        cursor4.next();
-        if (size5 == -1) {
-          let node4 = reused[id42];
-          children3.push(node4);
-          positions3.push(start4 - parentStart);
-          return;
-        } else if (size5 == -3) {
-          contextHash = id42;
-          return;
-        } else if (size5 == -4) {
-          lookAhead = id42;
-          return;
-        } else {
-          throw new RangeError(`Unrecognized record size: ${size5}`);
-        }
-      }
-      let type9 = types8[id42], node3, buffer4;
-      let startPos = start4 - parentStart;
-      if (end3 - start4 <= maxBufferLength && (buffer4 = findBufferSize(cursor4.pos - minPos, inRepeat))) {
-        let data8 = new Uint16Array(buffer4.size - buffer4.skip);
-        let endPos = cursor4.pos - buffer4.size, index2 = data8.length;
-        while (cursor4.pos > endPos)
-          index2 = copyToBuffer(buffer4.start, data8, index2);
-        node3 = new TreeBuffer(data8, end3 - buffer4.start, nodeSet2);
-        startPos = buffer4.start - parentStart;
-      } else {
-        let endPos = cursor4.pos - size5;
-        cursor4.next();
-        let localChildren = [], localPositions = [];
-        let localInRepeat = id42 >= minRepeatType ? id42 : -1;
-        let lastGroup = 0, lastEnd = end3;
-        while (cursor4.pos > endPos) {
-          if (localInRepeat >= 0 && cursor4.id == localInRepeat && cursor4.size >= 0) {
-            if (cursor4.end <= lastEnd - maxBufferLength) {
-              makeRepeatLeaf(localChildren, localPositions, start4, lastGroup, cursor4.end, lastEnd, localInRepeat, lookAheadAtStart, contextAtStart);
-              lastGroup = localChildren.length;
-              lastEnd = cursor4.end;
-            }
-            cursor4.next();
-          } else if (depth > 2500) {
-            takeFlatNode(start4, endPos, localChildren, localPositions);
-          } else {
-            takeNode(start4, endPos, localChildren, localPositions, localInRepeat, depth + 1);
-          }
-        }
-        if (localInRepeat >= 0 && lastGroup > 0 && lastGroup < localChildren.length)
-          makeRepeatLeaf(localChildren, localPositions, start4, lastGroup, start4, lastEnd, localInRepeat, lookAheadAtStart, contextAtStart);
-        localChildren.reverse();
-        localPositions.reverse();
-        if (localInRepeat > -1 && lastGroup > 0) {
-          let make = makeBalanced(type9, contextAtStart);
-          node3 = balanceRange(type9, localChildren, localPositions, 0, localChildren.length, 0, end3 - start4, make, make);
-        } else {
-          node3 = makeTree(type9, localChildren, localPositions, end3 - start4, lookAheadAtStart - end3, contextAtStart);
-        }
-      }
-      children3.push(node3);
-      positions3.push(startPos);
-    }
-    function takeFlatNode(parentStart, minPos, children3, positions3) {
-      let nodes5 = [];
-      let nodeCount2 = 0, stopAt = -1;
-      while (cursor4.pos > minPos) {
-        let { id: id42, start: start4, end: end3, size: size5 } = cursor4;
-        if (size5 > 4) {
-          cursor4.next();
-        } else if (stopAt > -1 && start4 < stopAt) {
-          break;
-        } else {
-          if (stopAt < 0)
-            stopAt = end3 - maxBufferLength;
-          nodes5.push(id42, start4, end3);
-          nodeCount2++;
-          cursor4.next();
-        }
-      }
-      if (nodeCount2) {
-        let buffer4 = new Uint16Array(nodeCount2 * 4);
-        let start4 = nodes5[nodes5.length - 2];
-        for (let i9 = nodes5.length - 3, j4 = 0; i9 >= 0; i9 -= 3) {
-          buffer4[j4++] = nodes5[i9];
-          buffer4[j4++] = nodes5[i9 + 1] - start4;
-          buffer4[j4++] = nodes5[i9 + 2] - start4;
-          buffer4[j4++] = j4;
-        }
-        children3.push(new TreeBuffer(buffer4, nodes5[2] - start4, nodeSet2));
-        positions3.push(start4 - parentStart);
-      }
-    }
-    function makeBalanced(type9, contextHash2) {
-      return (children3, positions3, length3) => {
-        let lookAhead2 = 0, lastI = children3.length - 1, last4, lookAheadProp;
-        if (lastI >= 0 && (last4 = children3[lastI]) instanceof Tree) {
-          if (!lastI && last4.type == type9 && last4.length == length3)
-            return last4;
-          if (lookAheadProp = last4.prop(NodeProp.lookAhead))
-            lookAhead2 = positions3[lastI] + last4.length + lookAheadProp;
-        }
-        return makeTree(type9, children3, positions3, length3, lookAhead2, contextHash2);
-      };
-    }
-    function makeRepeatLeaf(children3, positions3, base6, i9, from5, to, type9, lookAhead2, contextHash2) {
-      let localChildren = [], localPositions = [];
-      while (children3.length > i9) {
-        localChildren.push(children3.pop());
-        localPositions.push(positions3.pop() + base6 - from5);
-      }
-      children3.push(makeTree(nodeSet2.types[type9], localChildren, localPositions, to - from5, lookAhead2 - to, contextHash2));
-      positions3.push(from5 - base6);
-    }
-    function makeTree(type9, children3, positions3, length3, lookAhead2, contextHash2, props) {
-      if (contextHash2) {
-        let pair2 = [NodeProp.contextHash, contextHash2];
-        props = props ? [pair2].concat(props) : [pair2];
-      }
-      if (lookAhead2 > 25) {
-        let pair2 = [NodeProp.lookAhead, lookAhead2];
-        props = props ? [pair2].concat(props) : [pair2];
-      }
-      return new Tree(type9, children3, positions3, length3, props);
-    }
-    function findBufferSize(maxSize, inRepeat) {
-      let fork = cursor4.fork();
-      let size5 = 0, start4 = 0, skip = 0, minStart = fork.end - maxBufferLength;
-      let result = { size: 0, start: 0, skip: 0 };
-      scan: for (let minPos = fork.pos - maxSize; fork.pos > minPos; ) {
-        let nodeSize3 = fork.size;
-        if (fork.id == inRepeat && nodeSize3 >= 0) {
-          result.size = size5;
-          result.start = start4;
-          result.skip = skip;
-          skip += 4;
-          size5 += 4;
-          fork.next();
-          continue;
-        }
-        let startPos = fork.pos - nodeSize3;
-        if (nodeSize3 < 0 || startPos < minPos || fork.start < minStart)
-          break;
-        let localSkipped = fork.id >= minRepeatType ? 4 : 0;
-        let nodeStart2 = fork.start;
-        fork.next();
-        while (fork.pos > startPos) {
-          if (fork.size < 0) {
-            if (fork.size == -3 || fork.size == -4)
-              localSkipped += 4;
-            else
-              break scan;
-          } else if (fork.id >= minRepeatType) {
-            localSkipped += 4;
-          }
-          fork.next();
-        }
-        start4 = nodeStart2;
-        size5 += nodeSize3;
-        skip += localSkipped;
-      }
-      if (inRepeat < 0 || size5 == maxSize) {
-        result.size = size5;
-        result.start = start4;
-        result.skip = skip;
-      }
-      return result.size > 4 ? result : void 0;
-    }
-    function copyToBuffer(bufferStart, buffer4, index2) {
-      let { id: id42, start: start4, end: end3, size: size5 } = cursor4;
-      cursor4.next();
-      if (size5 >= 0 && id42 < minRepeatType) {
-        let startIndex = index2;
-        if (size5 > 4) {
-          let endPos = cursor4.pos - (size5 - 4);
-          while (cursor4.pos > endPos)
-            index2 = copyToBuffer(bufferStart, buffer4, index2);
-        }
-        buffer4[--index2] = startIndex;
-        buffer4[--index2] = end3 - bufferStart;
-        buffer4[--index2] = start4 - bufferStart;
-        buffer4[--index2] = id42;
-      } else if (size5 == -3) {
-        contextHash = id42;
-      } else if (size5 == -4) {
-        lookAhead = id42;
-      }
-      return index2;
-    }
-    let children2 = [], positions2 = [];
-    while (cursor4.pos > 0)
-      takeNode(data7.start || 0, data7.bufferStart || 0, children2, positions2, -1, 0);
-    let length2 = (_a2 = data7.length) !== null && _a2 !== void 0 ? _a2 : children2.length ? positions2[0] + children2[0].length : 0;
-    return new Tree(types8[data7.topID], children2.reverse(), positions2.reverse(), length2);
-  }
-  function nodeSize(balanceType, node3) {
-    if (!balanceType.isAnonymous || node3 instanceof TreeBuffer || node3.type != balanceType)
-      return 1;
-    let size5 = nodeSizeCache.get(node3);
-    if (size5 == null) {
-      size5 = 1;
-      for (let child of node3.children) {
-        if (child.type != balanceType || !(child instanceof Tree)) {
-          size5 = 1;
-          break;
-        }
-        size5 += nodeSize(balanceType, child);
-      }
-      nodeSizeCache.set(node3, size5);
-    }
-    return size5;
-  }
-  function balanceRange(balanceType, children2, positions2, from5, to, start4, length2, mkTop, mkTree) {
-    let total = 0;
-    for (let i9 = from5; i9 < to; i9++)
-      total += nodeSize(balanceType, children2[i9]);
-    let maxChild = Math.ceil(
-      total * 1.5 / 8
-      /* Balance.BranchFactor */
-    );
-    let localChildren = [], localPositions = [];
-    function divide(children3, positions3, from6, to2, offset3) {
-      for (let i9 = from6; i9 < to2; ) {
-        let groupFrom = i9, groupStart = positions3[i9], groupSize = nodeSize(balanceType, children3[i9]);
-        i9++;
-        for (; i9 < to2; i9++) {
-          let nextSize = nodeSize(balanceType, children3[i9]);
-          if (groupSize + nextSize >= maxChild)
-            break;
-          groupSize += nextSize;
-        }
-        if (i9 == groupFrom + 1) {
-          if (groupSize > maxChild) {
-            let only = children3[groupFrom];
-            divide(only.children, only.positions, 0, only.children.length, positions3[groupFrom] + offset3);
-            continue;
-          }
-          localChildren.push(children3[groupFrom]);
-        } else {
-          let length3 = positions3[i9 - 1] + children3[i9 - 1].length - groupStart;
-          localChildren.push(balanceRange(balanceType, children3, positions3, groupFrom, i9, groupStart, length3, null, mkTree));
-        }
-        localPositions.push(groupStart + offset3 - start4);
-      }
-    }
-    divide(children2, positions2, from5, to, 0);
-    return (mkTop || mkTree)(localChildren, localPositions, length2);
-  }
-  function parseMixed(nest) {
-    return (parse9, input, fragments, ranges) => new MixedParse(parse9, nest, input, fragments, ranges);
-  }
-  function checkRanges(ranges) {
-    if (!ranges.length || ranges.some((r6) => r6.from >= r6.to))
-      throw new RangeError("Invalid inner parse ranges given: " + JSON.stringify(ranges));
-  }
-  function checkCover(covered, from5, to) {
-    for (let range3 of covered) {
-      if (range3.from >= to)
-        break;
-      if (range3.to > from5)
-        return range3.from <= from5 && range3.to >= to ? 2 : 1;
-    }
-    return 0;
-  }
-  function sliceBuf(buf, startI, endI, nodes5, positions2, off) {
-    if (startI < endI) {
-      let from5 = buf.buffer[startI + 1];
-      nodes5.push(buf.slice(startI, endI, from5));
-      positions2.push(from5 - off);
-    }
-  }
-  function materialize(cursor4) {
-    let { node: node3 } = cursor4, stack = [];
-    let buffer3 = node3.context.buffer;
-    do {
-      stack.push(cursor4.index);
-      cursor4.parent();
-    } while (!cursor4.tree);
-    let base6 = cursor4.tree, i9 = base6.children.indexOf(buffer3);
-    let buf = base6.children[i9], b3 = buf.buffer, newStack = [i9];
-    function split2(startI, endI, type9, innerOffset, length2, stackPos) {
-      let targetI = stack[stackPos];
-      let children2 = [], positions2 = [];
-      sliceBuf(buf, startI, targetI, children2, positions2, innerOffset);
-      let from5 = b3[targetI + 1], to = b3[targetI + 2];
-      newStack.push(children2.length);
-      let child = stackPos ? split2(targetI + 4, b3[targetI + 3], buf.set.types[b3[targetI]], from5, to - from5, stackPos - 1) : node3.toTree();
-      children2.push(child);
-      positions2.push(from5 - innerOffset);
-      sliceBuf(buf, b3[targetI + 3], endI, children2, positions2, innerOffset);
-      return new Tree(type9, children2, positions2, length2);
-    }
-    base6.children[i9] = split2(0, b3.length, NodeType.none, 0, buf.length, stack.length - 1);
-    for (let index2 of newStack) {
-      let tree = cursor4.tree.children[index2], pos = cursor4.tree.positions[index2];
-      cursor4.yield(new TreeNode2(tree, pos + cursor4.from, index2, cursor4._tree));
-    }
-  }
-  function punchRanges(outer, ranges) {
-    let copy6 = null, current2 = ranges;
-    for (let i9 = 1, j4 = 0; i9 < outer.length; i9++) {
-      let gapFrom = outer[i9 - 1].to, gapTo = outer[i9].from;
-      for (; j4 < current2.length; j4++) {
-        let r6 = current2[j4];
-        if (r6.from >= gapTo)
-          break;
-        if (r6.to <= gapFrom)
-          continue;
-        if (!copy6)
-          current2 = copy6 = ranges.slice();
-        if (r6.from < gapFrom) {
-          copy6[j4] = new Range3(r6.from, gapFrom);
-          if (r6.to > gapTo)
-            copy6.splice(j4 + 1, 0, new Range3(gapTo, r6.to));
-        } else if (r6.to > gapTo) {
-          copy6[j4--] = new Range3(gapTo, r6.to);
-        } else {
-          copy6.splice(j4--, 1);
-        }
-      }
-    }
-    return current2;
-  }
-  function findCoverChanges(a3, b3, from5, to) {
-    let iA = 0, iB = 0, inA = false, inB = false, pos = -1e9;
-    let result = [];
-    for (; ; ) {
-      let nextA = iA == a3.length ? 1e9 : inA ? a3[iA].to : a3[iA].from;
-      let nextB = iB == b3.length ? 1e9 : inB ? b3[iB].to : b3[iB].from;
-      if (inA != inB) {
-        let start4 = Math.max(pos, from5), end3 = Math.min(nextA, nextB, to);
-        if (start4 < end3)
-          result.push(new Range3(start4, end3));
-      }
-      pos = Math.min(nextA, nextB);
-      if (pos == 1e9)
-        break;
-      if (nextA == pos) {
-        if (!inA)
-          inA = true;
-        else {
-          inA = false;
-          iA++;
-        }
-      }
-      if (nextB == pos) {
-        if (!inB)
-          inB = true;
-        else {
-          inB = false;
-          iB++;
-        }
-      }
-    }
-    return result;
-  }
-  function enterFragments(mounts, ranges) {
-    let result = [];
-    for (let { pos, mount: mount2, frag } of mounts) {
-      let startPos = pos + (mount2.overlay ? mount2.overlay[0].from : 0), endPos = startPos + mount2.tree.length;
-      let from5 = Math.max(frag.from, startPos), to = Math.min(frag.to, endPos);
-      if (mount2.overlay) {
-        let overlay = mount2.overlay.map((r6) => new Range3(r6.from + pos, r6.to + pos));
-        let changes = findCoverChanges(ranges, overlay, from5, to);
-        for (let i9 = 0, pos2 = from5; ; i9++) {
-          let last4 = i9 == changes.length, end3 = last4 ? to : changes[i9].from;
-          if (end3 > pos2)
-            result.push(new TreeFragment(pos2, end3, mount2.tree, -startPos, frag.from >= pos2 || frag.openStart, frag.to <= end3 || frag.openEnd));
-          if (last4)
-            break;
-          pos2 = changes[i9].to;
-        }
-      } else {
-        result.push(new TreeFragment(from5, to, mount2.tree, -startPos, frag.from >= startPos || frag.openStart, frag.to <= endPos || frag.openEnd));
-      }
-    }
-    return result;
-  }
-  var DefaultBufferLength, nextPropID, Range3, NodeProp, MountedTree, noProps, NodeType, NodeSet, CachedNode, CachedInnerNode, IterMode, Tree, FlatBufferCursor, TreeBuffer, BaseNode, TreeNode2, BufferContext, BufferNode, StackIterator, TreeCursor, nodeSizeCache, NodeWeakMap, TreeFragment, Parser4, StringInput, InnerParse, ActiveOverlay, stoppedInner, MixedParse, StructureCursor, FragmentCursor;
-  var init_dist5 = __esm({
-    "node_modules/@lezer/common/dist/index.js"() {
-      DefaultBufferLength = 1024;
-      nextPropID = 0;
-      Range3 = class {
-        constructor(from5, to) {
-          this.from = from5;
-          this.to = to;
-        }
-      };
-      NodeProp = class {
-        /**
-        Create a new node prop type.
-        */
-        constructor(config5 = {}) {
-          this.id = nextPropID++;
-          this.perNode = !!config5.perNode;
-          this.deserialize = config5.deserialize || (() => {
-            throw new Error("This node type doesn't define a deserialize function");
-          });
-          this.combine = config5.combine || null;
-        }
-        /**
-        This is meant to be used with
-        [`NodeSet.extend`](#common.NodeSet.extend) or
-        [`LRParser.configure`](#lr.ParserConfig.props) to compute
-        prop values for each node type in the set. Takes a [match
-        object](#common.NodeType^match) or function that returns undefined
-        if the node type doesn't get this prop, and the prop's value if
-        it does.
-        */
-        add(match4) {
-          if (this.perNode)
-            throw new RangeError("Can't add per-node props to node types");
-          if (typeof match4 != "function")
-            match4 = NodeType.match(match4);
-          return (type9) => {
-            let result = match4(type9);
-            return result === void 0 ? null : [this, result];
-          };
-        }
-      };
-      NodeProp.closedBy = new NodeProp({ deserialize: (str2) => str2.split(" ") });
-      NodeProp.openedBy = new NodeProp({ deserialize: (str2) => str2.split(" ") });
-      NodeProp.group = new NodeProp({ deserialize: (str2) => str2.split(" ") });
-      NodeProp.isolate = new NodeProp({ deserialize: (value2) => {
-        if (value2 && value2 != "rtl" && value2 != "ltr" && value2 != "auto")
-          throw new RangeError("Invalid value for isolate: " + value2);
-        return value2 || "auto";
-      } });
-      NodeProp.contextHash = new NodeProp({ perNode: true });
-      NodeProp.lookAhead = new NodeProp({ perNode: true });
-      NodeProp.mounted = new NodeProp({ perNode: true });
-      MountedTree = class {
-        constructor(tree, overlay, parser58, bracketed3 = false) {
-          this.tree = tree;
-          this.overlay = overlay;
-          this.parser = parser58;
-          this.bracketed = bracketed3;
-        }
-        /**
-        @internal
-        */
-        static get(tree) {
-          return tree && tree.props && tree.props[NodeProp.mounted.id];
-        }
-      };
-      noProps = /* @__PURE__ */ Object.create(null);
-      NodeType = class _NodeType {
-        /**
-        @internal
-        */
-        constructor(name2, props, id42, flags = 0) {
-          this.name = name2;
-          this.props = props;
-          this.id = id42;
-          this.flags = flags;
-        }
-        /**
-        Define a node type.
-        */
-        static define(spec2) {
-          let props = spec2.props && spec2.props.length ? /* @__PURE__ */ Object.create(null) : noProps;
-          let flags = (spec2.top ? 1 : 0) | (spec2.skipped ? 2 : 0) | (spec2.error ? 4 : 0) | (spec2.name == null ? 8 : 0);
-          let type9 = new _NodeType(spec2.name || "", props, spec2.id, flags);
-          if (spec2.props)
-            for (let src of spec2.props) {
-              if (!Array.isArray(src))
-                src = src(type9);
-              if (src) {
-                if (src[0].perNode)
-                  throw new RangeError("Can't store a per-node prop on a node type");
-                props[src[0].id] = src[1];
-              }
-            }
-          return type9;
-        }
-        /**
-        Retrieves a node prop for this type. Will return `undefined` if
-        the prop isn't present on this node.
-        */
-        prop(prop) {
-          return this.props[prop.id];
-        }
-        /**
-        True when this is the top node of a grammar.
-        */
-        get isTop() {
-          return (this.flags & 1) > 0;
-        }
-        /**
-        True when this node is produced by a skip rule.
-        */
-        get isSkipped() {
-          return (this.flags & 2) > 0;
-        }
-        /**
-        Indicates whether this is an error node.
-        */
-        get isError() {
-          return (this.flags & 4) > 0;
-        }
-        /**
-        When true, this node type doesn't correspond to a user-declared
-        named node, for example because it is used to cache repetition.
-        */
-        get isAnonymous() {
-          return (this.flags & 8) > 0;
-        }
-        /**
-        Returns true when this node's name or one of its
-        [groups](#common.NodeProp^group) matches the given string.
-        */
-        is(name2) {
-          if (typeof name2 == "string") {
-            if (this.name == name2)
-              return true;
-            let group2 = this.prop(NodeProp.group);
-            return group2 ? group2.indexOf(name2) > -1 : false;
-          }
-          return this.id == name2;
-        }
-        /**
-        Create a function from node types to arbitrary values by
-        specifying an object whose property names are node or
-        [group](#common.NodeProp^group) names. Often useful with
-        [`NodeProp.add`](#common.NodeProp.add). You can put multiple
-        names, separated by spaces, in a single property name to map
-        multiple node names to a single value.
-        */
-        static match(map10) {
-          let direct = /* @__PURE__ */ Object.create(null);
-          for (let prop in map10)
-            for (let name2 of prop.split(" "))
-              direct[name2] = map10[prop];
-          return (node3) => {
-            for (let groups = node3.prop(NodeProp.group), i9 = -1; i9 < (groups ? groups.length : 0); i9++) {
-              let found2 = direct[i9 < 0 ? node3.name : groups[i9]];
-              if (found2)
-                return found2;
-            }
-          };
-        }
-      };
-      NodeType.none = new NodeType(
-        "",
-        /* @__PURE__ */ Object.create(null),
-        0,
-        8
-        /* NodeFlag.Anonymous */
-      );
-      NodeSet = class _NodeSet {
-        /**
-        Create a set with the given types. The `id` property of each
-        type should correspond to its position within the array.
-        */
-        constructor(types8) {
-          this.types = types8;
-          for (let i9 = 0; i9 < types8.length; i9++)
-            if (types8[i9].id != i9)
-              throw new RangeError("Node type ids should correspond to array positions when creating a node set");
-        }
-        /**
-        Create a copy of this set with some node properties added. The
-        arguments to this method can be created with
-        [`NodeProp.add`](#common.NodeProp.add).
-        */
-        extend(...props) {
-          let newTypes = [];
-          for (let type9 of this.types) {
-            let newProps = null;
-            for (let source of props) {
-              let add5 = source(type9);
-              if (add5) {
-                if (!newProps)
-                  newProps = Object.assign({}, type9.props);
-                let value2 = add5[1], prop = add5[0];
-                if (prop.combine && prop.id in newProps)
-                  value2 = prop.combine(newProps[prop.id], value2);
-                newProps[prop.id] = value2;
-              }
-            }
-            newTypes.push(newProps ? new NodeType(type9.name, newProps, type9.id, type9.flags) : type9);
-          }
-          return new _NodeSet(newTypes);
-        }
-      };
-      CachedNode = /* @__PURE__ */ new WeakMap();
-      CachedInnerNode = /* @__PURE__ */ new WeakMap();
-      (function(IterMode2) {
-        IterMode2[IterMode2["ExcludeBuffers"] = 1] = "ExcludeBuffers";
-        IterMode2[IterMode2["IncludeAnonymous"] = 2] = "IncludeAnonymous";
-        IterMode2[IterMode2["IgnoreMounts"] = 4] = "IgnoreMounts";
-        IterMode2[IterMode2["IgnoreOverlays"] = 8] = "IgnoreOverlays";
-        IterMode2[IterMode2["EnterBracketed"] = 16] = "EnterBracketed";
-      })(IterMode || (IterMode = {}));
-      Tree = class _Tree {
-        /**
-        Construct a new tree. See also [`Tree.build`](#common.Tree^build).
-        */
-        constructor(type9, children2, positions2, length2, props) {
-          this.type = type9;
-          this.children = children2;
-          this.positions = positions2;
-          this.length = length2;
-          this.props = null;
-          if (props && props.length) {
-            this.props = /* @__PURE__ */ Object.create(null);
-            for (let [prop, value2] of props)
-              this.props[typeof prop == "number" ? prop : prop.id] = value2;
-          }
-        }
-        /**
-        @internal
-        */
-        toString() {
-          let mounted = MountedTree.get(this);
-          if (mounted && !mounted.overlay)
-            return mounted.tree.toString();
-          let children2 = "";
-          for (let ch5 of this.children) {
-            let str2 = ch5.toString();
-            if (str2) {
-              if (children2)
-                children2 += ",";
-              children2 += str2;
-            }
-          }
-          return !this.type.name ? children2 : (/\W/.test(this.type.name) && !this.type.isError ? JSON.stringify(this.type.name) : this.type.name) + (children2.length ? "(" + children2 + ")" : "");
-        }
-        /**
-        Get a [tree cursor](#common.TreeCursor) positioned at the top of
-        the tree. Mode can be used to [control](#common.IterMode) which
-        nodes the cursor visits.
-        */
-        cursor(mode = 0) {
-          return new TreeCursor(this.topNode, mode);
-        }
-        /**
-        Get a [tree cursor](#common.TreeCursor) pointing into this tree
-        at the given position and side (see
-        [`moveTo`](#common.TreeCursor.moveTo).
-        */
-        cursorAt(pos, side = 0, mode = 0) {
-          let scope = CachedNode.get(this) || this.topNode;
-          let cursor4 = new TreeCursor(scope);
-          cursor4.moveTo(pos, side);
-          CachedNode.set(this, cursor4._tree);
-          return cursor4;
-        }
-        /**
-        Get a [syntax node](#common.SyntaxNode) object for the top of the
-        tree.
-        */
-        get topNode() {
-          return new TreeNode2(this, 0, 0, null);
-        }
-        /**
-        Get the [syntax node](#common.SyntaxNode) at the given position.
-        If `side` is -1, this will move into nodes that end at the
-        position. If 1, it'll move into nodes that start at the
-        position. With 0, it'll only enter nodes that cover the position
-        from both sides.
-        
-        Note that this will not enter
-        [overlays](#common.MountedTree.overlay), and you often want
-        [`resolveInner`](#common.Tree.resolveInner) instead.
-        */
-        resolve(pos, side = 0) {
-          let node3 = resolveNode(CachedNode.get(this) || this.topNode, pos, side, false);
-          CachedNode.set(this, node3);
-          return node3;
-        }
-        /**
-        Like [`resolve`](#common.Tree.resolve), but will enter
-        [overlaid](#common.MountedTree.overlay) nodes, producing a syntax node
-        pointing into the innermost overlaid tree at the given position
-        (with parent links going through all parent structure, including
-        the host trees).
-        */
-        resolveInner(pos, side = 0) {
-          let node3 = resolveNode(CachedInnerNode.get(this) || this.topNode, pos, side, true);
-          CachedInnerNode.set(this, node3);
-          return node3;
-        }
-        /**
-        In some situations, it can be useful to iterate through all
-        nodes around a position, including those in overlays that don't
-        directly cover the position. This method gives you an iterator
-        that will produce all nodes, from small to big, around the given
-        position.
-        */
-        resolveStack(pos, side = 0) {
-          return stackIterator(this, pos, side);
-        }
-        /**
-        Iterate over the tree and its children, calling `enter` for any
-        node that touches the `from`/`to` region (if given) before
-        running over such a node's children, and `leave` (if given) when
-        leaving the node. When `enter` returns `false`, that node will
-        not have its children iterated over (or `leave` called).
-        */
-        iterate(spec2) {
-          let { enter, leave, from: from5 = 0, to = this.length } = spec2;
-          let mode = spec2.mode || 0, anon = (mode & IterMode.IncludeAnonymous) > 0;
-          for (let c5 = this.cursor(mode | IterMode.IncludeAnonymous); ; ) {
-            let entered = false;
-            if (c5.from <= to && c5.to >= from5 && (!anon && c5.type.isAnonymous || enter(c5) !== false)) {
-              if (c5.firstChild())
-                continue;
-              entered = true;
-            }
-            for (; ; ) {
-              if (entered && leave && (anon || !c5.type.isAnonymous))
-                leave(c5);
-              if (c5.nextSibling())
-                break;
-              if (!c5.parent())
-                return;
-              entered = true;
-            }
-          }
-        }
-        /**
-        Get the value of the given [node prop](#common.NodeProp) for this
-        node. Works with both per-node and per-type props.
-        */
-        prop(prop) {
-          return !prop.perNode ? this.type.prop(prop) : this.props ? this.props[prop.id] : void 0;
-        }
-        /**
-        Returns the node's [per-node props](#common.NodeProp.perNode) in a
-        format that can be passed to the [`Tree`](#common.Tree)
-        constructor.
-        */
-        get propValues() {
-          let result = [];
-          if (this.props)
-            for (let id42 in this.props)
-              result.push([+id42, this.props[id42]]);
-          return result;
-        }
-        /**
-        Balance the direct children of this tree, producing a copy of
-        which may have children grouped into subtrees with type
-        [`NodeType.none`](#common.NodeType^none).
-        */
-        balance(config5 = {}) {
-          return this.children.length <= 8 ? this : balanceRange(NodeType.none, this.children, this.positions, 0, this.children.length, 0, this.length, (children2, positions2, length2) => new _Tree(this.type, children2, positions2, length2, this.propValues), config5.makeTree || ((children2, positions2, length2) => new _Tree(NodeType.none, children2, positions2, length2)));
-        }
-        /**
-        Build a tree from a postfix-ordered buffer of node information,
-        or a cursor over such a buffer.
-        */
-        static build(data7) {
-          return buildTree5(data7);
-        }
-      };
-      Tree.empty = new Tree(NodeType.none, [], [], 0);
-      FlatBufferCursor = class _FlatBufferCursor {
-        constructor(buffer3, index2) {
-          this.buffer = buffer3;
-          this.index = index2;
-        }
-        get id() {
-          return this.buffer[this.index - 4];
-        }
-        get start() {
-          return this.buffer[this.index - 3];
-        }
-        get end() {
-          return this.buffer[this.index - 2];
-        }
-        get size() {
-          return this.buffer[this.index - 1];
-        }
-        get pos() {
-          return this.index;
-        }
-        next() {
-          this.index -= 4;
-        }
-        fork() {
-          return new _FlatBufferCursor(this.buffer, this.index);
-        }
-      };
-      TreeBuffer = class _TreeBuffer {
-        /**
-        Create a tree buffer.
-        */
-        constructor(buffer3, length2, set6) {
-          this.buffer = buffer3;
-          this.length = length2;
-          this.set = set6;
-        }
-        /**
-        @internal
-        */
-        get type() {
-          return NodeType.none;
-        }
-        /**
-        @internal
-        */
-        toString() {
-          let result = [];
-          for (let index2 = 0; index2 < this.buffer.length; ) {
-            result.push(this.childString(index2));
-            index2 = this.buffer[index2 + 3];
-          }
-          return result.join(",");
-        }
-        /**
-        @internal
-        */
-        childString(index2) {
-          let id42 = this.buffer[index2], endIndex = this.buffer[index2 + 3];
-          let type9 = this.set.types[id42], result = type9.name;
-          if (/\W/.test(result) && !type9.isError)
-            result = JSON.stringify(result);
-          index2 += 4;
-          if (endIndex == index2)
-            return result;
-          let children2 = [];
-          while (index2 < endIndex) {
-            children2.push(this.childString(index2));
-            index2 = this.buffer[index2 + 3];
-          }
-          return result + "(" + children2.join(",") + ")";
-        }
-        /**
-        @internal
-        */
-        findChild(startIndex, endIndex, dir2, pos, side) {
-          let { buffer: buffer3 } = this, pick2 = -1;
-          for (let i9 = startIndex; i9 != endIndex; i9 = buffer3[i9 + 3]) {
-            if (checkSide(side, pos, buffer3[i9 + 1], buffer3[i9 + 2])) {
-              pick2 = i9;
-              if (dir2 > 0)
-                break;
-            }
-          }
-          return pick2;
-        }
-        /**
-        @internal
-        */
-        slice(startI, endI, from5) {
-          let b3 = this.buffer;
-          let copy6 = new Uint16Array(endI - startI), len2 = 0;
-          for (let i9 = startI, j4 = 0; i9 < endI; ) {
-            copy6[j4++] = b3[i9++];
-            copy6[j4++] = b3[i9++] - from5;
-            let to = copy6[j4++] = b3[i9++] - from5;
-            copy6[j4++] = b3[i9++] - startI;
-            len2 = Math.max(len2, to);
-          }
-          return new _TreeBuffer(copy6, len2, this.set);
-        }
-      };
-      BaseNode = class {
-        cursor(mode = 0) {
-          return new TreeCursor(this, mode);
-        }
-        getChild(type9, before = null, after = null) {
-          let r6 = getChildren(this, type9, before, after);
-          return r6.length ? r6[0] : null;
-        }
-        getChildren(type9, before = null, after = null) {
-          return getChildren(this, type9, before, after);
-        }
-        resolve(pos, side = 0) {
-          return resolveNode(this, pos, side, false);
-        }
-        resolveInner(pos, side = 0) {
-          return resolveNode(this, pos, side, true);
-        }
-        matchContext(context) {
-          return matchNodeContext(this.parent, context);
-        }
-        enterUnfinishedNodesBefore(pos) {
-          let scan = this.childBefore(pos), node3 = this;
-          while (scan) {
-            let last4 = scan.lastChild;
-            if (!last4 || last4.to != scan.to)
-              break;
-            if (last4.type.isError && last4.from == last4.to) {
-              node3 = scan;
-              scan = last4.prevSibling;
-            } else {
-              scan = last4;
-            }
-          }
-          return node3;
-        }
-        get node() {
-          return this;
-        }
-        get next() {
-          return this.parent;
-        }
-      };
-      TreeNode2 = class _TreeNode extends BaseNode {
-        constructor(_tree, from5, index2, _parent) {
-          super();
-          this._tree = _tree;
-          this.from = from5;
-          this.index = index2;
-          this._parent = _parent;
-        }
-        get type() {
-          return this._tree.type;
-        }
-        get name() {
-          return this._tree.type.name;
-        }
-        get to() {
-          return this.from + this._tree.length;
-        }
-        nextChild(i9, dir2, pos, side, mode = 0) {
-          for (let parent4 = this; ; ) {
-            for (let { children: children2, positions: positions2 } = parent4._tree, e3 = dir2 > 0 ? children2.length : -1; i9 != e3; i9 += dir2) {
-              let next4 = children2[i9], start4 = positions2[i9] + parent4.from, mounted;
-              if (!(mode & IterMode.EnterBracketed && next4 instanceof Tree && (mounted = MountedTree.get(next4)) && !mounted.overlay && mounted.bracketed && pos >= start4 && pos <= start4 + next4.length) && !checkSide(side, pos, start4, start4 + next4.length))
-                continue;
-              if (next4 instanceof TreeBuffer) {
-                if (mode & IterMode.ExcludeBuffers)
-                  continue;
-                let index2 = next4.findChild(0, next4.buffer.length, dir2, pos - start4, side);
-                if (index2 > -1)
-                  return new BufferNode(new BufferContext(parent4, next4, i9, start4), null, index2);
-              } else if (mode & IterMode.IncludeAnonymous || (!next4.type.isAnonymous || hasChild(next4))) {
-                let mounted2;
-                if (!(mode & IterMode.IgnoreMounts) && (mounted2 = MountedTree.get(next4)) && !mounted2.overlay)
-                  return new _TreeNode(mounted2.tree, start4, i9, parent4);
-                let inner4 = new _TreeNode(next4, start4, i9, parent4);
-                return mode & IterMode.IncludeAnonymous || !inner4.type.isAnonymous ? inner4 : inner4.nextChild(dir2 < 0 ? next4.children.length - 1 : 0, dir2, pos, side, mode);
-              }
-            }
-            if (mode & IterMode.IncludeAnonymous || !parent4.type.isAnonymous)
-              return null;
-            if (parent4.index >= 0)
-              i9 = parent4.index + dir2;
-            else
-              i9 = dir2 < 0 ? -1 : parent4._parent._tree.children.length;
-            parent4 = parent4._parent;
-            if (!parent4)
-              return null;
-          }
-        }
-        get firstChild() {
-          return this.nextChild(
-            0,
-            1,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        get lastChild() {
-          return this.nextChild(
-            this._tree.children.length - 1,
-            -1,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        childAfter(pos) {
-          return this.nextChild(
-            0,
-            1,
-            pos,
-            2
-            /* Side.After */
-          );
-        }
-        childBefore(pos) {
-          return this.nextChild(
-            this._tree.children.length - 1,
-            -1,
-            pos,
-            -2
-            /* Side.Before */
-          );
-        }
-        prop(prop) {
-          return this._tree.prop(prop);
-        }
-        enter(pos, side, mode = 0) {
-          let mounted;
-          if (!(mode & IterMode.IgnoreOverlays) && (mounted = MountedTree.get(this._tree)) && mounted.overlay) {
-            let rPos = pos - this.from, enterBracketed = mode & IterMode.EnterBracketed && mounted.bracketed;
-            for (let { from: from5, to } of mounted.overlay) {
-              if ((side > 0 || enterBracketed ? from5 <= rPos : from5 < rPos) && (side < 0 || enterBracketed ? to >= rPos : to > rPos))
-                return new _TreeNode(mounted.tree, mounted.overlay[0].from + this.from, -1, this);
-            }
-          }
-          return this.nextChild(0, 1, pos, side, mode);
-        }
-        nextSignificantParent() {
-          let val = this;
-          while (val.type.isAnonymous && val._parent)
-            val = val._parent;
-          return val;
-        }
-        get parent() {
-          return this._parent ? this._parent.nextSignificantParent() : null;
-        }
-        get nextSibling() {
-          return this._parent && this.index >= 0 ? this._parent.nextChild(
-            this.index + 1,
-            1,
-            0,
-            4
-            /* Side.DontCare */
-          ) : null;
-        }
-        get prevSibling() {
-          return this._parent && this.index >= 0 ? this._parent.nextChild(
-            this.index - 1,
-            -1,
-            0,
-            4
-            /* Side.DontCare */
-          ) : null;
-        }
-        get tree() {
-          return this._tree;
-        }
-        toTree() {
-          return this._tree;
-        }
-        /**
-        @internal
-        */
-        toString() {
-          return this._tree.toString();
-        }
-      };
-      BufferContext = class {
-        constructor(parent4, buffer3, index2, start4) {
-          this.parent = parent4;
-          this.buffer = buffer3;
-          this.index = index2;
-          this.start = start4;
-        }
-      };
-      BufferNode = class _BufferNode extends BaseNode {
-        get name() {
-          return this.type.name;
-        }
-        get from() {
-          return this.context.start + this.context.buffer.buffer[this.index + 1];
-        }
-        get to() {
-          return this.context.start + this.context.buffer.buffer[this.index + 2];
-        }
-        constructor(context, _parent, index2) {
-          super();
-          this.context = context;
-          this._parent = _parent;
-          this.index = index2;
-          this.type = context.buffer.set.types[context.buffer.buffer[index2]];
-        }
-        child(dir2, pos, side) {
-          let { buffer: buffer3 } = this.context;
-          let index2 = buffer3.findChild(this.index + 4, buffer3.buffer[this.index + 3], dir2, pos - this.context.start, side);
-          return index2 < 0 ? null : new _BufferNode(this.context, this, index2);
-        }
-        get firstChild() {
-          return this.child(
-            1,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        get lastChild() {
-          return this.child(
-            -1,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        childAfter(pos) {
-          return this.child(
-            1,
-            pos,
-            2
-            /* Side.After */
-          );
-        }
-        childBefore(pos) {
-          return this.child(
-            -1,
-            pos,
-            -2
-            /* Side.Before */
-          );
-        }
-        prop(prop) {
-          return this.type.prop(prop);
-        }
-        enter(pos, side, mode = 0) {
-          if (mode & IterMode.ExcludeBuffers)
-            return null;
-          let { buffer: buffer3 } = this.context;
-          let index2 = buffer3.findChild(this.index + 4, buffer3.buffer[this.index + 3], side > 0 ? 1 : -1, pos - this.context.start, side);
-          return index2 < 0 ? null : new _BufferNode(this.context, this, index2);
-        }
-        get parent() {
-          return this._parent || this.context.parent.nextSignificantParent();
-        }
-        externalSibling(dir2) {
-          return this._parent ? null : this.context.parent.nextChild(
-            this.context.index + dir2,
-            dir2,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        get nextSibling() {
-          let { buffer: buffer3 } = this.context;
-          let after = buffer3.buffer[this.index + 3];
-          if (after < (this._parent ? buffer3.buffer[this._parent.index + 3] : buffer3.buffer.length))
-            return new _BufferNode(this.context, this._parent, after);
-          return this.externalSibling(1);
-        }
-        get prevSibling() {
-          let { buffer: buffer3 } = this.context;
-          let parentStart = this._parent ? this._parent.index + 4 : 0;
-          if (this.index == parentStart)
-            return this.externalSibling(-1);
-          return new _BufferNode(this.context, this._parent, buffer3.findChild(
-            parentStart,
-            this.index,
-            -1,
-            0,
-            4
-            /* Side.DontCare */
-          ));
-        }
-        get tree() {
-          return null;
-        }
-        toTree() {
-          let children2 = [], positions2 = [];
-          let { buffer: buffer3 } = this.context;
-          let startI = this.index + 4, endI = buffer3.buffer[this.index + 3];
-          if (endI > startI) {
-            let from5 = buffer3.buffer[this.index + 1];
-            children2.push(buffer3.slice(startI, endI, from5));
-            positions2.push(0);
-          }
-          return new Tree(this.type, children2, positions2, this.to - this.from);
-        }
-        /**
-        @internal
-        */
-        toString() {
-          return this.context.buffer.childString(this.index);
-        }
-      };
-      StackIterator = class {
-        constructor(heads, node3) {
-          this.heads = heads;
-          this.node = node3;
-        }
-        get next() {
-          return iterStack(this.heads);
-        }
-      };
-      TreeCursor = class {
-        /**
-        Shorthand for `.type.name`.
-        */
-        get name() {
-          return this.type.name;
-        }
-        /**
-        @internal
-        */
-        constructor(node3, mode = 0) {
-          this.buffer = null;
-          this.stack = [];
-          this.index = 0;
-          this.bufferNode = null;
-          this.mode = mode & ~IterMode.EnterBracketed;
-          if (node3 instanceof TreeNode2) {
-            this.yieldNode(node3);
-          } else {
-            this._tree = node3.context.parent;
-            this.buffer = node3.context;
-            for (let n2 = node3._parent; n2; n2 = n2._parent)
-              this.stack.unshift(n2.index);
-            this.bufferNode = node3;
-            this.yieldBuf(node3.index);
-          }
-        }
-        yieldNode(node3) {
-          if (!node3)
-            return false;
-          this._tree = node3;
-          this.type = node3.type;
-          this.from = node3.from;
-          this.to = node3.to;
-          return true;
-        }
-        yieldBuf(index2, type9) {
-          this.index = index2;
-          let { start: start4, buffer: buffer3 } = this.buffer;
-          this.type = type9 || buffer3.set.types[buffer3.buffer[index2]];
-          this.from = start4 + buffer3.buffer[index2 + 1];
-          this.to = start4 + buffer3.buffer[index2 + 2];
-          return true;
-        }
-        /**
-        @internal
-        */
-        yield(node3) {
-          if (!node3)
-            return false;
-          if (node3 instanceof TreeNode2) {
-            this.buffer = null;
-            return this.yieldNode(node3);
-          }
-          this.buffer = node3.context;
-          return this.yieldBuf(node3.index, node3.type);
-        }
-        /**
-        @internal
-        */
-        toString() {
-          return this.buffer ? this.buffer.buffer.childString(this.index) : this._tree.toString();
-        }
-        /**
-        @internal
-        */
-        enterChild(dir2, pos, side) {
-          if (!this.buffer)
-            return this.yield(this._tree.nextChild(dir2 < 0 ? this._tree._tree.children.length - 1 : 0, dir2, pos, side, this.mode));
-          let { buffer: buffer3 } = this.buffer;
-          let index2 = buffer3.findChild(this.index + 4, buffer3.buffer[this.index + 3], dir2, pos - this.buffer.start, side);
-          if (index2 < 0)
-            return false;
-          this.stack.push(this.index);
-          return this.yieldBuf(index2);
-        }
-        /**
-        Move the cursor to this node's first child. When this returns
-        false, the node has no child, and the cursor has not been moved.
-        */
-        firstChild() {
-          return this.enterChild(
-            1,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        /**
-        Move the cursor to this node's last child.
-        */
-        lastChild() {
-          return this.enterChild(
-            -1,
-            0,
-            4
-            /* Side.DontCare */
-          );
-        }
-        /**
-        Move the cursor to the first child that ends after `pos`.
-        */
-        childAfter(pos) {
-          return this.enterChild(
-            1,
-            pos,
-            2
-            /* Side.After */
-          );
-        }
-        /**
-        Move to the last child that starts before `pos`.
-        */
-        childBefore(pos) {
-          return this.enterChild(
-            -1,
-            pos,
-            -2
-            /* Side.Before */
-          );
-        }
-        /**
-        Move the cursor to the child around `pos`. If side is -1 the
-        child may end at that position, when 1 it may start there. This
-        will also enter [overlaid](#common.MountedTree.overlay)
-        [mounted](#common.NodeProp^mounted) trees unless `overlays` is
-        set to false.
-        */
-        enter(pos, side, mode = this.mode) {
-          if (!this.buffer)
-            return this.yield(this._tree.enter(pos, side, mode));
-          return mode & IterMode.ExcludeBuffers ? false : this.enterChild(1, pos, side);
-        }
-        /**
-        Move to the node's parent node, if this isn't the top node.
-        */
-        parent() {
-          if (!this.buffer)
-            return this.yieldNode(this.mode & IterMode.IncludeAnonymous ? this._tree._parent : this._tree.parent);
-          if (this.stack.length)
-            return this.yieldBuf(this.stack.pop());
-          let parent4 = this.mode & IterMode.IncludeAnonymous ? this.buffer.parent : this.buffer.parent.nextSignificantParent();
-          this.buffer = null;
-          return this.yieldNode(parent4);
-        }
-        /**
-        @internal
-        */
-        sibling(dir2) {
-          if (!this.buffer)
-            return !this._tree._parent ? false : this.yield(this._tree.index < 0 ? null : this._tree._parent.nextChild(this._tree.index + dir2, dir2, 0, 4, this.mode));
-          let { buffer: buffer3 } = this.buffer, d6 = this.stack.length - 1;
-          if (dir2 < 0) {
-            let parentStart = d6 < 0 ? 0 : this.stack[d6] + 4;
-            if (this.index != parentStart)
-              return this.yieldBuf(buffer3.findChild(
-                parentStart,
-                this.index,
-                -1,
-                0,
-                4
-                /* Side.DontCare */
-              ));
-          } else {
-            let after = buffer3.buffer[this.index + 3];
-            if (after < (d6 < 0 ? buffer3.buffer.length : buffer3.buffer[this.stack[d6] + 3]))
-              return this.yieldBuf(after);
-          }
-          return d6 < 0 ? this.yield(this.buffer.parent.nextChild(this.buffer.index + dir2, dir2, 0, 4, this.mode)) : false;
-        }
-        /**
-        Move to this node's next sibling, if any.
-        */
-        nextSibling() {
-          return this.sibling(1);
-        }
-        /**
-        Move to this node's previous sibling, if any.
-        */
-        prevSibling() {
-          return this.sibling(-1);
-        }
-        atLastNode(dir2) {
-          let index2, parent4, { buffer: buffer3 } = this;
-          if (buffer3) {
-            if (dir2 > 0) {
-              if (this.index < buffer3.buffer.buffer.length)
-                return false;
-            } else {
-              for (let i9 = 0; i9 < this.index; i9++)
-                if (buffer3.buffer.buffer[i9 + 3] < this.index)
-                  return false;
-            }
-            ({ index: index2, parent: parent4 } = buffer3);
-          } else {
-            ({ index: index2, _parent: parent4 } = this._tree);
-          }
-          for (; parent4; { index: index2, _parent: parent4 } = parent4) {
-            if (index2 > -1)
-              for (let i9 = index2 + dir2, e3 = dir2 < 0 ? -1 : parent4._tree.children.length; i9 != e3; i9 += dir2) {
-                let child = parent4._tree.children[i9];
-                if (this.mode & IterMode.IncludeAnonymous || child instanceof TreeBuffer || !child.type.isAnonymous || hasChild(child))
-                  return false;
-              }
-          }
-          return true;
-        }
-        move(dir2, enter) {
-          if (enter && this.enterChild(
-            dir2,
-            0,
-            4
-            /* Side.DontCare */
-          ))
-            return true;
-          for (; ; ) {
-            if (this.sibling(dir2))
-              return true;
-            if (this.atLastNode(dir2) || !this.parent())
-              return false;
-          }
-        }
-        /**
-        Move to the next node in a
-        [pre-order](https://en.wikipedia.org/wiki/Tree_traversal#Pre-order,_NLR)
-        traversal, going from a node to its first child or, if the
-        current node is empty or `enter` is false, its next sibling or
-        the next sibling of the first parent node that has one.
-        */
-        next(enter = true) {
-          return this.move(1, enter);
-        }
-        /**
-        Move to the next node in a last-to-first pre-order traversal. A
-        node is followed by its last child or, if it has none, its
-        previous sibling or the previous sibling of the first parent
-        node that has one.
-        */
-        prev(enter = true) {
-          return this.move(-1, enter);
-        }
-        /**
-        Move the cursor to the innermost node that covers `pos`. If
-        `side` is -1, it will enter nodes that end at `pos`. If it is 1,
-        it will enter nodes that start at `pos`.
-        */
-        moveTo(pos, side = 0) {
-          while (this.from == this.to || (side < 1 ? this.from >= pos : this.from > pos) || (side > -1 ? this.to <= pos : this.to < pos))
-            if (!this.parent())
-              break;
-          while (this.enterChild(1, pos, side)) {
-          }
-          return this;
-        }
-        /**
-        Get a [syntax node](#common.SyntaxNode) at the cursor's current
-        position.
-        */
-        get node() {
-          if (!this.buffer)
-            return this._tree;
-          let cache6 = this.bufferNode, result = null, depth = 0;
-          if (cache6 && cache6.context == this.buffer) {
-            scan: for (let index2 = this.index, d6 = this.stack.length; d6 >= 0; ) {
-              for (let c5 = cache6; c5; c5 = c5._parent)
-                if (c5.index == index2) {
-                  if (index2 == this.index)
-                    return c5;
-                  result = c5;
-                  depth = d6 + 1;
-                  break scan;
-                }
-              index2 = this.stack[--d6];
-            }
-          }
-          for (let i9 = depth; i9 < this.stack.length; i9++)
-            result = new BufferNode(this.buffer, result, this.stack[i9]);
-          return this.bufferNode = new BufferNode(this.buffer, result, this.index);
-        }
-        /**
-        Get the [tree](#common.Tree) that represents the current node, if
-        any. Will return null when the node is in a [tree
-        buffer](#common.TreeBuffer).
-        */
-        get tree() {
-          return this.buffer ? null : this._tree._tree;
-        }
-        /**
-        Iterate over the current node and all its descendants, calling
-        `enter` when entering a node and `leave`, if given, when leaving
-        one. When `enter` returns `false`, any children of that node are
-        skipped, and `leave` isn't called for it.
-        */
-        iterate(enter, leave) {
-          for (let depth = 0; ; ) {
-            let mustLeave = false;
-            if (this.type.isAnonymous || enter(this) !== false) {
-              if (this.firstChild()) {
-                depth++;
-                continue;
-              }
-              if (!this.type.isAnonymous)
-                mustLeave = true;
-            }
-            for (; ; ) {
-              if (mustLeave && leave)
-                leave(this);
-              mustLeave = this.type.isAnonymous;
-              if (!depth)
-                return;
-              if (this.nextSibling())
-                break;
-              this.parent();
-              depth--;
-              mustLeave = true;
-            }
-          }
-        }
-        /**
-        Test whether the current node matches a given context—a sequence
-        of direct parent node names. Empty strings in the context array
-        are treated as wildcards.
-        */
-        matchContext(context) {
-          if (!this.buffer)
-            return matchNodeContext(this.node.parent, context);
-          let { buffer: buffer3 } = this.buffer, { types: types8 } = buffer3.set;
-          for (let i9 = context.length - 1, d6 = this.stack.length - 1; i9 >= 0; d6--) {
-            if (d6 < 0)
-              return matchNodeContext(this._tree, context, i9);
-            let type9 = types8[buffer3.buffer[this.stack[d6]]];
-            if (!type9.isAnonymous) {
-              if (context[i9] && context[i9] != type9.name)
-                return false;
-              i9--;
-            }
-          }
-          return true;
-        }
-      };
-      nodeSizeCache = /* @__PURE__ */ new WeakMap();
-      NodeWeakMap = class {
-        constructor() {
-          this.map = /* @__PURE__ */ new WeakMap();
-        }
-        setBuffer(buffer3, index2, value2) {
-          let inner4 = this.map.get(buffer3);
-          if (!inner4)
-            this.map.set(buffer3, inner4 = /* @__PURE__ */ new Map());
-          inner4.set(index2, value2);
-        }
-        getBuffer(buffer3, index2) {
-          let inner4 = this.map.get(buffer3);
-          return inner4 && inner4.get(index2);
-        }
-        /**
-        Set the value for this syntax node.
-        */
-        set(node3, value2) {
-          if (node3 instanceof BufferNode)
-            this.setBuffer(node3.context.buffer, node3.index, value2);
-          else if (node3 instanceof TreeNode2)
-            this.map.set(node3.tree, value2);
-        }
-        /**
-        Retrieve value for this syntax node, if it exists in the map.
-        */
-        get(node3) {
-          return node3 instanceof BufferNode ? this.getBuffer(node3.context.buffer, node3.index) : node3 instanceof TreeNode2 ? this.map.get(node3.tree) : void 0;
-        }
-        /**
-        Set the value for the node that a cursor currently points to.
-        */
-        cursorSet(cursor4, value2) {
-          if (cursor4.buffer)
-            this.setBuffer(cursor4.buffer.buffer, cursor4.index, value2);
-          else
-            this.map.set(cursor4.tree, value2);
-        }
-        /**
-        Retrieve the value for the node that a cursor currently points
-        to.
-        */
-        cursorGet(cursor4) {
-          return cursor4.buffer ? this.getBuffer(cursor4.buffer.buffer, cursor4.index) : this.map.get(cursor4.tree);
-        }
-      };
-      TreeFragment = class _TreeFragment {
-        /**
-        Construct a tree fragment. You'll usually want to use
-        [`addTree`](#common.TreeFragment^addTree) and
-        [`applyChanges`](#common.TreeFragment^applyChanges) instead of
-        calling this directly.
-        */
-        constructor(from5, to, tree, offset3, openStart = false, openEnd = false) {
-          this.from = from5;
-          this.to = to;
-          this.tree = tree;
-          this.offset = offset3;
-          this.open = (openStart ? 1 : 0) | (openEnd ? 2 : 0);
-        }
-        /**
-        Whether the start of the fragment represents the start of a
-        parse, or the end of a change. (In the second case, it may not
-        be safe to reuse some nodes at the start, depending on the
-        parsing algorithm.)
-        */
-        get openStart() {
-          return (this.open & 1) > 0;
-        }
-        /**
-        Whether the end of the fragment represents the end of a
-        full-document parse, or the start of a change.
-        */
-        get openEnd() {
-          return (this.open & 2) > 0;
-        }
-        /**
-        Create a set of fragments from a freshly parsed tree, or update
-        an existing set of fragments by replacing the ones that overlap
-        with a tree with content from the new tree. When `partial` is
-        true, the parse is treated as incomplete, and the resulting
-        fragment has [`openEnd`](#common.TreeFragment.openEnd) set to
-        true.
-        */
-        static addTree(tree, fragments = [], partial = false) {
-          let result = [new _TreeFragment(0, tree.length, tree, 0, false, partial)];
-          for (let f2 of fragments)
-            if (f2.to > tree.length)
-              result.push(f2);
-          return result;
-        }
-        /**
-        Apply a set of edits to an array of fragments, removing or
-        splitting fragments as necessary to remove edited ranges, and
-        adjusting offsets for fragments that moved.
-        */
-        static applyChanges(fragments, changes, minGap = 128) {
-          if (!changes.length)
-            return fragments;
-          let result = [];
-          let fI = 1, nextF = fragments.length ? fragments[0] : null;
-          for (let cI = 0, pos = 0, off = 0; ; cI++) {
-            let nextC = cI < changes.length ? changes[cI] : null;
-            let nextPos = nextC ? nextC.fromA : 1e9;
-            if (nextPos - pos >= minGap)
-              while (nextF && nextF.from < nextPos) {
-                let cut = nextF;
-                if (pos >= cut.from || nextPos <= cut.to || off) {
-                  let fFrom = Math.max(cut.from, pos) - off, fTo = Math.min(cut.to, nextPos) - off;
-                  cut = fFrom >= fTo ? null : new _TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0, !!nextC);
-                }
-                if (cut)
-                  result.push(cut);
-                if (nextF.to > nextPos)
-                  break;
-                nextF = fI < fragments.length ? fragments[fI++] : null;
-              }
-            if (!nextC)
-              break;
-            pos = nextC.toA;
-            off = nextC.toA - nextC.toB;
-          }
-          return result;
-        }
-      };
-      Parser4 = class {
-        /**
-        Start a parse, returning a [partial parse](#common.PartialParse)
-        object. [`fragments`](#common.TreeFragment) can be passed in to
-        make the parse incremental.
-        
-        By default, the entire input is parsed. You can pass `ranges`,
-        which should be a sorted array of non-empty, non-overlapping
-        ranges, to parse only those ranges. The tree returned in that
-        case will start at `ranges[0].from`.
-        */
-        startParse(input, fragments, ranges) {
-          if (typeof input == "string")
-            input = new StringInput(input);
-          ranges = !ranges ? [new Range3(0, input.length)] : ranges.length ? ranges.map((r6) => new Range3(r6.from, r6.to)) : [new Range3(0, 0)];
-          return this.createParse(input, fragments || [], ranges);
-        }
-        /**
-        Run a full parse, returning the resulting tree.
-        */
-        parse(input, fragments, ranges) {
-          let parse9 = this.startParse(input, fragments, ranges);
-          for (; ; ) {
-            let done = parse9.advance();
-            if (done)
-              return done;
-          }
-        }
-      };
-      StringInput = class {
-        constructor(string7) {
-          this.string = string7;
-        }
-        get length() {
-          return this.string.length;
-        }
-        chunk(from5) {
-          return this.string.slice(from5);
-        }
-        get lineChunks() {
-          return false;
-        }
-        read(from5, to) {
-          return this.string.slice(from5, to);
-        }
-      };
-      InnerParse = class {
-        constructor(parser58, parse9, overlay, bracketed3, target, from5) {
-          this.parser = parser58;
-          this.parse = parse9;
-          this.overlay = overlay;
-          this.bracketed = bracketed3;
-          this.target = target;
-          this.from = from5;
-        }
-      };
-      ActiveOverlay = class {
-        constructor(parser58, predicate, mounts, index2, start4, bracketed3, target, prev2) {
-          this.parser = parser58;
-          this.predicate = predicate;
-          this.mounts = mounts;
-          this.index = index2;
-          this.start = start4;
-          this.bracketed = bracketed3;
-          this.target = target;
-          this.prev = prev2;
-          this.depth = 0;
-          this.ranges = [];
-        }
-      };
-      stoppedInner = new NodeProp({ perNode: true });
-      MixedParse = class {
-        constructor(base6, nest, input, fragments, ranges) {
-          this.nest = nest;
-          this.input = input;
-          this.fragments = fragments;
-          this.ranges = ranges;
-          this.inner = [];
-          this.innerDone = 0;
-          this.baseTree = null;
-          this.stoppedAt = null;
-          this.baseParse = base6;
-        }
-        advance() {
-          if (this.baseParse) {
-            let done2 = this.baseParse.advance();
-            if (!done2)
-              return null;
-            this.baseParse = null;
-            this.baseTree = done2;
-            this.startInner();
-            if (this.stoppedAt != null)
-              for (let inner5 of this.inner)
-                inner5.parse.stopAt(this.stoppedAt);
-          }
-          if (this.innerDone == this.inner.length) {
-            let result = this.baseTree;
-            if (this.stoppedAt != null)
-              result = new Tree(result.type, result.children, result.positions, result.length, result.propValues.concat([[stoppedInner, this.stoppedAt]]));
-            return result;
-          }
-          let inner4 = this.inner[this.innerDone], done = inner4.parse.advance();
-          if (done) {
-            this.innerDone++;
-            let props = Object.assign(/* @__PURE__ */ Object.create(null), inner4.target.props);
-            props[NodeProp.mounted.id] = new MountedTree(done, inner4.overlay, inner4.parser, inner4.bracketed);
-            inner4.target.props = props;
-          }
-          return null;
-        }
-        get parsedPos() {
-          if (this.baseParse)
-            return 0;
-          let pos = this.input.length;
-          for (let i9 = this.innerDone; i9 < this.inner.length; i9++) {
-            if (this.inner[i9].from < pos)
-              pos = Math.min(pos, this.inner[i9].parse.parsedPos);
-          }
-          return pos;
-        }
-        stopAt(pos) {
-          this.stoppedAt = pos;
-          if (this.baseParse)
-            this.baseParse.stopAt(pos);
-          else
-            for (let i9 = this.innerDone; i9 < this.inner.length; i9++)
-              this.inner[i9].parse.stopAt(pos);
-        }
-        startInner() {
-          let fragmentCursor = new FragmentCursor(this.fragments);
-          let overlay = null;
-          let covered = null;
-          let cursor4 = new TreeCursor(new TreeNode2(this.baseTree, this.ranges[0].from, 0, null), IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
-          scan: for (let nest, isCovered; ; ) {
-            let enter = true, range3;
-            if (this.stoppedAt != null && cursor4.from >= this.stoppedAt) {
-              enter = false;
-            } else if (fragmentCursor.hasNode(cursor4)) {
-              if (overlay) {
-                let match4 = overlay.mounts.find((m3) => m3.frag.from <= cursor4.from && m3.frag.to >= cursor4.to && m3.mount.overlay);
-                if (match4)
-                  for (let r6 of match4.mount.overlay) {
-                    let from5 = r6.from + match4.pos, to = r6.to + match4.pos;
-                    if (from5 >= cursor4.from && to <= cursor4.to && !overlay.ranges.some((r7) => r7.from < to && r7.to > from5))
-                      overlay.ranges.push({ from: from5, to });
-                  }
-              }
-              enter = false;
-            } else if (covered && (isCovered = checkCover(covered.ranges, cursor4.from, cursor4.to))) {
-              enter = isCovered != 2;
-            } else if (!cursor4.type.isAnonymous && (nest = this.nest(cursor4, this.input)) && (cursor4.from < cursor4.to || !nest.overlay)) {
-              if (!cursor4.tree) {
-                materialize(cursor4);
-                if (overlay)
-                  overlay.depth++;
-                if (covered)
-                  covered.depth++;
-              }
-              let oldMounts = fragmentCursor.findMounts(cursor4.from, nest.parser);
-              if (typeof nest.overlay == "function") {
-                overlay = new ActiveOverlay(nest.parser, nest.overlay, oldMounts, this.inner.length, cursor4.from, !!nest.bracketed, cursor4.tree, overlay);
-              } else {
-                let ranges = punchRanges(this.ranges, nest.overlay || (cursor4.from < cursor4.to ? [new Range3(cursor4.from, cursor4.to)] : []));
-                if (ranges.length)
-                  checkRanges(ranges);
-                if (ranges.length || !nest.overlay)
-                  this.inner.push(new InnerParse(nest.parser, ranges.length ? nest.parser.startParse(this.input, enterFragments(oldMounts, ranges), ranges) : nest.parser.startParse(""), nest.overlay ? nest.overlay.map((r6) => new Range3(r6.from - cursor4.from, r6.to - cursor4.from)) : null, !!nest.bracketed, cursor4.tree, ranges.length ? ranges[0].from : cursor4.from));
-                if (!nest.overlay)
-                  enter = false;
-                else if (ranges.length)
-                  covered = { ranges, depth: 0, prev: covered };
-              }
-            } else if (overlay && (range3 = overlay.predicate(cursor4))) {
-              if (range3 === true)
-                range3 = new Range3(cursor4.from, cursor4.to);
-              if (range3.from < range3.to) {
-                let last4 = overlay.ranges.length - 1;
-                if (last4 >= 0 && overlay.ranges[last4].to == range3.from)
-                  overlay.ranges[last4] = { from: overlay.ranges[last4].from, to: range3.to };
-                else
-                  overlay.ranges.push(range3);
-              }
-            }
-            if (enter && cursor4.firstChild()) {
-              if (overlay)
-                overlay.depth++;
-              if (covered)
-                covered.depth++;
-            } else {
-              for (; ; ) {
-                if (cursor4.nextSibling())
-                  break;
-                if (!cursor4.parent())
-                  break scan;
-                if (overlay && !--overlay.depth) {
-                  let ranges = punchRanges(this.ranges, overlay.ranges);
-                  if (ranges.length) {
-                    checkRanges(ranges);
-                    this.inner.splice(overlay.index, 0, new InnerParse(overlay.parser, overlay.parser.startParse(this.input, enterFragments(overlay.mounts, ranges), ranges), overlay.ranges.map((r6) => new Range3(r6.from - overlay.start, r6.to - overlay.start)), overlay.bracketed, overlay.target, ranges[0].from));
-                  }
-                  overlay = overlay.prev;
-                }
-                if (covered && !--covered.depth)
-                  covered = covered.prev;
-              }
-            }
-          }
-        }
-      };
-      StructureCursor = class {
-        constructor(root5, offset3) {
-          this.offset = offset3;
-          this.done = false;
-          this.cursor = root5.cursor(IterMode.IncludeAnonymous | IterMode.IgnoreMounts);
-        }
-        // Move to the first node (in pre-order) that starts at or after `pos`.
-        moveTo(pos) {
-          let { cursor: cursor4 } = this, p4 = pos - this.offset;
-          while (!this.done && cursor4.from < p4) {
-            if (cursor4.to >= pos && cursor4.enter(p4, 1, IterMode.IgnoreOverlays | IterMode.ExcludeBuffers)) ;
-            else if (cursor4.to <= pos) {
-              if (!cursor4.next(false))
-                this.done = true;
-            } else {
-              break;
-            }
-          }
-        }
-        hasNode(cursor4) {
-          this.moveTo(cursor4.from);
-          if (!this.done && this.cursor.from + this.offset == cursor4.from && this.cursor.tree) {
-            for (let tree = this.cursor.tree; ; ) {
-              if (tree == cursor4.tree)
-                return true;
-              if (tree.children.length && tree.positions[0] == 0 && tree.children[0] instanceof Tree)
-                tree = tree.children[0];
-              else
-                break;
-            }
-          }
-          return false;
-        }
-      };
-      FragmentCursor = class {
-        constructor(fragments) {
-          var _a2;
-          this.fragments = fragments;
-          this.curTo = 0;
-          this.fragI = 0;
-          if (fragments.length) {
-            let first3 = this.curFrag = fragments[0];
-            this.curTo = (_a2 = first3.tree.prop(stoppedInner)) !== null && _a2 !== void 0 ? _a2 : first3.to;
-            this.inner = new StructureCursor(first3.tree, -first3.offset);
-          } else {
-            this.curFrag = this.inner = null;
-          }
-        }
-        hasNode(node3) {
-          while (this.curFrag && node3.from >= this.curTo)
-            this.nextFrag();
-          return this.curFrag && this.curFrag.from <= node3.from && this.curTo >= node3.to && this.inner.hasNode(node3);
-        }
-        nextFrag() {
-          var _a2;
-          this.fragI++;
-          if (this.fragI == this.fragments.length) {
-            this.curFrag = this.inner = null;
-          } else {
-            let frag = this.curFrag = this.fragments[this.fragI];
-            this.curTo = (_a2 = frag.tree.prop(stoppedInner)) !== null && _a2 !== void 0 ? _a2 : frag.to;
-            this.inner = new StructureCursor(frag.tree, -frag.offset);
-          }
-        }
-        findMounts(pos, parser58) {
-          var _a2;
-          let result = [];
-          if (this.inner) {
-            this.inner.cursor.moveTo(pos, 1);
-            for (let pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
-              let mount2 = (_a2 = pos2.tree) === null || _a2 === void 0 ? void 0 : _a2.prop(NodeProp.mounted);
-              if (mount2 && mount2.parser == parser58) {
-                for (let i9 = this.fragI; i9 < this.fragments.length; i9++) {
-                  let frag = this.fragments[i9];
-                  if (frag.from >= pos2.to)
-                    break;
-                  if (frag.tree == this.curFrag.tree)
-                    result.push({
-                      frag,
-                      pos: pos2.from - frag.offset,
-                      mount: mount2
-                    });
-                }
-              }
-            }
-          }
-          return result;
-        }
-      };
-    }
-  });
-
   // node_modules/@lezer/highlight/dist/index.js
   function sameArray2(a3, b3) {
     return a3.length == b3.length && a3.every((x6, i9) => x6 == b3[i9]);
@@ -214921,7 +214921,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
   var nextTagID, Tag, nextModifierID, Modifier, ruleNodeProp, Rule2, HighlightBuilder, t5, comment2, name, typeName, propertyName, literal, string3, number8, content, heading, keyword, operator, punctuation, bracket, meta3, tags2, classHighlighter;
   var init_dist6 = __esm({
     "node_modules/@lezer/highlight/dist/index.js"() {
-      init_dist5();
+      init_dist3();
       nextTagID = 0;
       Tag = class _Tag {
         /**
@@ -216144,9 +216144,9 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
   var _a, languageDataProp, sublanguageProp, Language, LRLanguage, DocInput, currentContext, ParseContext, LanguageState, requestIdle, isInputPending, parseWorker, language, LanguageSupport, LanguageDescription, indentService, indentUnit, IndentContext, indentNodeProp, TreeIndentContext, flatIndent, DontIndentBeyond, foldService, foldNodeProp, foldEffect, unfoldEffect, foldState, foldCode, unfoldCode, foldAll, unfoldAll, foldKeymap, defaultConfig5, foldConfig, foldWidget, PreparedFoldWidget, foldGutterDefaults, FoldMarker, baseTheme$12, HighlightStyle, highlighterFacet, fallbackHighlighter, TreeHighlighter, treeHighlighter, defaultHighlightStyle, baseTheme2, DefaultScanDist, DefaultBrackets, bracketMatchingConfig, matchingMark, nonmatchingMark, bracketMatcher, bracketMatchingUnique, bracketMatchingHandle, StringStream, IndentedFrom, StreamLanguage, Parse, noTokens, typeArray, nodeSet, warned, byTag, defaultTable, TokenTable, defaultTokenTable, marks;
   var init_dist7 = __esm({
     "node_modules/@codemirror/language/dist/index.js"() {
-      init_dist5();
       init_dist3();
       init_dist4();
+      init_dist5();
       init_dist6();
       init_style_mod();
       languageDataProp = /* @__PURE__ */ new NodeProp();
@@ -217818,7 +217818,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
   var Stack3, StackContext, SimulatedStack, StackBufferCursor, CachedToken, nullToken, InputStream, TokenGroup, LocalTokenGroup, ExternalTokenizer, verbose, stackIDs, FragmentCursor2, TokenCache, Parse2, Dialect, id39, ContextTracker, LRParser;
   var init_dist8 = __esm({
     "node_modules/@lezer/lr/dist/index.js"() {
-      init_dist5();
+      init_dist3();
       Stack3 = class _Stack {
         /**
         @internal
@@ -219976,11 +219976,11 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       baseTheme3
     ];
   }
-  var CompletionContext, Option3, pickedCompletion, SourceCache, startCompletionEffect, closeCompletionEffect, FuzzyMatcher, StrictMatcher, completionConfig, setSelectedEffect, CompletionTooltip, CompletionDialog, CompletionState, baseAttrs, noAttrs2, none4, ActiveSource, ActiveResult, setActiveEffect, completionState, createTooltip2, acceptCompletion, startCompletion, closeCompletion, RunningQuery, MaxUpdateCount, MinAbortTime, completionPlugin, windows, commitCharacters, baseTheme3, FieldPos, FieldRange, Snippet, fieldMarker, fieldRange, ActiveSnippet, setActive, moveToField, snippetState, clearSnippet, nextSnippetField, prevSnippetField, defaultSnippetKeymap, snippetKeymap, addSnippetKeymap, snippetPointerHandler, defaults6, closeBracketEffect, closedBracket, bracketState, definedClosing, android, inputHandler2, deleteBracketPair, closeBracketsKeymap, completionKeymap, completionKeymapExt;
+  var CompletionContext, Option3, pickedCompletion, SourceCache, startCompletionEffect, closeCompletionEffect, FuzzyMatcher, StrictMatcher, completionConfig, setSelectedEffect, CompletionTooltip, CompletionDialog, CompletionState, baseAttrs, noAttrs2, none3, ActiveSource, ActiveResult, setActiveEffect, completionState, createTooltip2, acceptCompletion, startCompletion, closeCompletion, RunningQuery, MaxUpdateCount, MinAbortTime, completionPlugin, windows, commitCharacters, baseTheme3, FieldPos, FieldRange, Snippet, fieldMarker, fieldRange, ActiveSnippet, setActive, moveToField, snippetState, clearSnippet, nextSnippetField, prevSnippetField, defaultSnippetKeymap, snippetKeymap, addSnippetKeymap, snippetPointerHandler, defaults6, closeBracketEffect, closedBracket, bracketState, definedClosing, android, inputHandler2, deleteBracketPair, closeBracketsKeymap, completionKeymap, completionKeymapExt;
   var init_dist9 = __esm({
     "node_modules/@codemirror/autocomplete/dist/index.js"() {
-      init_dist3();
       init_dist4();
+      init_dist5();
       init_dist7();
       CompletionContext = class {
         /**
@@ -220517,7 +220517,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
           this.open = open4;
         }
         static start() {
-          return new _CompletionState(none4, "cm-ac-" + Math.floor(Math.random() * 2e6).toString(36), null);
+          return new _CompletionState(none3, "cm-ac-" + Math.floor(Math.random() * 2e6).toString(36), null);
         }
         update(tr) {
           let { state: state4 } = tr, conf5 = state4.facet(completionConfig);
@@ -220564,7 +220564,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
         "aria-autocomplete": "list"
       };
       noAttrs2 = {};
-      none4 = [];
+      none3 = [];
       ActiveSource = class _ActiveSource {
         constructor(source, state4, explicit = false) {
           this.source = source;
@@ -222464,7 +222464,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "node_modules/@codemirror/lang-css/dist/index.js"() {
       init_dist13();
       init_dist7();
-      init_dist5();
+      init_dist3();
       _properties = null;
       pseudoClasses = /* @__PURE__ */ [
         "active",
@@ -223445,7 +223445,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       init_dist15();
       init_dist7();
       init_dist9();
-      init_dist5();
+      init_dist3();
       snippets = [
         /* @__PURE__ */ snippetCompletion("func ${name}(${params}) ${type} {\n	${}\n}", {
           label: "func",
@@ -223728,7 +223728,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "node_modules/@lezer/html/dist/index.js"() {
       init_dist8();
       init_dist6();
-      init_dist5();
+      init_dist3();
       scriptText = 55;
       StartCloseScriptTag = 1;
       styleText = 56;
@@ -224405,10 +224405,10 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "node_modules/@codemirror/lang-javascript/dist/index.js"() {
       init_dist18();
       init_dist7();
-      init_dist3();
       init_dist4();
-      init_dist9();
       init_dist5();
+      init_dist9();
+      init_dist3();
       snippets2 = [
         /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
           label: "function",
@@ -224820,8 +224820,8 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       init_dist17();
       init_dist14();
       init_dist19();
+      init_dist5();
       init_dist4();
-      init_dist3();
       init_dist7();
       Targets = ["_blank", "_self", "_top", "_parent"];
       Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
@@ -225667,10 +225667,10 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       init_dist7();
       init_dist20();
       init_dist6();
-      init_dist5();
-      init_dist8();
       init_dist3();
+      init_dist8();
       init_dist4();
+      init_dist5();
       interpolationStart = 1;
       commentTagStart = 2;
       tagStart2 = 3;
@@ -226242,10 +226242,10 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       init_dist7();
       init_dist20();
       init_dist6();
-      init_dist5();
-      init_dist8();
       init_dist3();
+      init_dist8();
       init_dist4();
+      init_dist5();
       interpolationStart2 = 1;
       tagStart3 = 2;
       endTagStart = 3;
@@ -226587,7 +226587,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     let rest2 = resolveConfig(spec2.slice(1));
     if (!rest2 || !conf5)
       return conf5 || rest2;
-    let conc2 = (a3, b3) => (a3 || none5).concat(b3 || none5);
+    let conc2 = (a3, b3) => (a3 || none4).concat(b3 || none4);
     let wrapA = conf5.wrap, wrapB = rest2.wrap;
     return {
       props: conc2(conf5.props, rest2.props),
@@ -226857,10 +226857,10 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       return -1;
     };
   }
-  var CompositeBlock, Type5, LeafBlock, Line2, DefaultSkipMarkup, EmptyLine, CommentEnd, ProcessingEnd, HTMLBlockStyle, DefaultBlockParsers, LinkReferenceParser, SetextHeadingParser, DefaultLeafBlocks, DefaultEndLeaf, scanLineResult, BlockContext, MarkdownParser, nodeTypes, none5, Buffer5, Element5, TreeElement, EmphasisUnderscore, EmphasisAsterisk, LinkStart, ImageStart, InlineDelimiter, Escapable, Punctuation2, DefaultInline, InlineContext, NotLast, FragmentCursor3, markdownHighlighting, parser46, StrikethroughDelim, Strikethrough, delimiterLine, TableParser, Table, TaskParser, TaskList, autolinkRE, urlRE, lastTwoDomainWords, emailRE, xmppResourceRE, Autolink, GFM, Superscript, Subscript, Emoji;
+  var CompositeBlock, Type5, LeafBlock, Line2, DefaultSkipMarkup, EmptyLine, CommentEnd, ProcessingEnd, HTMLBlockStyle, DefaultBlockParsers, LinkReferenceParser, SetextHeadingParser, DefaultLeafBlocks, DefaultEndLeaf, scanLineResult, BlockContext, MarkdownParser, nodeTypes, none4, Buffer5, Element5, TreeElement, EmphasisUnderscore, EmphasisAsterisk, LinkStart, ImageStart, InlineDelimiter, Escapable, Punctuation2, DefaultInline, InlineContext, NotLast, FragmentCursor3, markdownHighlighting, parser46, StrikethroughDelim, Strikethrough, delimiterLine, TableParser, Table, TaskParser, TaskList, autolinkRE, urlRE, lastTwoDomainWords, emailRE, xmppResourceRE, Autolink, GFM, Superscript, Subscript, Emoji;
   var init_dist28 = __esm({
     "node_modules/@lezer/markdown/dist/index.js"() {
-      init_dist5();
+      init_dist3();
       init_dist6();
       CompositeBlock = class _CompositeBlock {
         static create(type9, value2, from5, parentHash, end3) {
@@ -227599,7 +227599,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
         */
         addNode(block5, from5, to) {
           if (typeof block5 == "number")
-            block5 = new Tree(this.parser.nodeSet.types[block5], none5, none5, (to !== null && to !== void 0 ? to : this.prevLineEnd()) - from5);
+            block5 = new Tree(this.parser.nodeSet.types[block5], none4, none4, (to !== null && to !== void 0 ? to : this.prevLineEnd()) - from5);
           this.block.addChild(block5, from5 - this.block.from);
         }
         /**
@@ -227802,7 +227802,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
           top: name2 == "Document"
         });
       }
-      none5 = [];
+      none4 = [];
       Buffer5 = class {
         constructor(nodeSet2) {
           this.nodeSet = nodeSet2;
@@ -227832,7 +227832,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
         /**
         @internal
         */
-        constructor(type9, from5, to, children2 = none5) {
+        constructor(type9, from5, to, children2 = none4) {
           this.type = type9;
           this.from = from5;
           this.to = to;
@@ -227865,7 +227865,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
           return this.tree.type.id;
         }
         get children() {
-          return none5;
+          return none4;
         }
         writeTo(buf, offset3) {
           buf.nodes.push(this.tree);
@@ -228689,13 +228689,13 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
   var data6, headingProp, commonmark, headerIndent, commonmarkLanguage, extended, markdownLanguage, Context, insertNewlineContinueMarkupCommand, insertNewlineContinueMarkup, deleteMarkupBackward, markdownKeymap, htmlNoMatch, _tagCompletions, nonPlainText, pasteURLAsLink;
   var init_dist29 = __esm({
     "node_modules/@codemirror/lang-markdown/dist/index.js"() {
-      init_dist3();
       init_dist4();
+      init_dist5();
       init_dist7();
       init_dist9();
       init_dist28();
       init_dist20();
-      init_dist5();
+      init_dist3();
       data6 = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
       headingProp = /* @__PURE__ */ new NodeProp();
       commonmark = /* @__PURE__ */ parser46.configure({
@@ -229301,7 +229301,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
   var init_dist31 = __esm({
     "node_modules/@codemirror/lang-php/dist/index.js"() {
       init_dist30();
-      init_dist5();
+      init_dist3();
       init_dist20();
       init_dist7();
       phpLanguage = /* @__PURE__ */ LRLanguage.define({
@@ -229789,7 +229789,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "node_modules/@codemirror/lang-python/dist/index.js"() {
       init_dist32();
       init_dist7();
-      init_dist5();
+      init_dist3();
       init_dist9();
       cache5 = /* @__PURE__ */ new NodeWeakMap();
       ScopeNodes3 = /* @__PURE__ */ new Set([
@@ -231106,8 +231106,8 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "node_modules/@codemirror/lang-xml/dist/index.js"() {
       init_dist39();
       init_dist7();
-      init_dist3();
       init_dist4();
+      init_dist5();
       Element7 = class {
         constructor(spec2, attrs2, attrValues) {
           this.attrs = attrs2;
@@ -231583,7 +231583,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "node_modules/@codemirror/lang-yaml/dist/index.js"() {
       init_dist41();
       init_dist7();
-      init_dist5();
+      init_dist3();
       init_dist6();
       init_dist8();
       parser54 = /* @__PURE__ */ LRParser.deserialize({
@@ -246575,7 +246575,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       stream2.next();
       return "bracket";
     }
-    if (state4.commandMode > 0 && stream2.match(command2))
+    if (state4.commandMode > 0 && stream2.match(command))
       return "controlKeyword";
     if (stream2.match(intrinsicFuncs))
       return "builtin";
@@ -246596,7 +246596,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     stream2.next();
     return "error";
   }
-  var singleOperators2, doubleOperators, singleDelimiters, brackets, identifiers6, commandKeywords, intrinsicFuncsWords, intrinsicFuncs, command2, mumps;
+  var singleOperators2, doubleOperators, singleDelimiters, brackets, identifiers6, commandKeywords, intrinsicFuncsWords, intrinsicFuncs, command, mumps;
   var init_mumps = __esm({
     "node_modules/@codemirror/legacy-modes/mode/mumps.js"() {
       singleOperators2 = new RegExp("^[\\+\\-\\*/&#!_?\\\\<>=\\'\\[\\]]");
@@ -246607,7 +246607,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       commandKeywords = ["break", "close", "do", "else", "for", "goto", "halt", "hang", "if", "job", "kill", "lock", "merge", "new", "open", "quit", "read", "set", "tcommit", "trollback", "tstart", "use", "view", "write", "xecute", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "q", "r", "s", "tc", "tro", "ts", "u", "v", "w", "x"];
       intrinsicFuncsWords = ["\\$ascii", "\\$char", "\\$data", "\\$ecode", "\\$estack", "\\$etrap", "\\$extract", "\\$find", "\\$fnumber", "\\$get", "\\$horolog", "\\$io", "\\$increment", "\\$job", "\\$justify", "\\$length", "\\$name", "\\$next", "\\$order", "\\$piece", "\\$qlength", "\\$qsubscript", "\\$query", "\\$quit", "\\$random", "\\$reverse", "\\$select", "\\$stack", "\\$test", "\\$text", "\\$translate", "\\$view", "\\$x", "\\$y", "\\$a", "\\$c", "\\$d", "\\$e", "\\$ec", "\\$es", "\\$et", "\\$f", "\\$fn", "\\$g", "\\$h", "\\$i", "\\$j", "\\$l", "\\$n", "\\$na", "\\$o", "\\$p", "\\$q", "\\$ql", "\\$qs", "\\$r", "\\$re", "\\$s", "\\$st", "\\$t", "\\$tr", "\\$v", "\\$z"];
       intrinsicFuncs = wordRegexp6(intrinsicFuncsWords);
-      command2 = wordRegexp6(commandKeywords);
+      command = wordRegexp6(commandKeywords);
       mumps = {
         name: "mumps",
         startState: function() {
@@ -257623,7 +257623,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       init_dist20();
       init_dist19();
       init_dist6();
-      init_dist5();
+      init_dist3();
       init_dist8();
       parser55 = /* @__PURE__ */ LRParser.deserialize({
         version: 14,
@@ -257721,7 +257721,7 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       init_dist20();
       init_dist19();
       init_dist6();
-      init_dist5();
+      init_dist3();
       init_dist8();
       Text3 = 1;
       attributeContentSingle = 33;
@@ -258137,13 +258137,12 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "editor.blockCode": "\u4EE3\u7801\u5757",
     "editor.blockTable": "\u8868\u683C",
     "editor.blockMath": "\u516C\u5F0F",
-    /* 外部文件（单文件模式） */
-    "external.banner": "\u5355\u6587\u4EF6\u6A21\u5F0F",
-    "external.saveHint": "\u7F16\u8F91\u81EA\u52A8\u4FDD\u5B58\u56DE\u539F\u6587\u4EF6",
-    "external.exit": "\u8FD4\u56DE\u7B14\u8BB0",
+    /* 外部文件（preview_file 只读预览会话） */
     "external.saveFailed": "\u4FDD\u5B58\u5931\u8D25\uFF1A{msg}",
     "external.saved": "\u5DF2\u4FDD\u5B58 {name}",
     "external.waiting": "\u6B63\u5728\u6253\u5F00\u6587\u4EF6\u2026",
+    "external.previewBadge": "\u53EA\u8BFB\u9884\u89C8",
+    "external.edit": "\u7F16\u8F91",
     /* 提示 */
     "toast.saveFailed": "\u4FDD\u5B58\u5931\u8D25\uFF1A{msg}",
     "toast.exported": "\u5DF2\u5BFC\u51FA {kind} \u6587\u4EF6",
@@ -258234,12 +258233,11 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
     "editor.blockCode": "Code block",
     "editor.blockTable": "Table",
     "editor.blockMath": "Formula",
-    "external.banner": "Single-file mode",
-    "external.saveHint": "Edits save back to the original file",
-    "external.exit": "Back to notes",
     "external.saveFailed": "Save failed: {msg}",
     "external.saved": "Saved {name}",
     "external.waiting": "Opening file\u2026",
+    "external.previewBadge": "Read-only preview",
+    "external.edit": "Edit",
     "toast.saveFailed": "Save failed: {msg}",
     "toast.exported": "Exported {kind} file",
     "toast.exportFailed": "Export failed: {msg}",
@@ -258376,8 +258374,6 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
         return { ...state4, externalFile: action.file };
       case "externalSave":
         return state4.externalFile ? { ...state4, externalFile: { ...state4.externalFile, content: action.content } } : state4;
-      case "externalExit":
-        return { ...state4, externalFile: null };
       case "setContent":
         return {
           ...state4,
@@ -258580,6 +258576,18 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       return null;
     }
   }
+  function exitExternalFileNow() {
+    if (!hasBridge()) return;
+    const bridge = window.pluginBridge;
+    try {
+      if (typeof bridge.send === "function") {
+        bridge.send("skill.setEnabled", { id: "file.exit", enabled: true });
+        return;
+      }
+    } catch {
+    }
+    void bridge.invoke("skill.setEnabled", { id: "file.exit", enabled: true }).catch(() => void 0);
+  }
   async function saveExternalFile(path7, content5) {
     if (!hasBridge()) {
       return { bytes: content5.length, at: Date.now() };
@@ -258591,16 +258599,6 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
       content: content5
     });
     return { bytes: res?.bytes ?? content5.length, at: res?.at ?? Date.now() };
-  }
-  async function exitExternalFile() {
-    if (!hasBridge()) return;
-    try {
-      await window.pluginBridge.invoke("skill.setEnabled", {
-        id: "file.exit",
-        enabled: true
-      });
-    } catch {
-    }
   }
 
   // src/lib/exporters.ts
@@ -300515,13 +300513,13 @@ ${prefix2}${Math.round(value2 * 100) / 100}${suffix2}`;
 <title>${escapeHtml(note3.title)}</title>
 <style>
 ${collectStyles()}
-body{background:#ffffff;color:#1b2430;padding:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+body{background:#ffffff;color:#3d4852;padding:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
 </style>
 </head>
 <body>
 <div class="milkdown pi-md-export"
-  style="--crepe-color-background:#ffffff;--crepe-color-on-background:#1b2430;--crepe-color-inline-code:#d6336c;--crepe-color-primary:#0969da;--crepe-color-inline-area:#eef1f5;--crepe-color-selected:#e2e8f0;--crepe-color-outline:#cbd5e1;--crepe-color-surface:#ffffff;--crepe-color-surface-low:#f6f8fa;--crepe-color-on-surface:#1b2430;--crepe-color-on-surface-variant:#57606a;--crepe-color-hover:#eef1f5">
-  <div class="editor ProseMirror" style="padding:40px 24px;max-width:860px;margin:0 auto">${bodyHtml}</div>
+  style="--crepe-color-background:#ffffff;--crepe-color-on-background:#3d4852;--crepe-color-inline-code:#c7254e;--crepe-color-primary:#3b82c4;--crepe-color-inline-area:#f1f5f9;--crepe-color-selected:#d4e4f7;--crepe-color-outline:#e2e8f0;--crepe-color-surface:#ffffff;--crepe-color-surface-low:#f8fafc;--crepe-color-on-surface:#3d4852;--crepe-color-on-surface-variant:#5a6872;--crepe-color-hover:#f1f5f9">
+  <div class="editor ProseMirror" style="padding:2em 2.5em;max-width:860px;margin:0 auto">${bodyHtml}</div>
 </div>
 </body>
 </html>`;
@@ -300531,8 +300529,8 @@ body{background:#ffffff;color:#1b2430;padding:0;font-family:"Segoe UI","PingFang
     return (async () => {
       const wrap5 = document.createElement("div");
       wrap5.className = "milkdown pi-md-export";
-      wrap5.style.cssText = "position:fixed;left:-9999px;top:0;width:860px;background:#ffffff;color:#1b2430;box-sizing:border-box;z-index:-1;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;--crepe-color-background:#ffffff;--crepe-color-on-background:#1b2430;--crepe-color-inline-code:#d6336c;--crepe-color-primary:#0969da;--crepe-color-inline-area:#eef1f5;--crepe-color-selected:#e2e8f0;--crepe-color-outline:#cbd5e1;--crepe-color-surface:#ffffff;--crepe-color-surface-low:#f6f8fa;--crepe-color-on-surface:#1b2430;--crepe-color-on-surface-variant:#57606a;--crepe-color-hover:#eef1f5";
-      wrap5.innerHTML = `<div class="editor ProseMirror" style="padding:48px">${bodyHtml}</div>`;
+      wrap5.style.cssText = "position:fixed;left:-9999px;top:0;width:860px;background:#ffffff;color:#3d4852;box-sizing:border-box;z-index:-1;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;--crepe-color-background:#ffffff;--crepe-color-on-background:#3d4852;--crepe-color-inline-code:#c7254e;--crepe-color-primary:#3b82c4;--crepe-color-inline-area:#f1f5f9;--crepe-color-selected:#d4e4f7;--crepe-color-outline:#e2e8f0;--crepe-color-surface:#ffffff;--crepe-color-surface-low:#f8fafc;--crepe-color-on-surface:#3d4852;--crepe-color-on-surface-variant:#5a6872;--crepe-color-hover:#f1f5f9";
+      wrap5.innerHTML = `<div class="editor ProseMirror" style="padding:2em 2.5em">${bodyHtml}</div>`;
       document.body.appendChild(wrap5);
       try {
         const canvas = await (0, import_html2canvas.default)(wrap5, {
@@ -300742,7 +300740,7 @@ flowchart LR
           dragIdRef.current = null;
           setDragOver(null);
         },
-        className: `group relative flex cursor-pointer select-none items-center gap-1.5 pr-2 text-[13px] transition-colors ${active ? "bg-accent text-onaccent" : "text-muted hover:bg-panel2 hover:text-ink"}`,
+        className: `group relative flex cursor-pointer select-none items-center gap-1.5 pr-2 text-[13px] transition-colors ${active ? "bg-sel text-onsel" : "text-muted hover:bg-panel2 hover:text-ink"}`,
         style: { paddingLeft: `${depth * 14 + 8}px`, minHeight: 28 },
         onClick: () => isFolder ? onToggle() : onOpen(),
         onContextMenu: onContext,
@@ -300837,7 +300835,7 @@ flowchart LR
       "button",
       {
         onClick: () => onNavigate(i9),
-        className: `flex items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors ${activeIndex === i9 ? "bg-accent font-medium text-onaccent" : "text-muted hover:bg-panel2 hover:text-ink"}`,
+        className: `flex items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors ${activeIndex === i9 ? "bg-sel font-medium text-onsel" : "text-muted hover:bg-panel2 hover:text-ink"}`,
         style: { paddingLeft: `${(item.level - 1) * 14 + 8}px` },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "shrink-0 font-mono text-[10px] text-faint", children: "#".repeat(item.level) }),
@@ -300923,7 +300921,7 @@ flowchart LR
         "button",
         {
           onClick: () => onTab(t22.key),
-          className: `px-3 py-1 text-xs transition-colors ${tab3 === t22.key ? "bg-accent font-medium text-onaccent" : "text-muted hover:bg-panel2 hover:text-ink"}`,
+          className: `px-3 py-1 text-xs transition-colors ${tab3 === t22.key ? "bg-sel font-medium text-onsel" : "text-muted hover:bg-panel2 hover:text-ink"}`,
           children: t22.label
         },
         t22.key
@@ -301042,7 +301040,7 @@ flowchart LR
     onToggleTheme
   }) {
     const time4 = saveState.at ? new Date(saveState.at).toLocaleTimeString(getLocale(), { hour12: false }) : "";
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("footer", { className: "flex h-7 shrink-0 items-center gap-4 border-t border-edge bg-panel px-4 text-[11px] text-faint", children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("footer", { className: "flex h-7 shrink-0 items-center gap-4 border-t border-edge bg-panel px-4 text-[11px] text-muted", children: [
       /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "flex items-center gap-1.5 truncate", children: [
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "svg",
@@ -301066,7 +301064,7 @@ flowchart LR
             onClick: onToggleTheme,
             title: theme2 === "dark" ? t("status.toLight") : t("status.toDark"),
             "aria-label": theme2 === "dark" ? t("status.toLight") : t("status.toDark"),
-            className: "flex items-center gap-1.5 text-faint transition-colors hover:text-ink",
+            className: "flex items-center gap-1.5 text-muted transition-colors hover:text-ink",
             children: [
               theme2 === "dark" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
                 "svg",
@@ -301109,1255 +301107,6 @@ flowchart LR
 
   // src/components/EditorPane.tsx
   var import_react4 = __toESM(require_react(), 1);
-
-  // node_modules/@codemirror/commands/dist/index.js
-  init_dist3();
-  init_dist4();
-  init_dist7();
-  init_dist5();
-  var toggleComment = (target) => {
-    let { state: state4 } = target, line2 = state4.doc.lineAt(state4.selection.main.from), config5 = getConfig4(target.state, line2.from);
-    return config5.line ? toggleLineComment(target) : config5.block ? toggleBlockCommentByLine(target) : false;
-  };
-  function command(f2, option2) {
-    return ({ state: state4, dispatch: dispatch3 }) => {
-      if (state4.readOnly)
-        return false;
-      let tr = f2(option2, state4);
-      if (!tr)
-        return false;
-      dispatch3(state4.update(tr));
-      return true;
-    };
-  }
-  var toggleLineComment = /* @__PURE__ */ command(
-    changeLineComment,
-    0
-    /* CommentOption.Toggle */
-  );
-  var toggleBlockComment = /* @__PURE__ */ command(
-    changeBlockComment,
-    0
-    /* CommentOption.Toggle */
-  );
-  var toggleBlockCommentByLine = /* @__PURE__ */ command(
-    (o2, s3) => changeBlockComment(o2, s3, selectedLineRanges(s3)),
-    0
-    /* CommentOption.Toggle */
-  );
-  function getConfig4(state4, pos) {
-    let data7 = state4.languageDataAt("commentTokens", pos, 1);
-    return data7.length ? data7[0] : {};
-  }
-  var SearchMargin = 50;
-  function findBlockComment(state4, { open: open4, close: close5 }, from5, to) {
-    let textBefore = state4.sliceDoc(from5 - SearchMargin, from5);
-    let textAfter = state4.sliceDoc(to, to + SearchMargin);
-    let spaceBefore = /\s*$/.exec(textBefore)[0].length, spaceAfter = /^\s*/.exec(textAfter)[0].length;
-    let beforeOff = textBefore.length - spaceBefore;
-    if (textBefore.slice(beforeOff - open4.length, beforeOff) == open4 && textAfter.slice(spaceAfter, spaceAfter + close5.length) == close5) {
-      return {
-        open: { pos: from5 - spaceBefore, margin: spaceBefore && 1 },
-        close: { pos: to + spaceAfter, margin: spaceAfter && 1 }
-      };
-    }
-    let startText, endText;
-    if (to - from5 <= 2 * SearchMargin) {
-      startText = endText = state4.sliceDoc(from5, to);
-    } else {
-      startText = state4.sliceDoc(from5, from5 + SearchMargin);
-      endText = state4.sliceDoc(to - SearchMargin, to);
-    }
-    let startSpace = /^\s*/.exec(startText)[0].length, endSpace = /\s*$/.exec(endText)[0].length;
-    let endOff = endText.length - endSpace - close5.length;
-    if (startText.slice(startSpace, startSpace + open4.length) == open4 && endText.slice(endOff, endOff + close5.length) == close5) {
-      return {
-        open: {
-          pos: from5 + startSpace + open4.length,
-          margin: /\s/.test(startText.charAt(startSpace + open4.length)) ? 1 : 0
-        },
-        close: {
-          pos: to - endSpace - close5.length,
-          margin: /\s/.test(endText.charAt(endOff - 1)) ? 1 : 0
-        }
-      };
-    }
-    return null;
-  }
-  function selectedLineRanges(state4) {
-    let ranges = [];
-    for (let r6 of state4.selection.ranges) {
-      let fromLine = state4.doc.lineAt(r6.from);
-      let toLine = r6.to <= fromLine.to ? fromLine : state4.doc.lineAt(r6.to);
-      if (toLine.from > fromLine.from && toLine.from == r6.to)
-        toLine = r6.to == fromLine.to + 1 ? fromLine : state4.doc.lineAt(r6.to - 1);
-      let last4 = ranges.length - 1;
-      if (last4 >= 0 && ranges[last4].to > fromLine.from)
-        ranges[last4].to = toLine.to;
-      else
-        ranges.push({ from: fromLine.from + /^\s*/.exec(fromLine.text)[0].length, to: toLine.to });
-    }
-    return ranges;
-  }
-  function changeBlockComment(option2, state4, ranges = state4.selection.ranges) {
-    let tokens4 = ranges.map((r6) => getConfig4(state4, r6.from).block);
-    if (!tokens4.every((c5) => c5))
-      return null;
-    let comments2 = ranges.map((r6, i9) => findBlockComment(state4, tokens4[i9], r6.from, r6.to));
-    if (option2 != 2 && !comments2.every((c5) => c5)) {
-      return { changes: state4.changes(ranges.map((range3, i9) => {
-        if (comments2[i9])
-          return [];
-        return [{ from: range3.from, insert: tokens4[i9].open + " " }, { from: range3.to, insert: " " + tokens4[i9].close }];
-      })) };
-    } else if (option2 != 1 && comments2.some((c5) => c5)) {
-      let changes = [];
-      for (let i9 = 0, comment5; i9 < comments2.length; i9++)
-        if (comment5 = comments2[i9]) {
-          let token2 = tokens4[i9], { open: open4, close: close5 } = comment5;
-          changes.push({ from: open4.pos - token2.open.length, to: open4.pos + open4.margin }, { from: close5.pos - close5.margin, to: close5.pos + token2.close.length });
-        }
-      return { changes };
-    }
-    return null;
-  }
-  function changeLineComment(option2, state4, ranges = state4.selection.ranges) {
-    let lines = [];
-    let prevLine = -1;
-    ranges: for (let { from: from5, to } of ranges) {
-      let startI = lines.length, minIndent = 1e9, token2;
-      for (let pos = from5; pos <= to; ) {
-        let line2 = state4.doc.lineAt(pos);
-        if (token2 == void 0) {
-          token2 = getConfig4(state4, line2.from).line;
-          if (!token2)
-            continue ranges;
-        }
-        if (line2.from > prevLine && (from5 == to || to > line2.from)) {
-          prevLine = line2.from;
-          let indent8 = /^\s*/.exec(line2.text)[0].length;
-          let empty6 = indent8 == line2.length;
-          let comment5 = line2.text.slice(indent8, indent8 + token2.length) == token2 ? indent8 : -1;
-          if (indent8 < line2.text.length && indent8 < minIndent)
-            minIndent = indent8;
-          lines.push({ line: line2, comment: comment5, token: token2, indent: indent8, empty: empty6, single: false });
-        }
-        pos = line2.to + 1;
-      }
-      if (minIndent < 1e9) {
-        for (let i9 = startI; i9 < lines.length; i9++)
-          if (lines[i9].indent < lines[i9].line.text.length)
-            lines[i9].indent = minIndent;
-      }
-      if (lines.length == startI + 1)
-        lines[startI].single = true;
-    }
-    if (option2 != 2 && lines.some((l4) => l4.comment < 0 && (!l4.empty || l4.single))) {
-      let changes = [];
-      for (let { line: line2, token: token2, indent: indent8, empty: empty6, single } of lines)
-        if (single || !empty6)
-          changes.push({ from: line2.from + indent8, insert: token2 + " " });
-      let changeSet = state4.changes(changes);
-      return { changes: changeSet, selection: state4.selection.map(changeSet, 1) };
-    } else if (option2 != 1 && lines.some((l4) => l4.comment >= 0)) {
-      let changes = [];
-      for (let { line: line2, comment: comment5, token: token2 } of lines)
-        if (comment5 >= 0) {
-          let from5 = line2.from + comment5, to = from5 + token2.length;
-          if (line2.text[to - line2.from] == " ")
-            to++;
-          changes.push({ from: from5, to });
-        }
-      return { changes };
-    }
-    return null;
-  }
-  var fromHistory = /* @__PURE__ */ Annotation2.define();
-  var isolateHistory = /* @__PURE__ */ Annotation2.define();
-  var invertedEffects = /* @__PURE__ */ Facet.define();
-  var historyConfig = /* @__PURE__ */ Facet.define({
-    combine(configs) {
-      return combineConfig(configs, {
-        minDepth: 100,
-        newGroupDelay: 500,
-        joinToEvent: (_t, isAdjacent2) => isAdjacent2
-      }, {
-        minDepth: Math.max,
-        newGroupDelay: Math.min,
-        joinToEvent: (a3, b3) => (tr, adj) => a3(tr, adj) || b3(tr, adj)
-      });
-    }
-  });
-  var historyField_ = /* @__PURE__ */ StateField.define({
-    create() {
-      return HistoryState.empty;
-    },
-    update(state4, tr) {
-      let config5 = tr.state.facet(historyConfig);
-      let fromHist = tr.annotation(fromHistory);
-      if (fromHist) {
-        let item = HistEvent.fromTransaction(tr, fromHist.selection), from5 = fromHist.side;
-        let other = from5 == 0 ? state4.undone : state4.done;
-        if (item)
-          other = updateBranch(other, other.length, config5.minDepth, item);
-        else
-          other = addSelection(other, tr.startState.selection);
-        return new HistoryState(from5 == 0 ? fromHist.rest : other, from5 == 0 ? other : fromHist.rest);
-      }
-      let isolate = tr.annotation(isolateHistory);
-      if (isolate == "full" || isolate == "before")
-        state4 = state4.isolate();
-      if (tr.annotation(Transaction.addToHistory) === false)
-        return !tr.changes.empty ? state4.addMapping(tr.changes.desc) : state4;
-      let event3 = HistEvent.fromTransaction(tr);
-      let time4 = tr.annotation(Transaction.time), userEvent = tr.annotation(Transaction.userEvent);
-      if (event3)
-        state4 = state4.addChanges(event3, time4, userEvent, config5, tr);
-      else if (tr.selection)
-        state4 = state4.addSelection(tr.startState.selection, time4, userEvent, config5.newGroupDelay);
-      if (isolate == "full" || isolate == "after")
-        state4 = state4.isolate();
-      return state4;
-    },
-    toJSON(value2) {
-      return { done: value2.done.map((e3) => e3.toJSON()), undone: value2.undone.map((e3) => e3.toJSON()) };
-    },
-    fromJSON(json7) {
-      return new HistoryState(json7.done.map(HistEvent.fromJSON), json7.undone.map(HistEvent.fromJSON));
-    }
-  });
-  function history(config5 = {}) {
-    return [
-      historyField_,
-      historyConfig.of(config5),
-      EditorView.domEventHandlers({
-        beforeinput(e3, view) {
-          let command3 = e3.inputType == "historyUndo" ? undo4 : e3.inputType == "historyRedo" ? redo : null;
-          if (!command3)
-            return false;
-          e3.preventDefault();
-          return command3(view);
-        }
-      })
-    ];
-  }
-  function cmd(side, selection3) {
-    return function({ state: state4, dispatch: dispatch3 }) {
-      if (!selection3 && state4.readOnly)
-        return false;
-      let historyState = state4.field(historyField_, false);
-      if (!historyState)
-        return false;
-      let tr = historyState.pop(side, state4, selection3);
-      if (!tr)
-        return false;
-      dispatch3(tr);
-      return true;
-    };
-  }
-  var undo4 = /* @__PURE__ */ cmd(0, false);
-  var redo = /* @__PURE__ */ cmd(1, false);
-  var undoSelection = /* @__PURE__ */ cmd(0, true);
-  var redoSelection = /* @__PURE__ */ cmd(1, true);
-  var HistEvent = class _HistEvent {
-    constructor(changes, effects, mapped, startSelection, selectionsAfter) {
-      this.changes = changes;
-      this.effects = effects;
-      this.mapped = mapped;
-      this.startSelection = startSelection;
-      this.selectionsAfter = selectionsAfter;
-    }
-    setSelAfter(after) {
-      return new _HistEvent(this.changes, this.effects, this.mapped, this.startSelection, after);
-    }
-    toJSON() {
-      var _a2, _b2, _c;
-      return {
-        changes: (_a2 = this.changes) === null || _a2 === void 0 ? void 0 : _a2.toJSON(),
-        mapped: (_b2 = this.mapped) === null || _b2 === void 0 ? void 0 : _b2.toJSON(),
-        startSelection: (_c = this.startSelection) === null || _c === void 0 ? void 0 : _c.toJSON(),
-        selectionsAfter: this.selectionsAfter.map((s3) => s3.toJSON())
-      };
-    }
-    static fromJSON(json7) {
-      return new _HistEvent(json7.changes && ChangeSet.fromJSON(json7.changes), [], json7.mapped && ChangeDesc.fromJSON(json7.mapped), json7.startSelection && EditorSelection.fromJSON(json7.startSelection), json7.selectionsAfter.map(EditorSelection.fromJSON));
-    }
-    // This does not check `addToHistory` and such, it assumes the
-    // transaction needs to be converted to an item. Returns null when
-    // there are no changes or effects in the transaction.
-    static fromTransaction(tr, selection3) {
-      let effects = none3;
-      for (let invert2 of tr.startState.facet(invertedEffects)) {
-        let result = invert2(tr);
-        if (result.length)
-          effects = effects.concat(result);
-      }
-      if (!effects.length && tr.changes.empty)
-        return null;
-      return new _HistEvent(tr.changes.invert(tr.startState.doc), effects, void 0, selection3 || tr.startState.selection, none3);
-    }
-    static selection(selections) {
-      return new _HistEvent(void 0, none3, void 0, void 0, selections);
-    }
-  };
-  function updateBranch(branch2, to, maxLen, newEvent) {
-    let start4 = to + 1 > maxLen + 20 ? to - maxLen - 1 : 0;
-    let newBranch = branch2.slice(start4, to);
-    newBranch.push(newEvent);
-    return newBranch;
-  }
-  function isAdjacent(a3, b3) {
-    let ranges = [], isAdjacent2 = false;
-    a3.iterChangedRanges((f2, t6) => ranges.push(f2, t6));
-    b3.iterChangedRanges((_f2, _t, f2, t6) => {
-      for (let i9 = 0; i9 < ranges.length; ) {
-        let from5 = ranges[i9++], to = ranges[i9++];
-        if (t6 >= from5 && f2 <= to)
-          isAdjacent2 = true;
-      }
-    });
-    return isAdjacent2;
-  }
-  function eqSelectionShape(a3, b3) {
-    return a3.ranges.length == b3.ranges.length && a3.ranges.filter((r6, i9) => r6.empty != b3.ranges[i9].empty).length === 0;
-  }
-  function conc(a3, b3) {
-    return !a3.length ? b3 : !b3.length ? a3 : a3.concat(b3);
-  }
-  var none3 = [];
-  var MaxSelectionsPerEvent = 200;
-  function addSelection(branch2, selection3) {
-    if (!branch2.length) {
-      return [HistEvent.selection([selection3])];
-    } else {
-      let lastEvent = branch2[branch2.length - 1];
-      let sels = lastEvent.selectionsAfter.slice(Math.max(0, lastEvent.selectionsAfter.length - MaxSelectionsPerEvent));
-      if (sels.length && sels[sels.length - 1].eq(selection3))
-        return branch2;
-      sels.push(selection3);
-      return updateBranch(branch2, branch2.length - 1, 1e9, lastEvent.setSelAfter(sels));
-    }
-  }
-  function popSelection(branch2) {
-    let last4 = branch2[branch2.length - 1];
-    let newBranch = branch2.slice();
-    newBranch[branch2.length - 1] = last4.setSelAfter(last4.selectionsAfter.slice(0, last4.selectionsAfter.length - 1));
-    return newBranch;
-  }
-  function addMappingToBranch(branch2, mapping) {
-    if (!branch2.length)
-      return branch2;
-    let length2 = branch2.length, selections = none3;
-    while (length2) {
-      let event3 = mapEvent(branch2[length2 - 1], mapping, selections);
-      if (event3.changes && !event3.changes.empty || event3.effects.length) {
-        let result = branch2.slice(0, length2);
-        result[length2 - 1] = event3;
-        return result;
-      } else {
-        mapping = event3.mapped;
-        length2--;
-        selections = event3.selectionsAfter;
-      }
-    }
-    return selections.length ? [HistEvent.selection(selections)] : none3;
-  }
-  function mapEvent(event3, mapping, extraSelections) {
-    let selections = conc(event3.selectionsAfter.length ? event3.selectionsAfter.map((s3) => s3.map(mapping)) : none3, extraSelections);
-    if (!event3.changes)
-      return HistEvent.selection(selections);
-    let mappedChanges = event3.changes.map(mapping), before = mapping.mapDesc(event3.changes, true);
-    let fullMapping = event3.mapped ? event3.mapped.composeDesc(before) : before;
-    return new HistEvent(mappedChanges, StateEffect.mapEffects(event3.effects, mapping), fullMapping, event3.startSelection.map(before), selections);
-  }
-  var joinableUserEvent = /^(input\.type|delete)($|\.)/;
-  var HistoryState = class _HistoryState {
-    constructor(done, undone, prevTime = 0, prevUserEvent = void 0) {
-      this.done = done;
-      this.undone = undone;
-      this.prevTime = prevTime;
-      this.prevUserEvent = prevUserEvent;
-    }
-    isolate() {
-      return this.prevTime ? new _HistoryState(this.done, this.undone) : this;
-    }
-    addChanges(event3, time4, userEvent, config5, tr) {
-      let done = this.done, lastEvent = done[done.length - 1];
-      if (lastEvent && lastEvent.changes && !lastEvent.changes.empty && event3.changes && (!userEvent || joinableUserEvent.test(userEvent)) && (!lastEvent.selectionsAfter.length && time4 - this.prevTime < config5.newGroupDelay && config5.joinToEvent(tr, isAdjacent(lastEvent.changes, event3.changes)) || // For compose (but not compose.start) events, always join with previous event
-      userEvent == "input.type.compose")) {
-        done = updateBranch(done, done.length - 1, config5.minDepth, new HistEvent(event3.changes.compose(lastEvent.changes), conc(StateEffect.mapEffects(event3.effects, lastEvent.changes), lastEvent.effects), lastEvent.mapped, lastEvent.startSelection, none3));
-      } else {
-        done = updateBranch(done, done.length, config5.minDepth, event3);
-      }
-      return new _HistoryState(done, none3, time4, userEvent);
-    }
-    addSelection(selection3, time4, userEvent, newGroupDelay) {
-      let last4 = this.done.length ? this.done[this.done.length - 1].selectionsAfter : none3;
-      if (last4.length > 0 && time4 - this.prevTime < newGroupDelay && userEvent == this.prevUserEvent && userEvent && /^select($|\.)/.test(userEvent) && eqSelectionShape(last4[last4.length - 1], selection3))
-        return this;
-      return new _HistoryState(addSelection(this.done, selection3), this.undone, time4, userEvent);
-    }
-    addMapping(mapping) {
-      return new _HistoryState(addMappingToBranch(this.done, mapping), addMappingToBranch(this.undone, mapping), this.prevTime, this.prevUserEvent);
-    }
-    pop(side, state4, onlySelection) {
-      let branch2 = side == 0 ? this.done : this.undone;
-      if (branch2.length == 0)
-        return null;
-      let event3 = branch2[branch2.length - 1], selection3 = event3.selectionsAfter[0] || (event3.startSelection ? event3.startSelection.map(event3.changes.invertedDesc, 1) : state4.selection);
-      if (onlySelection && event3.selectionsAfter.length) {
-        return state4.update({
-          selection: event3.selectionsAfter[event3.selectionsAfter.length - 1],
-          annotations: fromHistory.of({ side, rest: popSelection(branch2), selection: selection3 }),
-          userEvent: side == 0 ? "select.undo" : "select.redo",
-          scrollIntoView: true
-        });
-      } else if (!event3.changes) {
-        return null;
-      } else {
-        let rest2 = branch2.length == 1 ? none3 : branch2.slice(0, branch2.length - 1);
-        if (event3.mapped)
-          rest2 = addMappingToBranch(rest2, event3.mapped);
-        return state4.update({
-          changes: event3.changes,
-          selection: event3.startSelection,
-          effects: event3.effects,
-          annotations: fromHistory.of({ side, rest: rest2, selection: selection3 }),
-          filter: false,
-          userEvent: side == 0 ? "undo" : "redo",
-          scrollIntoView: true
-        });
-      }
-    }
-  };
-  HistoryState.empty = /* @__PURE__ */ new HistoryState(none3, none3);
-  var historyKeymap = [
-    { key: "Mod-z", run: undo4, preventDefault: true },
-    { key: "Mod-y", mac: "Mod-Shift-z", run: redo, preventDefault: true },
-    { linux: "Ctrl-Shift-z", run: redo, preventDefault: true },
-    { key: "Mod-u", run: undoSelection, preventDefault: true },
-    { key: "Alt-u", mac: "Mod-Shift-u", run: redoSelection, preventDefault: true }
-  ];
-  function updateSel(sel, by) {
-    return EditorSelection.create(sel.ranges.map(by), sel.mainIndex);
-  }
-  function setSel(state4, selection3) {
-    return state4.update({ selection: selection3, scrollIntoView: true, userEvent: "select" });
-  }
-  function moveSel({ state: state4, dispatch: dispatch3 }, how) {
-    let selection3 = updateSel(state4.selection, how);
-    if (selection3.eq(state4.selection, true))
-      return false;
-    dispatch3(setSel(state4, selection3));
-    return true;
-  }
-  function rangeEnd(range3, forward) {
-    return EditorSelection.cursor(forward ? range3.to : range3.from);
-  }
-  function cursorByChar(view, forward) {
-    return moveSel(view, (range3) => range3.empty ? view.moveByChar(range3, forward) : rangeEnd(range3, forward));
-  }
-  function ltrAtCursor(view) {
-    return view.textDirectionAt(view.state.selection.main.head) == Direction2.LTR;
-  }
-  var cursorCharLeft = (view) => cursorByChar(view, !ltrAtCursor(view));
-  var cursorCharRight = (view) => cursorByChar(view, ltrAtCursor(view));
-  function cursorByGroup(view, forward) {
-    return moveSel(view, (range3) => range3.empty ? view.moveByGroup(range3, forward) : rangeEnd(range3, forward));
-  }
-  var cursorGroupLeft = (view) => cursorByGroup(view, !ltrAtCursor(view));
-  var cursorGroupRight = (view) => cursorByGroup(view, ltrAtCursor(view));
-  var segmenter = typeof Intl != "undefined" && Intl.Segmenter ? /* @__PURE__ */ new Intl.Segmenter(void 0, { granularity: "word" }) : null;
-  function interestingNode(state4, node3, bracketProp) {
-    if (node3.type.prop(bracketProp))
-      return true;
-    let len2 = node3.to - node3.from;
-    return len2 && (len2 > 2 || /[^\s,.;:]/.test(state4.sliceDoc(node3.from, node3.to))) || node3.firstChild;
-  }
-  function moveBySyntax(state4, start4, forward) {
-    let pos = syntaxTree(state4).resolveInner(start4.head);
-    let bracketProp = forward ? NodeProp.closedBy : NodeProp.openedBy;
-    for (let at2 = start4.head; ; ) {
-      let next4 = forward ? pos.childAfter(at2) : pos.childBefore(at2);
-      if (!next4)
-        break;
-      if (interestingNode(state4, next4, bracketProp))
-        pos = next4;
-      else
-        at2 = forward ? next4.to : next4.from;
-    }
-    let bracket2 = pos.type.prop(bracketProp), match4, newPos;
-    if (bracket2 && (match4 = forward ? matchBrackets(state4, pos.from, 1) : matchBrackets(state4, pos.to, -1)) && match4.matched)
-      newPos = forward ? match4.end.to : match4.end.from;
-    else
-      newPos = forward ? pos.to : pos.from;
-    return EditorSelection.cursor(newPos, forward ? -1 : 1);
-  }
-  var cursorSyntaxLeft = (view) => moveSel(view, (range3) => moveBySyntax(view.state, range3, !ltrAtCursor(view)));
-  var cursorSyntaxRight = (view) => moveSel(view, (range3) => moveBySyntax(view.state, range3, ltrAtCursor(view)));
-  function cursorByLine(view, forward) {
-    return moveSel(view, (range3) => {
-      if (!range3.empty)
-        return rangeEnd(range3, forward);
-      let moved = view.moveVertically(range3, forward);
-      return moved.head != range3.head ? moved : view.moveToLineBoundary(range3, forward);
-    });
-  }
-  var cursorLineUp = (view) => cursorByLine(view, false);
-  var cursorLineDown = (view) => cursorByLine(view, true);
-  function pageInfo(view) {
-    let selfScroll = view.scrollDOM.clientHeight < view.scrollDOM.scrollHeight - 2;
-    let marginTop = 0, marginBottom = 0, height2;
-    if (selfScroll) {
-      for (let source of view.state.facet(EditorView.scrollMargins)) {
-        let margins = source(view);
-        if (margins === null || margins === void 0 ? void 0 : margins.top)
-          marginTop = Math.max(margins === null || margins === void 0 ? void 0 : margins.top, marginTop);
-        if (margins === null || margins === void 0 ? void 0 : margins.bottom)
-          marginBottom = Math.max(margins === null || margins === void 0 ? void 0 : margins.bottom, marginBottom);
-      }
-      height2 = view.scrollDOM.clientHeight - marginTop - marginBottom;
-    } else {
-      height2 = (view.dom.ownerDocument.defaultView || window).innerHeight;
-    }
-    return {
-      marginTop,
-      marginBottom,
-      selfScroll,
-      height: Math.max(view.defaultLineHeight, height2 - 5)
-    };
-  }
-  function cursorByPage(view, forward) {
-    let page = pageInfo(view);
-    let { state: state4 } = view, selection3 = updateSel(state4.selection, (range3) => {
-      return range3.empty ? view.moveVertically(range3, forward, page.height) : rangeEnd(range3, forward);
-    });
-    if (selection3.eq(state4.selection))
-      return false;
-    let effect2;
-    if (page.selfScroll) {
-      let startPos = view.coordsAtPos(state4.selection.main.head);
-      let scrollRect = view.scrollDOM.getBoundingClientRect();
-      let scrollTop = scrollRect.top + page.marginTop, scrollBottom = scrollRect.bottom - page.marginBottom;
-      if (startPos && startPos.top > scrollTop && startPos.bottom < scrollBottom)
-        effect2 = EditorView.scrollIntoView(selection3.main.head, { y: "start", yMargin: startPos.top - scrollTop });
-    }
-    view.dispatch(setSel(state4, selection3), { effects: effect2 });
-    return true;
-  }
-  var cursorPageUp = (view) => cursorByPage(view, false);
-  var cursorPageDown = (view) => cursorByPage(view, true);
-  function moveByLineBoundary(view, start4, forward) {
-    let line2 = view.lineBlockAt(start4.head), moved = view.moveToLineBoundary(start4, forward);
-    if (moved.head == start4.head && moved.head != (forward ? line2.to : line2.from))
-      moved = view.moveToLineBoundary(start4, forward, false);
-    if (!forward && moved.head == line2.from && line2.length) {
-      let space8 = /^\s*/.exec(view.state.sliceDoc(line2.from, Math.min(line2.from + 100, line2.to)))[0].length;
-      if (space8 && start4.head != line2.from + space8)
-        moved = EditorSelection.cursor(line2.from + space8);
-    }
-    return moved;
-  }
-  var cursorLineBoundaryForward = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, true));
-  var cursorLineBoundaryBackward = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, false));
-  var cursorLineBoundaryLeft = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, !ltrAtCursor(view)));
-  var cursorLineBoundaryRight = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, ltrAtCursor(view)));
-  var cursorLineStart = (view) => moveSel(view, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).from, 1));
-  var cursorLineEnd = (view) => moveSel(view, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).to, -1));
-  function toMatchingBracket(state4, dispatch3, extend6) {
-    let found2 = false, selection3 = updateSel(state4.selection, (range3) => {
-      let matching3 = matchBrackets(state4, range3.head, -1) || matchBrackets(state4, range3.head, 1) || range3.head > 0 && matchBrackets(state4, range3.head - 1, 1) || range3.head < state4.doc.length && matchBrackets(state4, range3.head + 1, -1);
-      if (!matching3 || !matching3.end)
-        return range3;
-      found2 = true;
-      let head2 = matching3.start.from == range3.head ? matching3.end.to : matching3.end.from;
-      return extend6 ? EditorSelection.range(range3.anchor, head2) : EditorSelection.cursor(head2);
-    });
-    if (!found2)
-      return false;
-    dispatch3(setSel(state4, selection3));
-    return true;
-  }
-  var cursorMatchingBracket = ({ state: state4, dispatch: dispatch3 }) => toMatchingBracket(state4, dispatch3, false);
-  function extendSel(target, forward, how) {
-    let selection3 = updateSel(target.state.selection, (range3) => {
-      if (range3.undirectional && range3.head >= range3.anchor != forward)
-        range3 = EditorSelection.range(range3.head, range3.anchor);
-      let head2 = how(range3);
-      return EditorSelection.range(range3.anchor, head2.head, head2.goalColumn, head2.bidiLevel || void 0, head2.assoc);
-    });
-    if (selection3.eq(target.state.selection))
-      return false;
-    target.dispatch(setSel(target.state, selection3));
-    return true;
-  }
-  function selectByChar(view, forward) {
-    return extendSel(view, forward, (range3) => view.moveByChar(range3, forward));
-  }
-  var selectCharLeft = (view) => selectByChar(view, !ltrAtCursor(view));
-  var selectCharRight = (view) => selectByChar(view, ltrAtCursor(view));
-  function selectByGroup(view, forward) {
-    return extendSel(view, forward, (range3) => view.moveByGroup(range3, forward));
-  }
-  var selectGroupLeft = (view) => selectByGroup(view, !ltrAtCursor(view));
-  var selectGroupRight = (view) => selectByGroup(view, ltrAtCursor(view));
-  var selectSyntaxLeft = (view) => {
-    let forward = !ltrAtCursor(view);
-    return extendSel(view, forward, (range3) => moveBySyntax(view.state, range3, forward));
-  };
-  var selectSyntaxRight = (view) => {
-    let forward = ltrAtCursor(view);
-    return extendSel(view, forward, (range3) => moveBySyntax(view.state, range3, forward));
-  };
-  function selectByLine(view, forward) {
-    return extendSel(view, forward, (range3) => view.moveVertically(range3, forward));
-  }
-  var selectLineUp = (view) => selectByLine(view, false);
-  var selectLineDown = (view) => selectByLine(view, true);
-  function selectByPage(view, forward) {
-    return extendSel(view, forward, (range3) => view.moveVertically(range3, forward, pageInfo(view).height));
-  }
-  var selectPageUp = (view) => selectByPage(view, false);
-  var selectPageDown = (view) => selectByPage(view, true);
-  var selectLineBoundaryForward = (view) => extendSel(view, true, (range3) => moveByLineBoundary(view, range3, true));
-  var selectLineBoundaryBackward = (view) => extendSel(view, false, (range3) => moveByLineBoundary(view, range3, false));
-  var selectLineBoundaryLeft = (view) => {
-    let forward = !ltrAtCursor(view);
-    return extendSel(view, forward, (range3) => moveByLineBoundary(view, range3, forward));
-  };
-  var selectLineBoundaryRight = (view) => {
-    let forward = ltrAtCursor(view);
-    return extendSel(view, forward, (range3) => moveByLineBoundary(view, range3, forward));
-  };
-  var selectLineStart = (view) => extendSel(view, false, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).from));
-  var selectLineEnd = (view) => extendSel(view, true, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).to));
-  var cursorDocStart = ({ state: state4, dispatch: dispatch3 }) => {
-    dispatch3(setSel(state4, { anchor: 0 }));
-    return true;
-  };
-  var cursorDocEnd = ({ state: state4, dispatch: dispatch3 }) => {
-    dispatch3(setSel(state4, { anchor: state4.doc.length }));
-    return true;
-  };
-  var selectDocStart = ({ state: state4, dispatch: dispatch3 }) => {
-    dispatch3(setSel(state4, { anchor: state4.selection.main.anchor, head: 0 }));
-    return true;
-  };
-  var selectDocEnd = ({ state: state4, dispatch: dispatch3 }) => {
-    dispatch3(setSel(state4, { anchor: state4.selection.main.anchor, head: state4.doc.length }));
-    return true;
-  };
-  var selectAll = ({ state: state4, dispatch: dispatch3 }) => {
-    dispatch3(state4.update({ selection: { anchor: 0, head: state4.doc.length }, userEvent: "select" }));
-    return true;
-  };
-  var selectLine = ({ state: state4, dispatch: dispatch3 }) => {
-    let ranges = selectedLineBlocks(state4).map(({ from: from5, to }) => EditorSelection.range(from5, Math.min(to + 1, state4.doc.length)));
-    dispatch3(state4.update({ selection: EditorSelection.create(ranges), userEvent: "select" }));
-    return true;
-  };
-  var selectParentSyntax = ({ state: state4, dispatch: dispatch3 }) => {
-    let selection3 = updateSel(state4.selection, (range3) => {
-      let tree = syntaxTree(state4), stack = tree.resolveStack(range3.from, 1);
-      if (range3.empty) {
-        let stackBefore = tree.resolveStack(range3.from, -1);
-        if (stackBefore.node.from >= stack.node.from && stackBefore.node.to <= stack.node.to)
-          stack = stackBefore;
-      }
-      for (let cur2 = stack; cur2; cur2 = cur2.next) {
-        let { node: node3 } = cur2;
-        if ((node3.from < range3.from && node3.to >= range3.to || node3.to > range3.to && node3.from <= range3.from) && cur2.next)
-          return EditorSelection.range(node3.to, node3.from);
-      }
-      return range3;
-    });
-    if (selection3.eq(state4.selection))
-      return false;
-    dispatch3(setSel(state4, selection3));
-    return true;
-  };
-  function addCursorVertically(view, forward) {
-    let { state: state4 } = view, sel = state4.selection, ranges = state4.selection.ranges.slice();
-    for (let range3 of state4.selection.ranges) {
-      let line2 = state4.doc.lineAt(range3.head);
-      if (forward ? line2.to < view.state.doc.length : line2.from > 0)
-        for (let cur2 = range3; ; ) {
-          let next4 = view.moveVertically(cur2, forward);
-          if (next4.head < line2.from || next4.head > line2.to) {
-            if (!ranges.some((r6) => r6.head == next4.head))
-              ranges.push(next4);
-            break;
-          } else if (next4.head == cur2.head) {
-            break;
-          } else {
-            cur2 = next4;
-          }
-        }
-    }
-    if (ranges.length == sel.ranges.length)
-      return false;
-    view.dispatch(setSel(state4, EditorSelection.create(ranges, ranges.length - 1)));
-    return true;
-  }
-  var addCursorAbove = (view) => addCursorVertically(view, false);
-  var addCursorBelow = (view) => addCursorVertically(view, true);
-  var simplifySelection = ({ state: state4, dispatch: dispatch3 }) => {
-    let cur2 = state4.selection, selection3 = null;
-    if (cur2.ranges.length > 1)
-      selection3 = EditorSelection.create([cur2.main]);
-    else if (!cur2.main.empty)
-      selection3 = EditorSelection.create([EditorSelection.cursor(cur2.main.head)]);
-    if (!selection3)
-      return false;
-    dispatch3(setSel(state4, selection3));
-    return true;
-  };
-  function deleteBy(target, by) {
-    if (target.state.readOnly)
-      return false;
-    let event3 = "delete.selection", { state: state4 } = target;
-    let changes = state4.changeByRange((range3) => {
-      let { from: from5, to } = range3;
-      if (from5 == to) {
-        let towards = by(range3);
-        if (towards < from5) {
-          event3 = "delete.backward";
-          towards = skipAtomic(target, towards, false);
-        } else if (towards > from5) {
-          event3 = "delete.forward";
-          towards = skipAtomic(target, towards, true);
-        }
-        from5 = Math.min(from5, towards);
-        to = Math.max(to, towards);
-      } else {
-        from5 = skipAtomic(target, from5, false);
-        to = skipAtomic(target, to, true);
-      }
-      return from5 == to ? { range: range3 } : { changes: { from: from5, to }, range: EditorSelection.cursor(from5, from5 < range3.head ? -1 : 1) };
-    });
-    if (changes.changes.empty)
-      return false;
-    target.dispatch(state4.update(changes, {
-      scrollIntoView: true,
-      userEvent: event3,
-      effects: event3 == "delete.selection" ? EditorView.announce.of(state4.phrase("Selection deleted")) : void 0
-    }));
-    return true;
-  }
-  function skipAtomic(target, pos, forward) {
-    if (target instanceof EditorView)
-      for (let ranges of target.state.facet(EditorView.atomicRanges).map((f2) => f2(target)))
-        ranges.between(pos, pos, (from5, to) => {
-          if (from5 < pos && to > pos)
-            pos = forward ? to : from5;
-        });
-    return pos;
-  }
-  var deleteByChar = (target, forward, byIndentUnit) => deleteBy(target, (range3) => {
-    let pos = range3.from, { state: state4 } = target, line2 = state4.doc.lineAt(pos), before, targetPos;
-    if (byIndentUnit && !forward && pos > line2.from && pos < line2.from + 200 && !/[^ \t]/.test(before = line2.text.slice(0, pos - line2.from))) {
-      if (before[before.length - 1] == "	")
-        return pos - 1;
-      let col = countColumn(before, state4.tabSize), drop2 = col % getIndentUnit(state4) || getIndentUnit(state4);
-      for (let i9 = 0; i9 < drop2 && before[before.length - 1 - i9] == " "; i9++)
-        pos--;
-      targetPos = pos;
-    } else {
-      targetPos = findClusterBreak2(line2.text, pos - line2.from, forward, forward) + line2.from;
-      if (targetPos == pos && line2.number != (forward ? state4.doc.lines : 1))
-        targetPos += forward ? 1 : -1;
-      else if (!forward && /[\ufe00-\ufe0f]/.test(line2.text.slice(targetPos - line2.from, pos - line2.from)))
-        targetPos = findClusterBreak2(line2.text, targetPos - line2.from, false, false) + line2.from;
-    }
-    return targetPos;
-  });
-  var deleteCharBackward = (view) => deleteByChar(view, false, true);
-  var deleteCharForward = (view) => deleteByChar(view, true, false);
-  var deleteByGroup = (target, forward) => deleteBy(target, (range3) => {
-    let pos = range3.head, { state: state4 } = target, line2 = state4.doc.lineAt(pos);
-    let categorize = state4.charCategorizer(pos);
-    for (let cat = null; ; ) {
-      if (pos == (forward ? line2.to : line2.from)) {
-        if (pos == range3.head && line2.number != (forward ? state4.doc.lines : 1))
-          pos += forward ? 1 : -1;
-        break;
-      }
-      let next4 = findClusterBreak2(line2.text, pos - line2.from, forward) + line2.from;
-      let nextChar2 = line2.text.slice(Math.min(pos, next4) - line2.from, Math.max(pos, next4) - line2.from);
-      let nextCat = categorize(nextChar2);
-      if (cat != null && nextCat != cat)
-        break;
-      if (nextChar2 != " " || pos != range3.head)
-        cat = nextCat;
-      pos = next4;
-    }
-    return pos;
-  });
-  var deleteGroupBackward = (target) => deleteByGroup(target, false);
-  var deleteGroupForward = (target) => deleteByGroup(target, true);
-  var deleteToLineEnd = (view) => deleteBy(view, (range3) => {
-    let lineEnd2 = view.lineBlockAt(range3.head).to;
-    return range3.head < lineEnd2 ? lineEnd2 : Math.min(view.state.doc.length, range3.head + 1);
-  });
-  var deleteLineBoundaryBackward = (view) => deleteBy(view, (range3) => {
-    let lineStart = view.moveToLineBoundary(range3, false).head;
-    return range3.head > lineStart ? lineStart : Math.max(0, range3.head - 1);
-  });
-  var deleteLineBoundaryForward = (view) => deleteBy(view, (range3) => {
-    let lineStart = view.moveToLineBoundary(range3, true).head;
-    return range3.head < lineStart ? lineStart : Math.min(view.state.doc.length, range3.head + 1);
-  });
-  var splitLine = ({ state: state4, dispatch: dispatch3 }) => {
-    if (state4.readOnly)
-      return false;
-    let changes = state4.changeByRange((range3) => {
-      return {
-        changes: { from: range3.from, to: range3.to, insert: Text2.of(["", ""]) },
-        range: EditorSelection.cursor(range3.from)
-      };
-    });
-    dispatch3(state4.update(changes, { scrollIntoView: true, userEvent: "input" }));
-    return true;
-  };
-  var transposeChars = ({ state: state4, dispatch: dispatch3 }) => {
-    if (state4.readOnly)
-      return false;
-    let changes = state4.changeByRange((range3) => {
-      if (!range3.empty || range3.from == 0 || range3.from == state4.doc.length)
-        return { range: range3 };
-      let pos = range3.from, line2 = state4.doc.lineAt(pos);
-      let from5 = pos == line2.from ? pos - 1 : findClusterBreak2(line2.text, pos - line2.from, false) + line2.from;
-      let to = pos == line2.to ? pos + 1 : findClusterBreak2(line2.text, pos - line2.from, true) + line2.from;
-      return {
-        changes: { from: from5, to, insert: state4.doc.slice(pos, to).append(state4.doc.slice(from5, pos)) },
-        range: EditorSelection.cursor(to)
-      };
-    });
-    if (changes.changes.empty)
-      return false;
-    dispatch3(state4.update(changes, { scrollIntoView: true, userEvent: "move.character" }));
-    return true;
-  };
-  function selectedLineBlocks(state4) {
-    let blocks2 = [], upto = -1;
-    for (let range3 of state4.selection.ranges) {
-      let startLine = state4.doc.lineAt(range3.from), endLine = state4.doc.lineAt(range3.to);
-      if (!range3.empty && range3.to == endLine.from)
-        endLine = state4.doc.lineAt(range3.to - 1);
-      if (upto >= startLine.number) {
-        let prev2 = blocks2[blocks2.length - 1];
-        prev2.to = endLine.to;
-        prev2.ranges.push(range3);
-      } else {
-        blocks2.push({ from: startLine.from, to: endLine.to, ranges: [range3] });
-      }
-      upto = endLine.number + 1;
-    }
-    return blocks2;
-  }
-  function moveLine(state4, dispatch3, forward) {
-    if (state4.readOnly)
-      return false;
-    let changes = [], ranges = [];
-    for (let block5 of selectedLineBlocks(state4)) {
-      if (forward ? block5.to == state4.doc.length : block5.from == 0)
-        continue;
-      let nextLine = state4.doc.lineAt(forward ? block5.to + 1 : block5.from - 1);
-      let size5 = nextLine.length + 1;
-      if (forward) {
-        changes.push({ from: block5.to, to: nextLine.to }, { from: block5.from, insert: nextLine.text + state4.lineBreak });
-        for (let r6 of block5.ranges)
-          ranges.push(EditorSelection.range(Math.min(state4.doc.length, r6.anchor + size5), Math.min(state4.doc.length, r6.head + size5)));
-      } else {
-        changes.push({ from: nextLine.from, to: block5.from }, { from: block5.to, insert: state4.lineBreak + nextLine.text });
-        for (let r6 of block5.ranges)
-          ranges.push(EditorSelection.range(r6.anchor - size5, r6.head - size5));
-      }
-    }
-    if (!changes.length)
-      return false;
-    dispatch3(state4.update({
-      changes,
-      scrollIntoView: true,
-      selection: EditorSelection.create(ranges, state4.selection.mainIndex),
-      userEvent: "move.line"
-    }));
-    return true;
-  }
-  var moveLineUp = ({ state: state4, dispatch: dispatch3 }) => moveLine(state4, dispatch3, false);
-  var moveLineDown = ({ state: state4, dispatch: dispatch3 }) => moveLine(state4, dispatch3, true);
-  function copyLine(state4, dispatch3, forward) {
-    if (state4.readOnly)
-      return false;
-    let changes = [];
-    for (let block5 of selectedLineBlocks(state4)) {
-      if (forward)
-        changes.push({ from: block5.from, insert: state4.doc.slice(block5.from, block5.to) + state4.lineBreak });
-      else
-        changes.push({ from: block5.to, insert: state4.lineBreak + state4.doc.slice(block5.from, block5.to) });
-    }
-    let changeSet = state4.changes(changes);
-    dispatch3(state4.update({
-      changes: changeSet,
-      selection: state4.selection.map(changeSet, forward ? 1 : -1),
-      scrollIntoView: true,
-      userEvent: "input.copyline"
-    }));
-    return true;
-  }
-  var copyLineUp = ({ state: state4, dispatch: dispatch3 }) => copyLine(state4, dispatch3, false);
-  var copyLineDown = ({ state: state4, dispatch: dispatch3 }) => copyLine(state4, dispatch3, true);
-  var deleteLine = (view) => {
-    if (view.state.readOnly)
-      return false;
-    let { state: state4 } = view, changes = state4.changes(selectedLineBlocks(state4).map(({ from: from5, to }) => {
-      if (from5 > 0)
-        from5--;
-      else if (to < state4.doc.length)
-        to++;
-      return { from: from5, to };
-    }));
-    let selection3 = updateSel(state4.selection, (range3) => {
-      let dist4 = void 0;
-      if (view.lineWrapping) {
-        let block5 = view.lineBlockAt(range3.head), pos = view.coordsAtPos(range3.head, range3.assoc || 1);
-        if (pos)
-          dist4 = block5.bottom + view.documentTop - pos.bottom + view.defaultLineHeight / 2;
-      }
-      return view.moveVertically(range3, true, dist4);
-    }).map(changes);
-    view.dispatch({ changes, selection: selection3, scrollIntoView: true, userEvent: "delete.line" });
-    return true;
-  };
-  function isBetweenBrackets(state4, pos) {
-    if (/\(\)|\[\]|\{\}/.test(state4.sliceDoc(pos - 1, pos + 1)))
-      return { from: pos, to: pos };
-    let context = syntaxTree(state4).resolveInner(pos);
-    let before = context.childBefore(pos), after = context.childAfter(pos), closedBy;
-    if (before && after && before.to <= pos && after.from >= pos && (closedBy = before.type.prop(NodeProp.closedBy)) && closedBy.indexOf(after.name) > -1 && state4.doc.lineAt(before.to).from == state4.doc.lineAt(after.from).from && !/\S/.test(state4.sliceDoc(before.to, after.from)))
-      return { from: before.to, to: after.from };
-    return null;
-  }
-  var insertNewlineAndIndent = /* @__PURE__ */ newlineAndIndent(false);
-  var insertBlankLine = /* @__PURE__ */ newlineAndIndent(true);
-  function newlineAndIndent(atEof) {
-    return ({ state: state4, dispatch: dispatch3 }) => {
-      if (state4.readOnly)
-        return false;
-      let changes = state4.changeByRange((range3) => {
-        let { from: from5, to } = range3, line2 = state4.doc.lineAt(from5);
-        let explode = !atEof && from5 == to && isBetweenBrackets(state4, from5);
-        if (atEof)
-          from5 = to = (to <= line2.to ? line2 : state4.doc.lineAt(to)).to;
-        let cx2 = new IndentContext(state4, { simulateBreak: from5, simulateDoubleBreak: !!explode });
-        let indent8 = getIndentation(cx2, from5);
-        if (indent8 == null)
-          indent8 = countColumn(/^\s*/.exec(state4.doc.lineAt(from5).text)[0], state4.tabSize);
-        while (to < line2.to && /\s/.test(line2.text[to - line2.from]))
-          to++;
-        if (explode)
-          ({ from: from5, to } = explode);
-        else if (from5 > line2.from && from5 < line2.from + 100 && !/\S/.test(line2.text.slice(0, from5)))
-          from5 = line2.from;
-        let insert2 = ["", indentString2(state4, indent8)];
-        if (explode)
-          insert2.push(indentString2(state4, cx2.lineIndent(line2.from, -1)));
-        return {
-          changes: { from: from5, to, insert: Text2.of(insert2) },
-          range: EditorSelection.cursor(from5 + 1 + insert2[1].length)
-        };
-      });
-      dispatch3(state4.update(changes, { scrollIntoView: true, userEvent: "input" }));
-      return true;
-    };
-  }
-  function changeBySelectedLine(state4, f2) {
-    let atLine = -1;
-    return state4.changeByRange((range3) => {
-      let changes = [];
-      for (let pos = range3.from; pos <= range3.to; ) {
-        let line2 = state4.doc.lineAt(pos);
-        if (line2.number > atLine && (range3.empty || range3.to > line2.from)) {
-          f2(line2, changes, range3);
-          atLine = line2.number;
-        }
-        pos = line2.to + 1;
-      }
-      let changeSet = state4.changes(changes);
-      return {
-        changes,
-        range: EditorSelection.range(changeSet.mapPos(range3.anchor, 1), changeSet.mapPos(range3.head, 1))
-      };
-    });
-  }
-  var indentSelection = ({ state: state4, dispatch: dispatch3 }) => {
-    if (state4.readOnly)
-      return false;
-    let updated = /* @__PURE__ */ Object.create(null);
-    let context = new IndentContext(state4, { overrideIndentation: (start4) => {
-      let found2 = updated[start4];
-      return found2 == null ? -1 : found2;
-    } });
-    let changes = changeBySelectedLine(state4, (line2, changes2, range3) => {
-      let indent8 = getIndentation(context, line2.from);
-      if (indent8 == null)
-        return;
-      if (!/\S/.test(line2.text))
-        indent8 = 0;
-      let cur2 = /^\s*/.exec(line2.text)[0];
-      let norm = indentString2(state4, indent8);
-      if (cur2 != norm || range3.from < line2.from + cur2.length) {
-        updated[line2.from] = indent8;
-        changes2.push({ from: line2.from, to: line2.from + cur2.length, insert: norm });
-      }
-    });
-    if (!changes.changes.empty)
-      dispatch3(state4.update(changes, { userEvent: "indent" }));
-    return true;
-  };
-  var indentMore = ({ state: state4, dispatch: dispatch3 }) => {
-    if (state4.readOnly)
-      return false;
-    dispatch3(state4.update(changeBySelectedLine(state4, (line2, changes) => {
-      changes.push({ from: line2.from, insert: state4.facet(indentUnit) });
-    }), { userEvent: "input.indent" }));
-    return true;
-  };
-  var indentLess = ({ state: state4, dispatch: dispatch3 }) => {
-    if (state4.readOnly)
-      return false;
-    dispatch3(state4.update(changeBySelectedLine(state4, (line2, changes) => {
-      let space8 = /^\s*/.exec(line2.text)[0];
-      if (!space8)
-        return;
-      let col = countColumn(space8, state4.tabSize), keep = 0;
-      let insert2 = indentString2(state4, Math.max(0, col - getIndentUnit(state4)));
-      while (keep < space8.length && keep < insert2.length && space8.charCodeAt(keep) == insert2.charCodeAt(keep))
-        keep++;
-      changes.push({ from: line2.from + keep, to: line2.from + space8.length, insert: insert2.slice(keep) });
-    }), { userEvent: "delete.dedent" }));
-    return true;
-  };
-  var toggleTabFocusMode = (view) => {
-    view.setTabFocusMode();
-    return true;
-  };
-  var emacsStyleKeymap = [
-    { key: "Ctrl-b", run: cursorCharLeft, shift: selectCharLeft, preventDefault: true },
-    { key: "Ctrl-f", run: cursorCharRight, shift: selectCharRight },
-    { key: "Ctrl-p", run: cursorLineUp, shift: selectLineUp },
-    { key: "Ctrl-n", run: cursorLineDown, shift: selectLineDown },
-    { key: "Ctrl-a", run: cursorLineStart, shift: selectLineStart },
-    { key: "Ctrl-e", run: cursorLineEnd, shift: selectLineEnd },
-    { key: "Ctrl-d", run: deleteCharForward },
-    { key: "Ctrl-h", run: deleteCharBackward },
-    { key: "Ctrl-k", run: deleteToLineEnd },
-    { key: "Ctrl-Alt-h", run: deleteGroupBackward },
-    { key: "Ctrl-o", run: splitLine },
-    { key: "Ctrl-t", run: transposeChars },
-    { key: "Ctrl-v", run: cursorPageDown }
-  ];
-  var standardKeymap = /* @__PURE__ */ [
-    { key: "ArrowLeft", run: cursorCharLeft, shift: selectCharLeft, preventDefault: true },
-    { key: "Mod-ArrowLeft", mac: "Alt-ArrowLeft", run: cursorGroupLeft, shift: selectGroupLeft, preventDefault: true },
-    { mac: "Cmd-ArrowLeft", run: cursorLineBoundaryLeft, shift: selectLineBoundaryLeft, preventDefault: true },
-    { key: "ArrowRight", run: cursorCharRight, shift: selectCharRight, preventDefault: true },
-    { key: "Mod-ArrowRight", mac: "Alt-ArrowRight", run: cursorGroupRight, shift: selectGroupRight, preventDefault: true },
-    { mac: "Cmd-ArrowRight", run: cursorLineBoundaryRight, shift: selectLineBoundaryRight, preventDefault: true },
-    { key: "ArrowUp", run: cursorLineUp, shift: selectLineUp, preventDefault: true },
-    { mac: "Cmd-ArrowUp", run: cursorDocStart, shift: selectDocStart },
-    { mac: "Ctrl-ArrowUp", run: cursorPageUp, shift: selectPageUp },
-    { key: "ArrowDown", run: cursorLineDown, shift: selectLineDown, preventDefault: true },
-    { mac: "Cmd-ArrowDown", run: cursorDocEnd, shift: selectDocEnd },
-    { mac: "Ctrl-ArrowDown", run: cursorPageDown, shift: selectPageDown },
-    { key: "PageUp", run: cursorPageUp, shift: selectPageUp },
-    { key: "PageDown", run: cursorPageDown, shift: selectPageDown },
-    { key: "Home", run: cursorLineBoundaryBackward, shift: selectLineBoundaryBackward, preventDefault: true },
-    { key: "Mod-Home", run: cursorDocStart, shift: selectDocStart },
-    { key: "End", run: cursorLineBoundaryForward, shift: selectLineBoundaryForward, preventDefault: true },
-    { key: "Mod-End", run: cursorDocEnd, shift: selectDocEnd },
-    { key: "Enter", run: insertNewlineAndIndent, shift: insertNewlineAndIndent },
-    { key: "Mod-a", run: selectAll },
-    { key: "Backspace", run: deleteCharBackward, shift: deleteCharBackward, preventDefault: true },
-    { key: "Delete", run: deleteCharForward, preventDefault: true },
-    { key: "Mod-Backspace", mac: "Alt-Backspace", run: deleteGroupBackward, preventDefault: true },
-    { key: "Mod-Delete", mac: "Alt-Delete", run: deleteGroupForward, preventDefault: true },
-    { mac: "Mod-Backspace", run: deleteLineBoundaryBackward, preventDefault: true },
-    { mac: "Mod-Delete", run: deleteLineBoundaryForward, preventDefault: true }
-  ].concat(/* @__PURE__ */ emacsStyleKeymap.map((b3) => ({ mac: b3.key, run: b3.run, shift: b3.shift })));
-  var defaultKeymap = /* @__PURE__ */ [
-    { key: "Alt-ArrowLeft", mac: "Ctrl-ArrowLeft", run: cursorSyntaxLeft, shift: selectSyntaxLeft },
-    { key: "Alt-ArrowRight", mac: "Ctrl-ArrowRight", run: cursorSyntaxRight, shift: selectSyntaxRight },
-    { key: "Alt-ArrowUp", run: moveLineUp },
-    { key: "Shift-Alt-ArrowUp", run: copyLineUp },
-    { key: "Alt-ArrowDown", run: moveLineDown },
-    { key: "Shift-Alt-ArrowDown", run: copyLineDown },
-    { key: "Mod-Alt-ArrowUp", run: addCursorAbove },
-    { key: "Mod-Alt-ArrowDown", run: addCursorBelow },
-    { key: "Escape", run: simplifySelection },
-    { key: "Mod-Enter", run: insertBlankLine },
-    { key: "Alt-l", mac: "Ctrl-l", run: selectLine },
-    { key: "Mod-i", run: selectParentSyntax, preventDefault: true },
-    { key: "Mod-[", run: indentLess },
-    { key: "Mod-]", run: indentMore },
-    { key: "Mod-Alt-\\", run: indentSelection },
-    { key: "Shift-Mod-k", run: deleteLine },
-    { key: "Shift-Mod-\\", run: cursorMatchingBracket },
-    { key: "Mod-/", run: toggleComment },
-    { key: "Alt-A", run: toggleBlockComment },
-    { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
-  ].concat(standardKeymap);
-  var indentWithTab = { key: "Tab", run: indentMore, shift: indentLess };
-
-  // node_modules/@codemirror/theme-one-dark/dist/index.js
-  init_dist4();
-  init_dist7();
-  init_dist6();
-  var chalky = "#e5c07b";
-  var coral = "#e06c75";
-  var cyan = "#56b6c2";
-  var invalid = "#ffffff";
-  var ivory = "#abb2bf";
-  var stone = "#7d8799";
-  var malibu = "#61afef";
-  var sage = "#98c379";
-  var whiskey = "#d19a66";
-  var violet = "#c678dd";
-  var darkBackground = "#21252b";
-  var highlightBackground = "#2c313a";
-  var background = "#282c34";
-  var tooltipBackground = "#353a42";
-  var selection2 = "#3E4451";
-  var cursor = "#528bff";
-  var oneDarkTheme = /* @__PURE__ */ EditorView.theme({
-    "&": {
-      color: ivory,
-      backgroundColor: background
-    },
-    ".cm-content": {
-      caretColor: cursor
-    },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: cursor },
-    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: selection2 },
-    ".cm-panels": { backgroundColor: darkBackground, color: ivory },
-    ".cm-panels.cm-panels-top": { borderBottom: "2px solid black" },
-    ".cm-panels.cm-panels-bottom": { borderTop: "2px solid black" },
-    ".cm-searchMatch": {
-      backgroundColor: "#72a1ff59",
-      outline: "1px solid #457dff"
-    },
-    ".cm-searchMatch.cm-searchMatch-selected": {
-      backgroundColor: "#6199ff2f"
-    },
-    ".cm-activeLine": { backgroundColor: "#6699ff0b" },
-    ".cm-selectionMatch": { backgroundColor: "#aafe661a" },
-    "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {
-      backgroundColor: "#bad0f847"
-    },
-    ".cm-gutters": {
-      backgroundColor: background,
-      color: stone,
-      border: "none"
-    },
-    ".cm-activeLineGutter": {
-      backgroundColor: highlightBackground
-    },
-    ".cm-foldPlaceholder": {
-      backgroundColor: "transparent",
-      border: "none",
-      color: "#ddd"
-    },
-    ".cm-tooltip": {
-      border: "none",
-      backgroundColor: tooltipBackground
-    },
-    ".cm-tooltip .cm-tooltip-arrow:before": {
-      borderTopColor: "transparent",
-      borderBottomColor: "transparent"
-    },
-    ".cm-tooltip .cm-tooltip-arrow:after": {
-      borderTopColor: tooltipBackground,
-      borderBottomColor: tooltipBackground
-    },
-    ".cm-tooltip-autocomplete": {
-      "& > ul > li[aria-selected]": {
-        backgroundColor: highlightBackground,
-        color: ivory
-      }
-    }
-  }, { dark: true });
-  var oneDarkHighlightStyle = /* @__PURE__ */ HighlightStyle.define([
-    {
-      tag: tags2.keyword,
-      color: violet
-    },
-    {
-      tag: [tags2.name, tags2.deleted, tags2.character, tags2.propertyName, tags2.macroName],
-      color: coral
-    },
-    {
-      tag: [/* @__PURE__ */ tags2.function(tags2.variableName), tags2.labelName],
-      color: malibu
-    },
-    {
-      tag: [tags2.color, /* @__PURE__ */ tags2.constant(tags2.name), /* @__PURE__ */ tags2.standard(tags2.name)],
-      color: whiskey
-    },
-    {
-      tag: [/* @__PURE__ */ tags2.definition(tags2.name), tags2.separator],
-      color: ivory
-    },
-    {
-      tag: [tags2.typeName, tags2.className, tags2.number, tags2.changed, tags2.annotation, tags2.modifier, tags2.self, tags2.namespace],
-      color: chalky
-    },
-    {
-      tag: [tags2.operator, tags2.operatorKeyword, tags2.url, tags2.escape, tags2.regexp, tags2.link, /* @__PURE__ */ tags2.special(tags2.string)],
-      color: cyan
-    },
-    {
-      tag: [tags2.meta, tags2.comment],
-      color: stone
-    },
-    {
-      tag: tags2.strong,
-      fontWeight: "bold"
-    },
-    {
-      tag: tags2.emphasis,
-      fontStyle: "italic"
-    },
-    {
-      tag: tags2.strikethrough,
-      textDecoration: "line-through"
-    },
-    {
-      tag: tags2.link,
-      color: stone,
-      textDecoration: "underline"
-    },
-    {
-      tag: tags2.heading,
-      fontWeight: "bold",
-      color: coral
-    },
-    {
-      tag: [tags2.atom, tags2.bool, /* @__PURE__ */ tags2.special(tags2.variableName)],
-      color: whiskey
-    },
-    {
-      tag: [tags2.processingInstruction, tags2.string, tags2.inserted],
-      color: sage
-    },
-    {
-      tag: tags2.invalid,
-      color: invalid
-    }
-  ]);
-  var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
-
-  // src/components/EditorPane.tsx
-  init_dist4();
 
   // node_modules/@milkdown/crepe/lib/esm/index.js
   init_lodash();
@@ -303389,6 +302138,153 @@ flowchart LR
       }
     })
   ];
+
+  // node_modules/@codemirror/theme-one-dark/dist/index.js
+  init_dist5();
+  init_dist7();
+  init_dist6();
+  var chalky = "#e5c07b";
+  var coral = "#e06c75";
+  var cyan = "#56b6c2";
+  var invalid = "#ffffff";
+  var ivory = "#abb2bf";
+  var stone = "#7d8799";
+  var malibu = "#61afef";
+  var sage = "#98c379";
+  var whiskey = "#d19a66";
+  var violet = "#c678dd";
+  var darkBackground = "#21252b";
+  var highlightBackground = "#2c313a";
+  var background = "#282c34";
+  var tooltipBackground = "#353a42";
+  var selection2 = "#3E4451";
+  var cursor = "#528bff";
+  var oneDarkTheme = /* @__PURE__ */ EditorView.theme({
+    "&": {
+      color: ivory,
+      backgroundColor: background
+    },
+    ".cm-content": {
+      caretColor: cursor
+    },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: cursor },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: selection2 },
+    ".cm-panels": { backgroundColor: darkBackground, color: ivory },
+    ".cm-panels.cm-panels-top": { borderBottom: "2px solid black" },
+    ".cm-panels.cm-panels-bottom": { borderTop: "2px solid black" },
+    ".cm-searchMatch": {
+      backgroundColor: "#72a1ff59",
+      outline: "1px solid #457dff"
+    },
+    ".cm-searchMatch.cm-searchMatch-selected": {
+      backgroundColor: "#6199ff2f"
+    },
+    ".cm-activeLine": { backgroundColor: "#6699ff0b" },
+    ".cm-selectionMatch": { backgroundColor: "#aafe661a" },
+    "&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket": {
+      backgroundColor: "#bad0f847"
+    },
+    ".cm-gutters": {
+      backgroundColor: background,
+      color: stone,
+      border: "none"
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: highlightBackground
+    },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "transparent",
+      border: "none",
+      color: "#ddd"
+    },
+    ".cm-tooltip": {
+      border: "none",
+      backgroundColor: tooltipBackground
+    },
+    ".cm-tooltip .cm-tooltip-arrow:before": {
+      borderTopColor: "transparent",
+      borderBottomColor: "transparent"
+    },
+    ".cm-tooltip .cm-tooltip-arrow:after": {
+      borderTopColor: tooltipBackground,
+      borderBottomColor: tooltipBackground
+    },
+    ".cm-tooltip-autocomplete": {
+      "& > ul > li[aria-selected]": {
+        backgroundColor: highlightBackground,
+        color: ivory
+      }
+    }
+  }, { dark: true });
+  var oneDarkHighlightStyle = /* @__PURE__ */ HighlightStyle.define([
+    {
+      tag: tags2.keyword,
+      color: violet
+    },
+    {
+      tag: [tags2.name, tags2.deleted, tags2.character, tags2.propertyName, tags2.macroName],
+      color: coral
+    },
+    {
+      tag: [/* @__PURE__ */ tags2.function(tags2.variableName), tags2.labelName],
+      color: malibu
+    },
+    {
+      tag: [tags2.color, /* @__PURE__ */ tags2.constant(tags2.name), /* @__PURE__ */ tags2.standard(tags2.name)],
+      color: whiskey
+    },
+    {
+      tag: [/* @__PURE__ */ tags2.definition(tags2.name), tags2.separator],
+      color: ivory
+    },
+    {
+      tag: [tags2.typeName, tags2.className, tags2.number, tags2.changed, tags2.annotation, tags2.modifier, tags2.self, tags2.namespace],
+      color: chalky
+    },
+    {
+      tag: [tags2.operator, tags2.operatorKeyword, tags2.url, tags2.escape, tags2.regexp, tags2.link, /* @__PURE__ */ tags2.special(tags2.string)],
+      color: cyan
+    },
+    {
+      tag: [tags2.meta, tags2.comment],
+      color: stone
+    },
+    {
+      tag: tags2.strong,
+      fontWeight: "bold"
+    },
+    {
+      tag: tags2.emphasis,
+      fontStyle: "italic"
+    },
+    {
+      tag: tags2.strikethrough,
+      textDecoration: "line-through"
+    },
+    {
+      tag: tags2.link,
+      color: stone,
+      textDecoration: "underline"
+    },
+    {
+      tag: tags2.heading,
+      fontWeight: "bold",
+      color: coral
+    },
+    {
+      tag: [tags2.atom, tags2.bool, /* @__PURE__ */ tags2.special(tags2.variableName)],
+      color: whiskey
+    },
+    {
+      tag: [tags2.processingInstruction, tags2.string, tags2.inserted],
+      color: sage
+    },
+    {
+      tag: tags2.invalid,
+      color: invalid
+    }
+  ]);
+  var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
   // node_modules/@milkdown/exception/lib/index.js
   var ErrorCode = /* @__PURE__ */ (function(ErrorCode2) {
@@ -318339,7 +317235,7 @@ flowchart LR
     };
   }
   var splitBlock = splitBlockAs();
-  var selectAll2 = (state4, dispatch3) => {
+  var selectAll = (state4, dispatch3) => {
     if (dispatch3)
       dispatch3(state4.tr.setSelection(new AllSelection(state4.doc)));
     return true;
@@ -318571,7 +317467,7 @@ flowchart LR
     "Shift-Backspace": backspace,
     "Delete": del,
     "Mod-Delete": del,
-    "Mod-a": selectAll2
+    "Mod-a": selectAll
   };
   var macBaseKeymap = {
     "Ctrl-h": pcBaseKeymap["Backspace"],
@@ -323199,15 +322095,15 @@ flowchart LR
       return this.type instanceof WidgetType2;
     }
   };
-  var none6 = [];
+  var none5 = [];
   var noSpec = {};
   var DecorationSet = class _DecorationSet {
     /**
     @internal
     */
     constructor(local, children2) {
-      this.local = local.length ? local : none6;
-      this.children = children2.length ? children2 : none6;
+      this.local = local.length ? local : none5;
+      this.children = children2.length ? children2 : none5;
     }
     /**
     Create a set of decorations, using the structure of the given
@@ -323267,7 +322163,7 @@ flowchart LR
       if (this.children.length)
         return mapChildren2(this.children, newLocal || [], mapping, node3, offset3, oldOffset, options2);
       else
-        return newLocal ? new _DecorationSet(newLocal.sort(byPos), none6) : empty4;
+        return newLocal ? new _DecorationSet(newLocal.sort(byPos), none5) : empty4;
     }
     /**
     Add the given array of decorations to the ones in the set,
@@ -323374,7 +322270,7 @@ flowchart LR
         }
       }
       if (local) {
-        let localSet = new _DecorationSet(local.sort(byPos), none6);
+        let localSet = new _DecorationSet(local.sort(byPos), none5);
         return child ? new DecorationGroup([localSet, child]) : localSet;
       }
       return child || empty4;
@@ -323406,7 +322302,7 @@ flowchart LR
     */
     localsInner(node3) {
       if (this == empty4)
-        return none6;
+        return none5;
       if (node3.inlineContent || !this.local.some(InlineType.is))
         return this.local;
       let result = [];
@@ -323471,7 +322367,7 @@ flowchart LR
             result.push(locals[j4]);
         }
       }
-      return result ? removeOverlap(sorted ? result : result.sort(byPos)) : none6;
+      return result ? removeOverlap(sorted ? result : result.sort(byPos)) : none5;
     }
     // Create a group for the given array of decoration sets, or return
     // a single set when possible.
@@ -344257,7 +343153,7 @@ Component that was made reactive: `,
     const rows = Array(rowsCount).fill(0).map((_4, i9) => i9 === 0 ? tableHeaderRowSchema.type(ctx).create(null, headerCells) : tableRowSchema.type(ctx).create(null, cells));
     return tableSchema.type(ctx).create(null, rows);
   }
-  function selectLine2(type9) {
+  function selectLine(type9) {
     return (index2, pos) => (tr) => {
       pos = pos ?? tr.selection.from;
       const $pos = tr.doc.resolve(pos);
@@ -344281,8 +343177,8 @@ Component that was made reactive: `,
       return tr;
     };
   }
-  var selectRow = selectLine2("row");
-  var selectCol = selectLine2("col");
+  var selectRow = selectLine("row");
+  var selectCol = selectLine("col");
   function addRowWithAlignment(ctx, tr, { map: map10, tableStart, table: table2 }, row) {
     const rowPos = Array(row).fill(0).reduce((acc, _4, i9) => {
       return acc + table2.child(i9).nodeSize;
@@ -344942,12 +343838,1111 @@ Component that was made reactive: `,
     plugins2
   ].flat();
 
-  // node_modules/@milkdown/crepe/lib/esm/index.js
+  // node_modules/@codemirror/commands/dist/index.js
   init_dist4();
+  init_dist5();
+  init_dist7();
+  init_dist3();
+  var toggleComment = (target) => {
+    let { state: state4 } = target, line2 = state4.doc.lineAt(state4.selection.main.from), config5 = getConfig4(target.state, line2.from);
+    return config5.line ? toggleLineComment(target) : config5.block ? toggleBlockCommentByLine(target) : false;
+  };
+  function command2(f2, option2) {
+    return ({ state: state4, dispatch: dispatch3 }) => {
+      if (state4.readOnly)
+        return false;
+      let tr = f2(option2, state4);
+      if (!tr)
+        return false;
+      dispatch3(state4.update(tr));
+      return true;
+    };
+  }
+  var toggleLineComment = /* @__PURE__ */ command2(
+    changeLineComment,
+    0
+    /* CommentOption.Toggle */
+  );
+  var toggleBlockComment = /* @__PURE__ */ command2(
+    changeBlockComment,
+    0
+    /* CommentOption.Toggle */
+  );
+  var toggleBlockCommentByLine = /* @__PURE__ */ command2(
+    (o2, s3) => changeBlockComment(o2, s3, selectedLineRanges(s3)),
+    0
+    /* CommentOption.Toggle */
+  );
+  function getConfig4(state4, pos) {
+    let data7 = state4.languageDataAt("commentTokens", pos, 1);
+    return data7.length ? data7[0] : {};
+  }
+  var SearchMargin = 50;
+  function findBlockComment(state4, { open: open4, close: close5 }, from5, to) {
+    let textBefore = state4.sliceDoc(from5 - SearchMargin, from5);
+    let textAfter = state4.sliceDoc(to, to + SearchMargin);
+    let spaceBefore = /\s*$/.exec(textBefore)[0].length, spaceAfter = /^\s*/.exec(textAfter)[0].length;
+    let beforeOff = textBefore.length - spaceBefore;
+    if (textBefore.slice(beforeOff - open4.length, beforeOff) == open4 && textAfter.slice(spaceAfter, spaceAfter + close5.length) == close5) {
+      return {
+        open: { pos: from5 - spaceBefore, margin: spaceBefore && 1 },
+        close: { pos: to + spaceAfter, margin: spaceAfter && 1 }
+      };
+    }
+    let startText, endText;
+    if (to - from5 <= 2 * SearchMargin) {
+      startText = endText = state4.sliceDoc(from5, to);
+    } else {
+      startText = state4.sliceDoc(from5, from5 + SearchMargin);
+      endText = state4.sliceDoc(to - SearchMargin, to);
+    }
+    let startSpace = /^\s*/.exec(startText)[0].length, endSpace = /\s*$/.exec(endText)[0].length;
+    let endOff = endText.length - endSpace - close5.length;
+    if (startText.slice(startSpace, startSpace + open4.length) == open4 && endText.slice(endOff, endOff + close5.length) == close5) {
+      return {
+        open: {
+          pos: from5 + startSpace + open4.length,
+          margin: /\s/.test(startText.charAt(startSpace + open4.length)) ? 1 : 0
+        },
+        close: {
+          pos: to - endSpace - close5.length,
+          margin: /\s/.test(endText.charAt(endOff - 1)) ? 1 : 0
+        }
+      };
+    }
+    return null;
+  }
+  function selectedLineRanges(state4) {
+    let ranges = [];
+    for (let r6 of state4.selection.ranges) {
+      let fromLine = state4.doc.lineAt(r6.from);
+      let toLine = r6.to <= fromLine.to ? fromLine : state4.doc.lineAt(r6.to);
+      if (toLine.from > fromLine.from && toLine.from == r6.to)
+        toLine = r6.to == fromLine.to + 1 ? fromLine : state4.doc.lineAt(r6.to - 1);
+      let last4 = ranges.length - 1;
+      if (last4 >= 0 && ranges[last4].to > fromLine.from)
+        ranges[last4].to = toLine.to;
+      else
+        ranges.push({ from: fromLine.from + /^\s*/.exec(fromLine.text)[0].length, to: toLine.to });
+    }
+    return ranges;
+  }
+  function changeBlockComment(option2, state4, ranges = state4.selection.ranges) {
+    let tokens4 = ranges.map((r6) => getConfig4(state4, r6.from).block);
+    if (!tokens4.every((c5) => c5))
+      return null;
+    let comments2 = ranges.map((r6, i9) => findBlockComment(state4, tokens4[i9], r6.from, r6.to));
+    if (option2 != 2 && !comments2.every((c5) => c5)) {
+      return { changes: state4.changes(ranges.map((range3, i9) => {
+        if (comments2[i9])
+          return [];
+        return [{ from: range3.from, insert: tokens4[i9].open + " " }, { from: range3.to, insert: " " + tokens4[i9].close }];
+      })) };
+    } else if (option2 != 1 && comments2.some((c5) => c5)) {
+      let changes = [];
+      for (let i9 = 0, comment5; i9 < comments2.length; i9++)
+        if (comment5 = comments2[i9]) {
+          let token2 = tokens4[i9], { open: open4, close: close5 } = comment5;
+          changes.push({ from: open4.pos - token2.open.length, to: open4.pos + open4.margin }, { from: close5.pos - close5.margin, to: close5.pos + token2.close.length });
+        }
+      return { changes };
+    }
+    return null;
+  }
+  function changeLineComment(option2, state4, ranges = state4.selection.ranges) {
+    let lines = [];
+    let prevLine = -1;
+    ranges: for (let { from: from5, to } of ranges) {
+      let startI = lines.length, minIndent = 1e9, token2;
+      for (let pos = from5; pos <= to; ) {
+        let line2 = state4.doc.lineAt(pos);
+        if (token2 == void 0) {
+          token2 = getConfig4(state4, line2.from).line;
+          if (!token2)
+            continue ranges;
+        }
+        if (line2.from > prevLine && (from5 == to || to > line2.from)) {
+          prevLine = line2.from;
+          let indent8 = /^\s*/.exec(line2.text)[0].length;
+          let empty6 = indent8 == line2.length;
+          let comment5 = line2.text.slice(indent8, indent8 + token2.length) == token2 ? indent8 : -1;
+          if (indent8 < line2.text.length && indent8 < minIndent)
+            minIndent = indent8;
+          lines.push({ line: line2, comment: comment5, token: token2, indent: indent8, empty: empty6, single: false });
+        }
+        pos = line2.to + 1;
+      }
+      if (minIndent < 1e9) {
+        for (let i9 = startI; i9 < lines.length; i9++)
+          if (lines[i9].indent < lines[i9].line.text.length)
+            lines[i9].indent = minIndent;
+      }
+      if (lines.length == startI + 1)
+        lines[startI].single = true;
+    }
+    if (option2 != 2 && lines.some((l4) => l4.comment < 0 && (!l4.empty || l4.single))) {
+      let changes = [];
+      for (let { line: line2, token: token2, indent: indent8, empty: empty6, single } of lines)
+        if (single || !empty6)
+          changes.push({ from: line2.from + indent8, insert: token2 + " " });
+      let changeSet = state4.changes(changes);
+      return { changes: changeSet, selection: state4.selection.map(changeSet, 1) };
+    } else if (option2 != 1 && lines.some((l4) => l4.comment >= 0)) {
+      let changes = [];
+      for (let { line: line2, comment: comment5, token: token2 } of lines)
+        if (comment5 >= 0) {
+          let from5 = line2.from + comment5, to = from5 + token2.length;
+          if (line2.text[to - line2.from] == " ")
+            to++;
+          changes.push({ from: from5, to });
+        }
+      return { changes };
+    }
+    return null;
+  }
+  var fromHistory = /* @__PURE__ */ Annotation2.define();
+  var isolateHistory = /* @__PURE__ */ Annotation2.define();
+  var invertedEffects = /* @__PURE__ */ Facet.define();
+  var historyConfig = /* @__PURE__ */ Facet.define({
+    combine(configs) {
+      return combineConfig(configs, {
+        minDepth: 100,
+        newGroupDelay: 500,
+        joinToEvent: (_t, isAdjacent2) => isAdjacent2
+      }, {
+        minDepth: Math.max,
+        newGroupDelay: Math.min,
+        joinToEvent: (a3, b3) => (tr, adj) => a3(tr, adj) || b3(tr, adj)
+      });
+    }
+  });
+  var historyField_ = /* @__PURE__ */ StateField.define({
+    create() {
+      return HistoryState.empty;
+    },
+    update(state4, tr) {
+      let config5 = tr.state.facet(historyConfig);
+      let fromHist = tr.annotation(fromHistory);
+      if (fromHist) {
+        let item = HistEvent.fromTransaction(tr, fromHist.selection), from5 = fromHist.side;
+        let other = from5 == 0 ? state4.undone : state4.done;
+        if (item)
+          other = updateBranch(other, other.length, config5.minDepth, item);
+        else
+          other = addSelection(other, tr.startState.selection);
+        return new HistoryState(from5 == 0 ? fromHist.rest : other, from5 == 0 ? other : fromHist.rest);
+      }
+      let isolate = tr.annotation(isolateHistory);
+      if (isolate == "full" || isolate == "before")
+        state4 = state4.isolate();
+      if (tr.annotation(Transaction.addToHistory) === false)
+        return !tr.changes.empty ? state4.addMapping(tr.changes.desc) : state4;
+      let event3 = HistEvent.fromTransaction(tr);
+      let time4 = tr.annotation(Transaction.time), userEvent = tr.annotation(Transaction.userEvent);
+      if (event3)
+        state4 = state4.addChanges(event3, time4, userEvent, config5, tr);
+      else if (tr.selection)
+        state4 = state4.addSelection(tr.startState.selection, time4, userEvent, config5.newGroupDelay);
+      if (isolate == "full" || isolate == "after")
+        state4 = state4.isolate();
+      return state4;
+    },
+    toJSON(value2) {
+      return { done: value2.done.map((e3) => e3.toJSON()), undone: value2.undone.map((e3) => e3.toJSON()) };
+    },
+    fromJSON(json7) {
+      return new HistoryState(json7.done.map(HistEvent.fromJSON), json7.undone.map(HistEvent.fromJSON));
+    }
+  });
+  function history(config5 = {}) {
+    return [
+      historyField_,
+      historyConfig.of(config5),
+      EditorView.domEventHandlers({
+        beforeinput(e3, view) {
+          let command3 = e3.inputType == "historyUndo" ? undo4 : e3.inputType == "historyRedo" ? redo : null;
+          if (!command3)
+            return false;
+          e3.preventDefault();
+          return command3(view);
+        }
+      })
+    ];
+  }
+  function cmd(side, selection3) {
+    return function({ state: state4, dispatch: dispatch3 }) {
+      if (!selection3 && state4.readOnly)
+        return false;
+      let historyState = state4.field(historyField_, false);
+      if (!historyState)
+        return false;
+      let tr = historyState.pop(side, state4, selection3);
+      if (!tr)
+        return false;
+      dispatch3(tr);
+      return true;
+    };
+  }
+  var undo4 = /* @__PURE__ */ cmd(0, false);
+  var redo = /* @__PURE__ */ cmd(1, false);
+  var undoSelection = /* @__PURE__ */ cmd(0, true);
+  var redoSelection = /* @__PURE__ */ cmd(1, true);
+  var HistEvent = class _HistEvent {
+    constructor(changes, effects, mapped, startSelection, selectionsAfter) {
+      this.changes = changes;
+      this.effects = effects;
+      this.mapped = mapped;
+      this.startSelection = startSelection;
+      this.selectionsAfter = selectionsAfter;
+    }
+    setSelAfter(after) {
+      return new _HistEvent(this.changes, this.effects, this.mapped, this.startSelection, after);
+    }
+    toJSON() {
+      var _a2, _b2, _c;
+      return {
+        changes: (_a2 = this.changes) === null || _a2 === void 0 ? void 0 : _a2.toJSON(),
+        mapped: (_b2 = this.mapped) === null || _b2 === void 0 ? void 0 : _b2.toJSON(),
+        startSelection: (_c = this.startSelection) === null || _c === void 0 ? void 0 : _c.toJSON(),
+        selectionsAfter: this.selectionsAfter.map((s3) => s3.toJSON())
+      };
+    }
+    static fromJSON(json7) {
+      return new _HistEvent(json7.changes && ChangeSet.fromJSON(json7.changes), [], json7.mapped && ChangeDesc.fromJSON(json7.mapped), json7.startSelection && EditorSelection.fromJSON(json7.startSelection), json7.selectionsAfter.map(EditorSelection.fromJSON));
+    }
+    // This does not check `addToHistory` and such, it assumes the
+    // transaction needs to be converted to an item. Returns null when
+    // there are no changes or effects in the transaction.
+    static fromTransaction(tr, selection3) {
+      let effects = none6;
+      for (let invert2 of tr.startState.facet(invertedEffects)) {
+        let result = invert2(tr);
+        if (result.length)
+          effects = effects.concat(result);
+      }
+      if (!effects.length && tr.changes.empty)
+        return null;
+      return new _HistEvent(tr.changes.invert(tr.startState.doc), effects, void 0, selection3 || tr.startState.selection, none6);
+    }
+    static selection(selections) {
+      return new _HistEvent(void 0, none6, void 0, void 0, selections);
+    }
+  };
+  function updateBranch(branch2, to, maxLen, newEvent) {
+    let start4 = to + 1 > maxLen + 20 ? to - maxLen - 1 : 0;
+    let newBranch = branch2.slice(start4, to);
+    newBranch.push(newEvent);
+    return newBranch;
+  }
+  function isAdjacent(a3, b3) {
+    let ranges = [], isAdjacent2 = false;
+    a3.iterChangedRanges((f2, t6) => ranges.push(f2, t6));
+    b3.iterChangedRanges((_f2, _t, f2, t6) => {
+      for (let i9 = 0; i9 < ranges.length; ) {
+        let from5 = ranges[i9++], to = ranges[i9++];
+        if (t6 >= from5 && f2 <= to)
+          isAdjacent2 = true;
+      }
+    });
+    return isAdjacent2;
+  }
+  function eqSelectionShape(a3, b3) {
+    return a3.ranges.length == b3.ranges.length && a3.ranges.filter((r6, i9) => r6.empty != b3.ranges[i9].empty).length === 0;
+  }
+  function conc(a3, b3) {
+    return !a3.length ? b3 : !b3.length ? a3 : a3.concat(b3);
+  }
+  var none6 = [];
+  var MaxSelectionsPerEvent = 200;
+  function addSelection(branch2, selection3) {
+    if (!branch2.length) {
+      return [HistEvent.selection([selection3])];
+    } else {
+      let lastEvent = branch2[branch2.length - 1];
+      let sels = lastEvent.selectionsAfter.slice(Math.max(0, lastEvent.selectionsAfter.length - MaxSelectionsPerEvent));
+      if (sels.length && sels[sels.length - 1].eq(selection3))
+        return branch2;
+      sels.push(selection3);
+      return updateBranch(branch2, branch2.length - 1, 1e9, lastEvent.setSelAfter(sels));
+    }
+  }
+  function popSelection(branch2) {
+    let last4 = branch2[branch2.length - 1];
+    let newBranch = branch2.slice();
+    newBranch[branch2.length - 1] = last4.setSelAfter(last4.selectionsAfter.slice(0, last4.selectionsAfter.length - 1));
+    return newBranch;
+  }
+  function addMappingToBranch(branch2, mapping) {
+    if (!branch2.length)
+      return branch2;
+    let length2 = branch2.length, selections = none6;
+    while (length2) {
+      let event3 = mapEvent(branch2[length2 - 1], mapping, selections);
+      if (event3.changes && !event3.changes.empty || event3.effects.length) {
+        let result = branch2.slice(0, length2);
+        result[length2 - 1] = event3;
+        return result;
+      } else {
+        mapping = event3.mapped;
+        length2--;
+        selections = event3.selectionsAfter;
+      }
+    }
+    return selections.length ? [HistEvent.selection(selections)] : none6;
+  }
+  function mapEvent(event3, mapping, extraSelections) {
+    let selections = conc(event3.selectionsAfter.length ? event3.selectionsAfter.map((s3) => s3.map(mapping)) : none6, extraSelections);
+    if (!event3.changes)
+      return HistEvent.selection(selections);
+    let mappedChanges = event3.changes.map(mapping), before = mapping.mapDesc(event3.changes, true);
+    let fullMapping = event3.mapped ? event3.mapped.composeDesc(before) : before;
+    return new HistEvent(mappedChanges, StateEffect.mapEffects(event3.effects, mapping), fullMapping, event3.startSelection.map(before), selections);
+  }
+  var joinableUserEvent = /^(input\.type|delete)($|\.)/;
+  var HistoryState = class _HistoryState {
+    constructor(done, undone, prevTime = 0, prevUserEvent = void 0) {
+      this.done = done;
+      this.undone = undone;
+      this.prevTime = prevTime;
+      this.prevUserEvent = prevUserEvent;
+    }
+    isolate() {
+      return this.prevTime ? new _HistoryState(this.done, this.undone) : this;
+    }
+    addChanges(event3, time4, userEvent, config5, tr) {
+      let done = this.done, lastEvent = done[done.length - 1];
+      if (lastEvent && lastEvent.changes && !lastEvent.changes.empty && event3.changes && (!userEvent || joinableUserEvent.test(userEvent)) && (!lastEvent.selectionsAfter.length && time4 - this.prevTime < config5.newGroupDelay && config5.joinToEvent(tr, isAdjacent(lastEvent.changes, event3.changes)) || // For compose (but not compose.start) events, always join with previous event
+      userEvent == "input.type.compose")) {
+        done = updateBranch(done, done.length - 1, config5.minDepth, new HistEvent(event3.changes.compose(lastEvent.changes), conc(StateEffect.mapEffects(event3.effects, lastEvent.changes), lastEvent.effects), lastEvent.mapped, lastEvent.startSelection, none6));
+      } else {
+        done = updateBranch(done, done.length, config5.minDepth, event3);
+      }
+      return new _HistoryState(done, none6, time4, userEvent);
+    }
+    addSelection(selection3, time4, userEvent, newGroupDelay) {
+      let last4 = this.done.length ? this.done[this.done.length - 1].selectionsAfter : none6;
+      if (last4.length > 0 && time4 - this.prevTime < newGroupDelay && userEvent == this.prevUserEvent && userEvent && /^select($|\.)/.test(userEvent) && eqSelectionShape(last4[last4.length - 1], selection3))
+        return this;
+      return new _HistoryState(addSelection(this.done, selection3), this.undone, time4, userEvent);
+    }
+    addMapping(mapping) {
+      return new _HistoryState(addMappingToBranch(this.done, mapping), addMappingToBranch(this.undone, mapping), this.prevTime, this.prevUserEvent);
+    }
+    pop(side, state4, onlySelection) {
+      let branch2 = side == 0 ? this.done : this.undone;
+      if (branch2.length == 0)
+        return null;
+      let event3 = branch2[branch2.length - 1], selection3 = event3.selectionsAfter[0] || (event3.startSelection ? event3.startSelection.map(event3.changes.invertedDesc, 1) : state4.selection);
+      if (onlySelection && event3.selectionsAfter.length) {
+        return state4.update({
+          selection: event3.selectionsAfter[event3.selectionsAfter.length - 1],
+          annotations: fromHistory.of({ side, rest: popSelection(branch2), selection: selection3 }),
+          userEvent: side == 0 ? "select.undo" : "select.redo",
+          scrollIntoView: true
+        });
+      } else if (!event3.changes) {
+        return null;
+      } else {
+        let rest2 = branch2.length == 1 ? none6 : branch2.slice(0, branch2.length - 1);
+        if (event3.mapped)
+          rest2 = addMappingToBranch(rest2, event3.mapped);
+        return state4.update({
+          changes: event3.changes,
+          selection: event3.startSelection,
+          effects: event3.effects,
+          annotations: fromHistory.of({ side, rest: rest2, selection: selection3 }),
+          filter: false,
+          userEvent: side == 0 ? "undo" : "redo",
+          scrollIntoView: true
+        });
+      }
+    }
+  };
+  HistoryState.empty = /* @__PURE__ */ new HistoryState(none6, none6);
+  var historyKeymap = [
+    { key: "Mod-z", run: undo4, preventDefault: true },
+    { key: "Mod-y", mac: "Mod-Shift-z", run: redo, preventDefault: true },
+    { linux: "Ctrl-Shift-z", run: redo, preventDefault: true },
+    { key: "Mod-u", run: undoSelection, preventDefault: true },
+    { key: "Alt-u", mac: "Mod-Shift-u", run: redoSelection, preventDefault: true }
+  ];
+  function updateSel(sel, by) {
+    return EditorSelection.create(sel.ranges.map(by), sel.mainIndex);
+  }
+  function setSel(state4, selection3) {
+    return state4.update({ selection: selection3, scrollIntoView: true, userEvent: "select" });
+  }
+  function moveSel({ state: state4, dispatch: dispatch3 }, how) {
+    let selection3 = updateSel(state4.selection, how);
+    if (selection3.eq(state4.selection, true))
+      return false;
+    dispatch3(setSel(state4, selection3));
+    return true;
+  }
+  function rangeEnd(range3, forward) {
+    return EditorSelection.cursor(forward ? range3.to : range3.from);
+  }
+  function cursorByChar(view, forward) {
+    return moveSel(view, (range3) => range3.empty ? view.moveByChar(range3, forward) : rangeEnd(range3, forward));
+  }
+  function ltrAtCursor(view) {
+    return view.textDirectionAt(view.state.selection.main.head) == Direction2.LTR;
+  }
+  var cursorCharLeft = (view) => cursorByChar(view, !ltrAtCursor(view));
+  var cursorCharRight = (view) => cursorByChar(view, ltrAtCursor(view));
+  function cursorByGroup(view, forward) {
+    return moveSel(view, (range3) => range3.empty ? view.moveByGroup(range3, forward) : rangeEnd(range3, forward));
+  }
+  var cursorGroupLeft = (view) => cursorByGroup(view, !ltrAtCursor(view));
+  var cursorGroupRight = (view) => cursorByGroup(view, ltrAtCursor(view));
+  var segmenter = typeof Intl != "undefined" && Intl.Segmenter ? /* @__PURE__ */ new Intl.Segmenter(void 0, { granularity: "word" }) : null;
+  function interestingNode(state4, node3, bracketProp) {
+    if (node3.type.prop(bracketProp))
+      return true;
+    let len2 = node3.to - node3.from;
+    return len2 && (len2 > 2 || /[^\s,.;:]/.test(state4.sliceDoc(node3.from, node3.to))) || node3.firstChild;
+  }
+  function moveBySyntax(state4, start4, forward) {
+    let pos = syntaxTree(state4).resolveInner(start4.head);
+    let bracketProp = forward ? NodeProp.closedBy : NodeProp.openedBy;
+    for (let at2 = start4.head; ; ) {
+      let next4 = forward ? pos.childAfter(at2) : pos.childBefore(at2);
+      if (!next4)
+        break;
+      if (interestingNode(state4, next4, bracketProp))
+        pos = next4;
+      else
+        at2 = forward ? next4.to : next4.from;
+    }
+    let bracket2 = pos.type.prop(bracketProp), match4, newPos;
+    if (bracket2 && (match4 = forward ? matchBrackets(state4, pos.from, 1) : matchBrackets(state4, pos.to, -1)) && match4.matched)
+      newPos = forward ? match4.end.to : match4.end.from;
+    else
+      newPos = forward ? pos.to : pos.from;
+    return EditorSelection.cursor(newPos, forward ? -1 : 1);
+  }
+  var cursorSyntaxLeft = (view) => moveSel(view, (range3) => moveBySyntax(view.state, range3, !ltrAtCursor(view)));
+  var cursorSyntaxRight = (view) => moveSel(view, (range3) => moveBySyntax(view.state, range3, ltrAtCursor(view)));
+  function cursorByLine(view, forward) {
+    return moveSel(view, (range3) => {
+      if (!range3.empty)
+        return rangeEnd(range3, forward);
+      let moved = view.moveVertically(range3, forward);
+      return moved.head != range3.head ? moved : view.moveToLineBoundary(range3, forward);
+    });
+  }
+  var cursorLineUp = (view) => cursorByLine(view, false);
+  var cursorLineDown = (view) => cursorByLine(view, true);
+  function pageInfo(view) {
+    let selfScroll = view.scrollDOM.clientHeight < view.scrollDOM.scrollHeight - 2;
+    let marginTop = 0, marginBottom = 0, height2;
+    if (selfScroll) {
+      for (let source of view.state.facet(EditorView.scrollMargins)) {
+        let margins = source(view);
+        if (margins === null || margins === void 0 ? void 0 : margins.top)
+          marginTop = Math.max(margins === null || margins === void 0 ? void 0 : margins.top, marginTop);
+        if (margins === null || margins === void 0 ? void 0 : margins.bottom)
+          marginBottom = Math.max(margins === null || margins === void 0 ? void 0 : margins.bottom, marginBottom);
+      }
+      height2 = view.scrollDOM.clientHeight - marginTop - marginBottom;
+    } else {
+      height2 = (view.dom.ownerDocument.defaultView || window).innerHeight;
+    }
+    return {
+      marginTop,
+      marginBottom,
+      selfScroll,
+      height: Math.max(view.defaultLineHeight, height2 - 5)
+    };
+  }
+  function cursorByPage(view, forward) {
+    let page = pageInfo(view);
+    let { state: state4 } = view, selection3 = updateSel(state4.selection, (range3) => {
+      return range3.empty ? view.moveVertically(range3, forward, page.height) : rangeEnd(range3, forward);
+    });
+    if (selection3.eq(state4.selection))
+      return false;
+    let effect2;
+    if (page.selfScroll) {
+      let startPos = view.coordsAtPos(state4.selection.main.head);
+      let scrollRect = view.scrollDOM.getBoundingClientRect();
+      let scrollTop = scrollRect.top + page.marginTop, scrollBottom = scrollRect.bottom - page.marginBottom;
+      if (startPos && startPos.top > scrollTop && startPos.bottom < scrollBottom)
+        effect2 = EditorView.scrollIntoView(selection3.main.head, { y: "start", yMargin: startPos.top - scrollTop });
+    }
+    view.dispatch(setSel(state4, selection3), { effects: effect2 });
+    return true;
+  }
+  var cursorPageUp = (view) => cursorByPage(view, false);
+  var cursorPageDown = (view) => cursorByPage(view, true);
+  function moveByLineBoundary(view, start4, forward) {
+    let line2 = view.lineBlockAt(start4.head), moved = view.moveToLineBoundary(start4, forward);
+    if (moved.head == start4.head && moved.head != (forward ? line2.to : line2.from))
+      moved = view.moveToLineBoundary(start4, forward, false);
+    if (!forward && moved.head == line2.from && line2.length) {
+      let space8 = /^\s*/.exec(view.state.sliceDoc(line2.from, Math.min(line2.from + 100, line2.to)))[0].length;
+      if (space8 && start4.head != line2.from + space8)
+        moved = EditorSelection.cursor(line2.from + space8);
+    }
+    return moved;
+  }
+  var cursorLineBoundaryForward = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, true));
+  var cursorLineBoundaryBackward = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, false));
+  var cursorLineBoundaryLeft = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, !ltrAtCursor(view)));
+  var cursorLineBoundaryRight = (view) => moveSel(view, (range3) => moveByLineBoundary(view, range3, ltrAtCursor(view)));
+  var cursorLineStart = (view) => moveSel(view, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).from, 1));
+  var cursorLineEnd = (view) => moveSel(view, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).to, -1));
+  function toMatchingBracket(state4, dispatch3, extend6) {
+    let found2 = false, selection3 = updateSel(state4.selection, (range3) => {
+      let matching3 = matchBrackets(state4, range3.head, -1) || matchBrackets(state4, range3.head, 1) || range3.head > 0 && matchBrackets(state4, range3.head - 1, 1) || range3.head < state4.doc.length && matchBrackets(state4, range3.head + 1, -1);
+      if (!matching3 || !matching3.end)
+        return range3;
+      found2 = true;
+      let head2 = matching3.start.from == range3.head ? matching3.end.to : matching3.end.from;
+      return extend6 ? EditorSelection.range(range3.anchor, head2) : EditorSelection.cursor(head2);
+    });
+    if (!found2)
+      return false;
+    dispatch3(setSel(state4, selection3));
+    return true;
+  }
+  var cursorMatchingBracket = ({ state: state4, dispatch: dispatch3 }) => toMatchingBracket(state4, dispatch3, false);
+  function extendSel(target, forward, how) {
+    let selection3 = updateSel(target.state.selection, (range3) => {
+      if (range3.undirectional && range3.head >= range3.anchor != forward)
+        range3 = EditorSelection.range(range3.head, range3.anchor);
+      let head2 = how(range3);
+      return EditorSelection.range(range3.anchor, head2.head, head2.goalColumn, head2.bidiLevel || void 0, head2.assoc);
+    });
+    if (selection3.eq(target.state.selection))
+      return false;
+    target.dispatch(setSel(target.state, selection3));
+    return true;
+  }
+  function selectByChar(view, forward) {
+    return extendSel(view, forward, (range3) => view.moveByChar(range3, forward));
+  }
+  var selectCharLeft = (view) => selectByChar(view, !ltrAtCursor(view));
+  var selectCharRight = (view) => selectByChar(view, ltrAtCursor(view));
+  function selectByGroup(view, forward) {
+    return extendSel(view, forward, (range3) => view.moveByGroup(range3, forward));
+  }
+  var selectGroupLeft = (view) => selectByGroup(view, !ltrAtCursor(view));
+  var selectGroupRight = (view) => selectByGroup(view, ltrAtCursor(view));
+  var selectSyntaxLeft = (view) => {
+    let forward = !ltrAtCursor(view);
+    return extendSel(view, forward, (range3) => moveBySyntax(view.state, range3, forward));
+  };
+  var selectSyntaxRight = (view) => {
+    let forward = ltrAtCursor(view);
+    return extendSel(view, forward, (range3) => moveBySyntax(view.state, range3, forward));
+  };
+  function selectByLine(view, forward) {
+    return extendSel(view, forward, (range3) => view.moveVertically(range3, forward));
+  }
+  var selectLineUp = (view) => selectByLine(view, false);
+  var selectLineDown = (view) => selectByLine(view, true);
+  function selectByPage(view, forward) {
+    return extendSel(view, forward, (range3) => view.moveVertically(range3, forward, pageInfo(view).height));
+  }
+  var selectPageUp = (view) => selectByPage(view, false);
+  var selectPageDown = (view) => selectByPage(view, true);
+  var selectLineBoundaryForward = (view) => extendSel(view, true, (range3) => moveByLineBoundary(view, range3, true));
+  var selectLineBoundaryBackward = (view) => extendSel(view, false, (range3) => moveByLineBoundary(view, range3, false));
+  var selectLineBoundaryLeft = (view) => {
+    let forward = !ltrAtCursor(view);
+    return extendSel(view, forward, (range3) => moveByLineBoundary(view, range3, forward));
+  };
+  var selectLineBoundaryRight = (view) => {
+    let forward = ltrAtCursor(view);
+    return extendSel(view, forward, (range3) => moveByLineBoundary(view, range3, forward));
+  };
+  var selectLineStart = (view) => extendSel(view, false, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).from));
+  var selectLineEnd = (view) => extendSel(view, true, (range3) => EditorSelection.cursor(view.lineBlockAt(range3.head).to));
+  var cursorDocStart = ({ state: state4, dispatch: dispatch3 }) => {
+    dispatch3(setSel(state4, { anchor: 0 }));
+    return true;
+  };
+  var cursorDocEnd = ({ state: state4, dispatch: dispatch3 }) => {
+    dispatch3(setSel(state4, { anchor: state4.doc.length }));
+    return true;
+  };
+  var selectDocStart = ({ state: state4, dispatch: dispatch3 }) => {
+    dispatch3(setSel(state4, { anchor: state4.selection.main.anchor, head: 0 }));
+    return true;
+  };
+  var selectDocEnd = ({ state: state4, dispatch: dispatch3 }) => {
+    dispatch3(setSel(state4, { anchor: state4.selection.main.anchor, head: state4.doc.length }));
+    return true;
+  };
+  var selectAll2 = ({ state: state4, dispatch: dispatch3 }) => {
+    dispatch3(state4.update({ selection: { anchor: 0, head: state4.doc.length }, userEvent: "select" }));
+    return true;
+  };
+  var selectLine2 = ({ state: state4, dispatch: dispatch3 }) => {
+    let ranges = selectedLineBlocks(state4).map(({ from: from5, to }) => EditorSelection.range(from5, Math.min(to + 1, state4.doc.length)));
+    dispatch3(state4.update({ selection: EditorSelection.create(ranges), userEvent: "select" }));
+    return true;
+  };
+  var selectParentSyntax = ({ state: state4, dispatch: dispatch3 }) => {
+    let selection3 = updateSel(state4.selection, (range3) => {
+      let tree = syntaxTree(state4), stack = tree.resolveStack(range3.from, 1);
+      if (range3.empty) {
+        let stackBefore = tree.resolveStack(range3.from, -1);
+        if (stackBefore.node.from >= stack.node.from && stackBefore.node.to <= stack.node.to)
+          stack = stackBefore;
+      }
+      for (let cur2 = stack; cur2; cur2 = cur2.next) {
+        let { node: node3 } = cur2;
+        if ((node3.from < range3.from && node3.to >= range3.to || node3.to > range3.to && node3.from <= range3.from) && cur2.next)
+          return EditorSelection.range(node3.to, node3.from);
+      }
+      return range3;
+    });
+    if (selection3.eq(state4.selection))
+      return false;
+    dispatch3(setSel(state4, selection3));
+    return true;
+  };
+  function addCursorVertically(view, forward) {
+    let { state: state4 } = view, sel = state4.selection, ranges = state4.selection.ranges.slice();
+    for (let range3 of state4.selection.ranges) {
+      let line2 = state4.doc.lineAt(range3.head);
+      if (forward ? line2.to < view.state.doc.length : line2.from > 0)
+        for (let cur2 = range3; ; ) {
+          let next4 = view.moveVertically(cur2, forward);
+          if (next4.head < line2.from || next4.head > line2.to) {
+            if (!ranges.some((r6) => r6.head == next4.head))
+              ranges.push(next4);
+            break;
+          } else if (next4.head == cur2.head) {
+            break;
+          } else {
+            cur2 = next4;
+          }
+        }
+    }
+    if (ranges.length == sel.ranges.length)
+      return false;
+    view.dispatch(setSel(state4, EditorSelection.create(ranges, ranges.length - 1)));
+    return true;
+  }
+  var addCursorAbove = (view) => addCursorVertically(view, false);
+  var addCursorBelow = (view) => addCursorVertically(view, true);
+  var simplifySelection = ({ state: state4, dispatch: dispatch3 }) => {
+    let cur2 = state4.selection, selection3 = null;
+    if (cur2.ranges.length > 1)
+      selection3 = EditorSelection.create([cur2.main]);
+    else if (!cur2.main.empty)
+      selection3 = EditorSelection.create([EditorSelection.cursor(cur2.main.head)]);
+    if (!selection3)
+      return false;
+    dispatch3(setSel(state4, selection3));
+    return true;
+  };
+  function deleteBy(target, by) {
+    if (target.state.readOnly)
+      return false;
+    let event3 = "delete.selection", { state: state4 } = target;
+    let changes = state4.changeByRange((range3) => {
+      let { from: from5, to } = range3;
+      if (from5 == to) {
+        let towards = by(range3);
+        if (towards < from5) {
+          event3 = "delete.backward";
+          towards = skipAtomic(target, towards, false);
+        } else if (towards > from5) {
+          event3 = "delete.forward";
+          towards = skipAtomic(target, towards, true);
+        }
+        from5 = Math.min(from5, towards);
+        to = Math.max(to, towards);
+      } else {
+        from5 = skipAtomic(target, from5, false);
+        to = skipAtomic(target, to, true);
+      }
+      return from5 == to ? { range: range3 } : { changes: { from: from5, to }, range: EditorSelection.cursor(from5, from5 < range3.head ? -1 : 1) };
+    });
+    if (changes.changes.empty)
+      return false;
+    target.dispatch(state4.update(changes, {
+      scrollIntoView: true,
+      userEvent: event3,
+      effects: event3 == "delete.selection" ? EditorView.announce.of(state4.phrase("Selection deleted")) : void 0
+    }));
+    return true;
+  }
+  function skipAtomic(target, pos, forward) {
+    if (target instanceof EditorView)
+      for (let ranges of target.state.facet(EditorView.atomicRanges).map((f2) => f2(target)))
+        ranges.between(pos, pos, (from5, to) => {
+          if (from5 < pos && to > pos)
+            pos = forward ? to : from5;
+        });
+    return pos;
+  }
+  var deleteByChar = (target, forward, byIndentUnit) => deleteBy(target, (range3) => {
+    let pos = range3.from, { state: state4 } = target, line2 = state4.doc.lineAt(pos), before, targetPos;
+    if (byIndentUnit && !forward && pos > line2.from && pos < line2.from + 200 && !/[^ \t]/.test(before = line2.text.slice(0, pos - line2.from))) {
+      if (before[before.length - 1] == "	")
+        return pos - 1;
+      let col = countColumn(before, state4.tabSize), drop2 = col % getIndentUnit(state4) || getIndentUnit(state4);
+      for (let i9 = 0; i9 < drop2 && before[before.length - 1 - i9] == " "; i9++)
+        pos--;
+      targetPos = pos;
+    } else {
+      targetPos = findClusterBreak2(line2.text, pos - line2.from, forward, forward) + line2.from;
+      if (targetPos == pos && line2.number != (forward ? state4.doc.lines : 1))
+        targetPos += forward ? 1 : -1;
+      else if (!forward && /[\ufe00-\ufe0f]/.test(line2.text.slice(targetPos - line2.from, pos - line2.from)))
+        targetPos = findClusterBreak2(line2.text, targetPos - line2.from, false, false) + line2.from;
+    }
+    return targetPos;
+  });
+  var deleteCharBackward = (view) => deleteByChar(view, false, true);
+  var deleteCharForward = (view) => deleteByChar(view, true, false);
+  var deleteByGroup = (target, forward) => deleteBy(target, (range3) => {
+    let pos = range3.head, { state: state4 } = target, line2 = state4.doc.lineAt(pos);
+    let categorize = state4.charCategorizer(pos);
+    for (let cat = null; ; ) {
+      if (pos == (forward ? line2.to : line2.from)) {
+        if (pos == range3.head && line2.number != (forward ? state4.doc.lines : 1))
+          pos += forward ? 1 : -1;
+        break;
+      }
+      let next4 = findClusterBreak2(line2.text, pos - line2.from, forward) + line2.from;
+      let nextChar2 = line2.text.slice(Math.min(pos, next4) - line2.from, Math.max(pos, next4) - line2.from);
+      let nextCat = categorize(nextChar2);
+      if (cat != null && nextCat != cat)
+        break;
+      if (nextChar2 != " " || pos != range3.head)
+        cat = nextCat;
+      pos = next4;
+    }
+    return pos;
+  });
+  var deleteGroupBackward = (target) => deleteByGroup(target, false);
+  var deleteGroupForward = (target) => deleteByGroup(target, true);
+  var deleteToLineEnd = (view) => deleteBy(view, (range3) => {
+    let lineEnd2 = view.lineBlockAt(range3.head).to;
+    return range3.head < lineEnd2 ? lineEnd2 : Math.min(view.state.doc.length, range3.head + 1);
+  });
+  var deleteLineBoundaryBackward = (view) => deleteBy(view, (range3) => {
+    let lineStart = view.moveToLineBoundary(range3, false).head;
+    return range3.head > lineStart ? lineStart : Math.max(0, range3.head - 1);
+  });
+  var deleteLineBoundaryForward = (view) => deleteBy(view, (range3) => {
+    let lineStart = view.moveToLineBoundary(range3, true).head;
+    return range3.head < lineStart ? lineStart : Math.min(view.state.doc.length, range3.head + 1);
+  });
+  var splitLine = ({ state: state4, dispatch: dispatch3 }) => {
+    if (state4.readOnly)
+      return false;
+    let changes = state4.changeByRange((range3) => {
+      return {
+        changes: { from: range3.from, to: range3.to, insert: Text2.of(["", ""]) },
+        range: EditorSelection.cursor(range3.from)
+      };
+    });
+    dispatch3(state4.update(changes, { scrollIntoView: true, userEvent: "input" }));
+    return true;
+  };
+  var transposeChars = ({ state: state4, dispatch: dispatch3 }) => {
+    if (state4.readOnly)
+      return false;
+    let changes = state4.changeByRange((range3) => {
+      if (!range3.empty || range3.from == 0 || range3.from == state4.doc.length)
+        return { range: range3 };
+      let pos = range3.from, line2 = state4.doc.lineAt(pos);
+      let from5 = pos == line2.from ? pos - 1 : findClusterBreak2(line2.text, pos - line2.from, false) + line2.from;
+      let to = pos == line2.to ? pos + 1 : findClusterBreak2(line2.text, pos - line2.from, true) + line2.from;
+      return {
+        changes: { from: from5, to, insert: state4.doc.slice(pos, to).append(state4.doc.slice(from5, pos)) },
+        range: EditorSelection.cursor(to)
+      };
+    });
+    if (changes.changes.empty)
+      return false;
+    dispatch3(state4.update(changes, { scrollIntoView: true, userEvent: "move.character" }));
+    return true;
+  };
+  function selectedLineBlocks(state4) {
+    let blocks2 = [], upto = -1;
+    for (let range3 of state4.selection.ranges) {
+      let startLine = state4.doc.lineAt(range3.from), endLine = state4.doc.lineAt(range3.to);
+      if (!range3.empty && range3.to == endLine.from)
+        endLine = state4.doc.lineAt(range3.to - 1);
+      if (upto >= startLine.number) {
+        let prev2 = blocks2[blocks2.length - 1];
+        prev2.to = endLine.to;
+        prev2.ranges.push(range3);
+      } else {
+        blocks2.push({ from: startLine.from, to: endLine.to, ranges: [range3] });
+      }
+      upto = endLine.number + 1;
+    }
+    return blocks2;
+  }
+  function moveLine(state4, dispatch3, forward) {
+    if (state4.readOnly)
+      return false;
+    let changes = [], ranges = [];
+    for (let block5 of selectedLineBlocks(state4)) {
+      if (forward ? block5.to == state4.doc.length : block5.from == 0)
+        continue;
+      let nextLine = state4.doc.lineAt(forward ? block5.to + 1 : block5.from - 1);
+      let size5 = nextLine.length + 1;
+      if (forward) {
+        changes.push({ from: block5.to, to: nextLine.to }, { from: block5.from, insert: nextLine.text + state4.lineBreak });
+        for (let r6 of block5.ranges)
+          ranges.push(EditorSelection.range(Math.min(state4.doc.length, r6.anchor + size5), Math.min(state4.doc.length, r6.head + size5)));
+      } else {
+        changes.push({ from: nextLine.from, to: block5.from }, { from: block5.to, insert: state4.lineBreak + nextLine.text });
+        for (let r6 of block5.ranges)
+          ranges.push(EditorSelection.range(r6.anchor - size5, r6.head - size5));
+      }
+    }
+    if (!changes.length)
+      return false;
+    dispatch3(state4.update({
+      changes,
+      scrollIntoView: true,
+      selection: EditorSelection.create(ranges, state4.selection.mainIndex),
+      userEvent: "move.line"
+    }));
+    return true;
+  }
+  var moveLineUp = ({ state: state4, dispatch: dispatch3 }) => moveLine(state4, dispatch3, false);
+  var moveLineDown = ({ state: state4, dispatch: dispatch3 }) => moveLine(state4, dispatch3, true);
+  function copyLine(state4, dispatch3, forward) {
+    if (state4.readOnly)
+      return false;
+    let changes = [];
+    for (let block5 of selectedLineBlocks(state4)) {
+      if (forward)
+        changes.push({ from: block5.from, insert: state4.doc.slice(block5.from, block5.to) + state4.lineBreak });
+      else
+        changes.push({ from: block5.to, insert: state4.lineBreak + state4.doc.slice(block5.from, block5.to) });
+    }
+    let changeSet = state4.changes(changes);
+    dispatch3(state4.update({
+      changes: changeSet,
+      selection: state4.selection.map(changeSet, forward ? 1 : -1),
+      scrollIntoView: true,
+      userEvent: "input.copyline"
+    }));
+    return true;
+  }
+  var copyLineUp = ({ state: state4, dispatch: dispatch3 }) => copyLine(state4, dispatch3, false);
+  var copyLineDown = ({ state: state4, dispatch: dispatch3 }) => copyLine(state4, dispatch3, true);
+  var deleteLine = (view) => {
+    if (view.state.readOnly)
+      return false;
+    let { state: state4 } = view, changes = state4.changes(selectedLineBlocks(state4).map(({ from: from5, to }) => {
+      if (from5 > 0)
+        from5--;
+      else if (to < state4.doc.length)
+        to++;
+      return { from: from5, to };
+    }));
+    let selection3 = updateSel(state4.selection, (range3) => {
+      let dist4 = void 0;
+      if (view.lineWrapping) {
+        let block5 = view.lineBlockAt(range3.head), pos = view.coordsAtPos(range3.head, range3.assoc || 1);
+        if (pos)
+          dist4 = block5.bottom + view.documentTop - pos.bottom + view.defaultLineHeight / 2;
+      }
+      return view.moveVertically(range3, true, dist4);
+    }).map(changes);
+    view.dispatch({ changes, selection: selection3, scrollIntoView: true, userEvent: "delete.line" });
+    return true;
+  };
+  function isBetweenBrackets(state4, pos) {
+    if (/\(\)|\[\]|\{\}/.test(state4.sliceDoc(pos - 1, pos + 1)))
+      return { from: pos, to: pos };
+    let context = syntaxTree(state4).resolveInner(pos);
+    let before = context.childBefore(pos), after = context.childAfter(pos), closedBy;
+    if (before && after && before.to <= pos && after.from >= pos && (closedBy = before.type.prop(NodeProp.closedBy)) && closedBy.indexOf(after.name) > -1 && state4.doc.lineAt(before.to).from == state4.doc.lineAt(after.from).from && !/\S/.test(state4.sliceDoc(before.to, after.from)))
+      return { from: before.to, to: after.from };
+    return null;
+  }
+  var insertNewlineAndIndent = /* @__PURE__ */ newlineAndIndent(false);
+  var insertBlankLine = /* @__PURE__ */ newlineAndIndent(true);
+  function newlineAndIndent(atEof) {
+    return ({ state: state4, dispatch: dispatch3 }) => {
+      if (state4.readOnly)
+        return false;
+      let changes = state4.changeByRange((range3) => {
+        let { from: from5, to } = range3, line2 = state4.doc.lineAt(from5);
+        let explode = !atEof && from5 == to && isBetweenBrackets(state4, from5);
+        if (atEof)
+          from5 = to = (to <= line2.to ? line2 : state4.doc.lineAt(to)).to;
+        let cx2 = new IndentContext(state4, { simulateBreak: from5, simulateDoubleBreak: !!explode });
+        let indent8 = getIndentation(cx2, from5);
+        if (indent8 == null)
+          indent8 = countColumn(/^\s*/.exec(state4.doc.lineAt(from5).text)[0], state4.tabSize);
+        while (to < line2.to && /\s/.test(line2.text[to - line2.from]))
+          to++;
+        if (explode)
+          ({ from: from5, to } = explode);
+        else if (from5 > line2.from && from5 < line2.from + 100 && !/\S/.test(line2.text.slice(0, from5)))
+          from5 = line2.from;
+        let insert2 = ["", indentString2(state4, indent8)];
+        if (explode)
+          insert2.push(indentString2(state4, cx2.lineIndent(line2.from, -1)));
+        return {
+          changes: { from: from5, to, insert: Text2.of(insert2) },
+          range: EditorSelection.cursor(from5 + 1 + insert2[1].length)
+        };
+      });
+      dispatch3(state4.update(changes, { scrollIntoView: true, userEvent: "input" }));
+      return true;
+    };
+  }
+  function changeBySelectedLine(state4, f2) {
+    let atLine = -1;
+    return state4.changeByRange((range3) => {
+      let changes = [];
+      for (let pos = range3.from; pos <= range3.to; ) {
+        let line2 = state4.doc.lineAt(pos);
+        if (line2.number > atLine && (range3.empty || range3.to > line2.from)) {
+          f2(line2, changes, range3);
+          atLine = line2.number;
+        }
+        pos = line2.to + 1;
+      }
+      let changeSet = state4.changes(changes);
+      return {
+        changes,
+        range: EditorSelection.range(changeSet.mapPos(range3.anchor, 1), changeSet.mapPos(range3.head, 1))
+      };
+    });
+  }
+  var indentSelection = ({ state: state4, dispatch: dispatch3 }) => {
+    if (state4.readOnly)
+      return false;
+    let updated = /* @__PURE__ */ Object.create(null);
+    let context = new IndentContext(state4, { overrideIndentation: (start4) => {
+      let found2 = updated[start4];
+      return found2 == null ? -1 : found2;
+    } });
+    let changes = changeBySelectedLine(state4, (line2, changes2, range3) => {
+      let indent8 = getIndentation(context, line2.from);
+      if (indent8 == null)
+        return;
+      if (!/\S/.test(line2.text))
+        indent8 = 0;
+      let cur2 = /^\s*/.exec(line2.text)[0];
+      let norm = indentString2(state4, indent8);
+      if (cur2 != norm || range3.from < line2.from + cur2.length) {
+        updated[line2.from] = indent8;
+        changes2.push({ from: line2.from, to: line2.from + cur2.length, insert: norm });
+      }
+    });
+    if (!changes.changes.empty)
+      dispatch3(state4.update(changes, { userEvent: "indent" }));
+    return true;
+  };
+  var indentMore = ({ state: state4, dispatch: dispatch3 }) => {
+    if (state4.readOnly)
+      return false;
+    dispatch3(state4.update(changeBySelectedLine(state4, (line2, changes) => {
+      changes.push({ from: line2.from, insert: state4.facet(indentUnit) });
+    }), { userEvent: "input.indent" }));
+    return true;
+  };
+  var indentLess = ({ state: state4, dispatch: dispatch3 }) => {
+    if (state4.readOnly)
+      return false;
+    dispatch3(state4.update(changeBySelectedLine(state4, (line2, changes) => {
+      let space8 = /^\s*/.exec(line2.text)[0];
+      if (!space8)
+        return;
+      let col = countColumn(space8, state4.tabSize), keep = 0;
+      let insert2 = indentString2(state4, Math.max(0, col - getIndentUnit(state4)));
+      while (keep < space8.length && keep < insert2.length && space8.charCodeAt(keep) == insert2.charCodeAt(keep))
+        keep++;
+      changes.push({ from: line2.from + keep, to: line2.from + space8.length, insert: insert2.slice(keep) });
+    }), { userEvent: "delete.dedent" }));
+    return true;
+  };
+  var toggleTabFocusMode = (view) => {
+    view.setTabFocusMode();
+    return true;
+  };
+  var emacsStyleKeymap = [
+    { key: "Ctrl-b", run: cursorCharLeft, shift: selectCharLeft, preventDefault: true },
+    { key: "Ctrl-f", run: cursorCharRight, shift: selectCharRight },
+    { key: "Ctrl-p", run: cursorLineUp, shift: selectLineUp },
+    { key: "Ctrl-n", run: cursorLineDown, shift: selectLineDown },
+    { key: "Ctrl-a", run: cursorLineStart, shift: selectLineStart },
+    { key: "Ctrl-e", run: cursorLineEnd, shift: selectLineEnd },
+    { key: "Ctrl-d", run: deleteCharForward },
+    { key: "Ctrl-h", run: deleteCharBackward },
+    { key: "Ctrl-k", run: deleteToLineEnd },
+    { key: "Ctrl-Alt-h", run: deleteGroupBackward },
+    { key: "Ctrl-o", run: splitLine },
+    { key: "Ctrl-t", run: transposeChars },
+    { key: "Ctrl-v", run: cursorPageDown }
+  ];
+  var standardKeymap = /* @__PURE__ */ [
+    { key: "ArrowLeft", run: cursorCharLeft, shift: selectCharLeft, preventDefault: true },
+    { key: "Mod-ArrowLeft", mac: "Alt-ArrowLeft", run: cursorGroupLeft, shift: selectGroupLeft, preventDefault: true },
+    { mac: "Cmd-ArrowLeft", run: cursorLineBoundaryLeft, shift: selectLineBoundaryLeft, preventDefault: true },
+    { key: "ArrowRight", run: cursorCharRight, shift: selectCharRight, preventDefault: true },
+    { key: "Mod-ArrowRight", mac: "Alt-ArrowRight", run: cursorGroupRight, shift: selectGroupRight, preventDefault: true },
+    { mac: "Cmd-ArrowRight", run: cursorLineBoundaryRight, shift: selectLineBoundaryRight, preventDefault: true },
+    { key: "ArrowUp", run: cursorLineUp, shift: selectLineUp, preventDefault: true },
+    { mac: "Cmd-ArrowUp", run: cursorDocStart, shift: selectDocStart },
+    { mac: "Ctrl-ArrowUp", run: cursorPageUp, shift: selectPageUp },
+    { key: "ArrowDown", run: cursorLineDown, shift: selectLineDown, preventDefault: true },
+    { mac: "Cmd-ArrowDown", run: cursorDocEnd, shift: selectDocEnd },
+    { mac: "Ctrl-ArrowDown", run: cursorPageDown, shift: selectPageDown },
+    { key: "PageUp", run: cursorPageUp, shift: selectPageUp },
+    { key: "PageDown", run: cursorPageDown, shift: selectPageDown },
+    { key: "Home", run: cursorLineBoundaryBackward, shift: selectLineBoundaryBackward, preventDefault: true },
+    { key: "Mod-Home", run: cursorDocStart, shift: selectDocStart },
+    { key: "End", run: cursorLineBoundaryForward, shift: selectLineBoundaryForward, preventDefault: true },
+    { key: "Mod-End", run: cursorDocEnd, shift: selectDocEnd },
+    { key: "Enter", run: insertNewlineAndIndent, shift: insertNewlineAndIndent },
+    { key: "Mod-a", run: selectAll2 },
+    { key: "Backspace", run: deleteCharBackward, shift: deleteCharBackward, preventDefault: true },
+    { key: "Delete", run: deleteCharForward, preventDefault: true },
+    { key: "Mod-Backspace", mac: "Alt-Backspace", run: deleteGroupBackward, preventDefault: true },
+    { key: "Mod-Delete", mac: "Alt-Delete", run: deleteGroupForward, preventDefault: true },
+    { mac: "Mod-Backspace", run: deleteLineBoundaryBackward, preventDefault: true },
+    { mac: "Mod-Delete", run: deleteLineBoundaryForward, preventDefault: true }
+  ].concat(/* @__PURE__ */ emacsStyleKeymap.map((b3) => ({ mac: b3.key, run: b3.run, shift: b3.shift })));
+  var defaultKeymap = /* @__PURE__ */ [
+    { key: "Alt-ArrowLeft", mac: "Ctrl-ArrowLeft", run: cursorSyntaxLeft, shift: selectSyntaxLeft },
+    { key: "Alt-ArrowRight", mac: "Ctrl-ArrowRight", run: cursorSyntaxRight, shift: selectSyntaxRight },
+    { key: "Alt-ArrowUp", run: moveLineUp },
+    { key: "Shift-Alt-ArrowUp", run: copyLineUp },
+    { key: "Alt-ArrowDown", run: moveLineDown },
+    { key: "Shift-Alt-ArrowDown", run: copyLineDown },
+    { key: "Mod-Alt-ArrowUp", run: addCursorAbove },
+    { key: "Mod-Alt-ArrowDown", run: addCursorBelow },
+    { key: "Escape", run: simplifySelection },
+    { key: "Mod-Enter", run: insertBlankLine },
+    { key: "Alt-l", mac: "Ctrl-l", run: selectLine2 },
+    { key: "Mod-i", run: selectParentSyntax, preventDefault: true },
+    { key: "Mod-[", run: indentLess },
+    { key: "Mod-]", run: indentMore },
+    { key: "Mod-Alt-\\", run: indentSelection },
+    { key: "Shift-Mod-k", run: deleteLine },
+    { key: "Shift-Mod-\\", run: cursorMatchingBracket },
+    { key: "Mod-/", run: toggleComment },
+    { key: "Alt-A", run: toggleBlockComment },
+    { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
+  ].concat(standardKeymap);
+  var indentWithTab = { key: "Tab", run: indentMore, shift: indentLess };
+
+  // node_modules/@milkdown/crepe/lib/esm/index.js
+  init_dist5();
 
   // node_modules/@milkdown/components/lib/code-block/index.js
-  init_dist3();
   init_dist4();
+  init_dist5();
 
   // node_modules/rope-sequence/dist/index.js
   var GOOD_LEAF_SIZE = 200;
@@ -346386,13 +346381,13 @@ Component that was made reactive: `,
   ];
 
   // node_modules/codemirror/dist/index.js
+  init_dist5();
   init_dist4();
-  init_dist3();
   init_dist7();
 
   // node_modules/@codemirror/search/dist/index.js
+  init_dist5();
   init_dist4();
-  init_dist3();
   init_crelt();
   var basicNormalize = typeof String.prototype.normalize == "function" ? (x6) => x6.normalize("NFKD") : (x6) => x6;
   var SearchCursor = class {
@@ -347479,8 +347474,8 @@ Component that was made reactive: `,
   init_dist9();
 
   // node_modules/@codemirror/lint/dist/index.js
+  init_dist5();
   init_dist4();
-  init_dist3();
   init_crelt();
   var SelectedDiagnostic = class {
     constructor(from5, to, diagnostic) {
@@ -370796,6 +370791,76 @@ Component that was made reactive: `,
   };
   var prism = [prismPlugin, prismConfig];
 
+  // src/lib/codeTheme.ts
+  init_dist7();
+  init_dist5();
+  init_dist6();
+  var typoraHighlight = HighlightStyle.define([
+    { tag: tags2.comment, color: "var(--code-comment)", fontStyle: "italic" },
+    { tag: [tags2.lineComment, tags2.blockComment, tags2.docComment], color: "var(--code-comment)", fontStyle: "italic" },
+    { tag: [tags2.keyword, tags2.modifier, tags2.operatorKeyword, tags2.controlKeyword, tags2.definitionKeyword, tags2.moduleKeyword], color: "var(--code-keyword)" },
+    { tag: [tags2.string, tags2.special(tags2.string), tags2.character], color: "var(--code-string)" },
+    { tag: [tags2.number, tags2.bool, tags2.null, tags2.atom], color: "var(--code-number)" },
+    { tag: [tags2.function(tags2.variableName), tags2.function(tags2.propertyName), tags2.labelName], color: "var(--code-function)" },
+    { tag: [tags2.typeName, tags2.className, tags2.namespace, tags2.definition(tags2.typeName)], color: "var(--code-type)" },
+    { tag: [tags2.tagName, tags2.angleBracket], color: "var(--code-tag)" },
+    { tag: [tags2.attributeName, tags2.attributeValue], color: "var(--code-attr)" },
+    { tag: [tags2.propertyName, tags2.variableName, tags2.definition(tags2.variableName)], color: "var(--code-punct)" },
+    { tag: [tags2.operator, tags2.derefOperator], color: "var(--code-operator)" },
+    { tag: [tags2.punctuation, tags2.bracket, tags2.separator], color: "var(--code-punct)" },
+    { tag: [tags2.meta, tags2.processingInstruction, tags2.annotation], color: "var(--code-meta)" },
+    { tag: [tags2.heading, tags2.strong, tags2.definition(tags2.heading)], color: "var(--code-heading)", fontWeight: "bold" },
+    { tag: [tags2.emphasis], color: "var(--code-heading)", fontStyle: "italic" },
+    { tag: [tags2.link, tags2.url], color: "var(--code-link)", textDecoration: "underline" },
+    { tag: [tags2.escape, tags2.regexp], color: "var(--code-number)" },
+    { tag: tags2.invalid, color: "var(--code-string)" }
+  ]);
+  var typoraEditorTheme = EditorView.theme({
+    "&": {
+      backgroundColor: "var(--code-bg)",
+      color: "var(--code-ink)",
+      fontFamily: "var(--code-font)",
+      fontSize: "var(--code-size)"
+    },
+    // CodeMirror 的运行时注入样式晚于页面样式表，字体族必须在这里声明才生效
+    // （写在 panel-polish.css 里会被它的 monospace 盖掉）。
+    ".cm-scroller, .cm-content": {
+      fontFamily: "var(--code-font)"
+    },
+    ".cm-content": {
+      lineHeight: "1.6",
+      padding: "8px 0",
+      caretColor: "var(--code-caret)"
+    },
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeftColor: "var(--code-caret)",
+      borderLeftWidth: "2px"
+    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+      backgroundColor: "var(--code-selection)"
+    },
+    ".cm-gutters": {
+      backgroundColor: "var(--code-bg)",
+      color: "var(--code-gutter)",
+      border: "none"
+    },
+    ".cm-activeLine": { backgroundColor: "var(--code-activeline)" },
+    ".cm-activeLineGutter": { backgroundColor: "var(--code-activeline)" },
+    ".cm-panels": {
+      backgroundColor: "var(--code-bg)",
+      color: "var(--code-ink)"
+    },
+    ".cm-tooltip": {
+      backgroundColor: "var(--code-bg)",
+      color: "var(--code-ink)",
+      border: "1px solid var(--code-border, #e7eaed)"
+    }
+  });
+  var typoraCodeTheme = [
+    typoraEditorTheme,
+    syntaxHighlighting(typoraHighlight)
+  ];
+
   // src/components/EditorPane.tsx
   var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
   var EXPORT_ITEMS = [
@@ -370844,7 +370909,7 @@ Component that was made reactive: `,
     sidebarOpen,
     onToggleSidebar,
     external,
-    onExitExternal
+    externalPath
   }) {
     const hostRef = (0, import_react4.useRef)(null);
     const scrollRef = (0, import_react4.useRef)(null);
@@ -370862,6 +370927,18 @@ Component that was made reactive: `,
     callbacksRef.current = { onHeadingChange };
     const dispatch3 = useAppDispatch();
     const locale3 = getLocale();
+    const [editing, setEditing] = (0, import_react4.useState)(false);
+    const readonly3 = external && !editing;
+    const readonlyRef = (0, import_react4.useRef)(readonly3);
+    readonlyRef.current = readonly3;
+    (0, import_react4.useEffect)(() => {
+      setEditing(false);
+    }, [externalPath, external]);
+    (0, import_react4.useEffect)(() => {
+      const current2 = crepeRef.current;
+      if (!current2 || current2.editor.status !== EditorStatus.Created) return;
+      current2.setReadonly(readonly3);
+    }, [readonly3, note3?.id]);
     const [exportMenuOpen, setExportMenuOpen] = (0, import_react4.useState)(false);
     const exportBoxRef = (0, import_react4.useRef)(null);
     (0, import_react4.useEffect)(() => {
@@ -370917,11 +370994,41 @@ Component that was made reactive: `,
       }, 300);
       return void 0;
     };
-    const cmExtensions = (dark) => [
-      keymap.of(defaultKeymap.concat(indentWithTab)),
-      basicSetup,
-      ...dark ? [oneDark] : []
-    ];
+    const refreshMermaidPanels = async (next4) => {
+      const host = hostRef.current;
+      if (!host) return;
+      const blocks2 = Array.from(
+        host.querySelectorAll(".milkdown-code-block")
+      ).filter((block5) => {
+        const btn = block5.querySelector(".tools .language-button");
+        return (btn?.textContent ?? "").trim().toLowerCase() === "mermaid";
+      });
+      if (blocks2.length === 0) return;
+      if (mermaidThemeRef.current !== next4) {
+        mermaidThemeRef.current = next4;
+        mermaid_default.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: next4 === "dark" ? "dark" : "default"
+        });
+      }
+      for (const block5 of blocks2) {
+        const holder = block5.querySelector(".preview-panel .preview");
+        const source = Array.from(
+          block5.querySelectorAll(".cm-content .cm-line")
+        ).map((line2) => line2.textContent ?? "").join("\n");
+        if (!holder || !source.trim()) continue;
+        try {
+          const { svg: svg5 } = await mermaid_default.render(
+            `pi-md-mermaid-t${++mermaidSeqRef.current}`,
+            source
+          );
+          holder.innerHTML = svg5;
+        } catch {
+        }
+      }
+    };
+    const cmExtensions = () => [typoraCodeTheme];
     (0, import_react4.useEffect)(() => {
       const handleScroll = () => {
         window.clearTimeout(scrollTimerRef.current);
@@ -370962,10 +371069,16 @@ Component that was made reactive: `,
         // （latex feature 在未启用 CodeMirror 时直接抛错，编辑器将无法初始化）。
         featureConfigs: {
           [Crepe.Feature.CodeMirror]: {
-            theme: themeRef.current === "dark" ? oneDark : void 0,
-            // 无预览模式：代码块始终显示 CodeMirror 编辑态，插入/点击即可直接输入，
-            // 不需要“编辑”按钮切换。
-            previewOnlyByDefault: false,
+            // theme 显式传 null：Crepe 的默认值 oneDark 会经 defaultsDeep 补回，
+            // 而传 null 能保留下来（falsy）从而不注入，避免与下面的 Typora 配色
+            // 主题争优先级。配色随 CSS 变量在当前主题下实时生效。
+            // （类型上只接受 Extension | undefined，故此处显式转换。）
+            theme: null,
+            extensions: cmExtensions(),
+            // 有预览的块（公式 / Mermaid）默认只显示预览，源码收起；点工具条上的
+            // 「编辑」才展开编辑态。普通代码块 renderPreview 返回 null，没有预览面板，
+            // 因此仍直接显示可编辑的代码（插入即可输入）。
+            previewOnlyByDefault: true,
             // 普通代码块不渲染预览（返回 null → 无预览面板与切换按钮）；
             // mermaid 语言 → 实时渲染图表（300ms 防抖，随主题深浅切换）；
             // latex 语言由 latex feature 接管渲染 KaTeX 公式。
@@ -370974,8 +371087,7 @@ Component that was made reactive: `,
             copyText: t("editor.copy"),
             searchPlaceholder: t("editor.searchLanguage"),
             noResultText: t("editor.noLanguage"),
-            previewToggleText: (previewOnlyMode) => previewOnlyMode ? t("editor.edit") : t("editor.hide"),
-            previewLabel: t("editor.preview")
+            previewToggleText: (previewOnlyMode) => previewOnlyMode ? t("editor.edit") : t("editor.hide")
           },
           [Crepe.Feature.Placeholder]: {
             text: t("editor.placeholder"),
@@ -371052,6 +371164,7 @@ Component that was made reactive: `,
         suppressNextRef.current = true;
         current2.editor.action(replaceAll(target?.content ?? ""));
         suppressNextRef.current = false;
+        current2.setReadonly(readonlyRef.current);
         scrollRef.current?.scrollTo({ top: 0 });
       };
       const api2 = {
@@ -371105,11 +371218,9 @@ Component that was made reactive: `,
       if (!current2 || current2.editor.status !== EditorStatus.Created) return;
       current2.editor.action((ctx) => {
         const prev2 = ctx.get(codeBlockConfig.key);
-        ctx.set(codeBlockConfig.key, {
-          ...prev2,
-          extensions: cmExtensions(theme2 === "dark")
-        });
+        ctx.set(codeBlockConfig.key, { ...prev2, extensions: cmExtensions() });
       });
+      void refreshMermaidPanels(theme2);
     }, [theme2]);
     (0, import_react4.useEffect)(() => {
       const current2 = crepeRef.current;
@@ -371121,39 +371232,10 @@ Component that was made reactive: `,
       current2.editor.action(replaceAll(note3?.content ?? ""));
       suppressNextRef.current = false;
       scrollRef.current?.scrollTo({ top: 0 });
-    }, [note3?.id]);
+    }, [note3?.id, externalPath]);
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("main", { className: "relative flex min-w-0 flex-1 flex-col bg-bg", children: [
-      external && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex shrink-0 items-center gap-3 border-b border-edge bg-panel px-5 py-2 text-xs", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "flex min-w-0 items-center gap-2", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-            "svg",
-            {
-              viewBox: "0 0 24 24",
-              className: "h-3.5 w-3.5 shrink-0 text-accent",
-              fill: "none",
-              stroke: "currentColor",
-              strokeWidth: "2",
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 3v5h5" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "shrink-0 font-medium text-ink", children: t("external.banner") }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "truncate text-muted", children: note3?.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "shrink-0 text-faint", children: t("external.saveHint") })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-          "button",
-          {
-            onClick: onExitExternal,
-            className: "ml-auto shrink-0 border border-edge2 px-3 py-1 text-muted transition-colors hover:border-edge2 hover:text-ink",
-            children: t("external.exit")
-          }
-        )
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex shrink-0 items-center gap-3 border-b border-edge px-5 pb-2 pt-3", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "editor-title-row flex shrink-0 items-center gap-3 border-b border-edge px-5 pb-2 pt-3", children: [
+        !external && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "button",
           {
             onClick: onToggleSidebar,
@@ -371184,7 +371266,34 @@ Component that was made reactive: `,
             className: "min-w-0 flex-1 bg-transparent text-lg font-semibold text-ink outline-none placeholder:text-faint disabled:cursor-default"
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { ref: exportBoxRef, className: "relative shrink-0", children: [
+        external && readonly3 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "shrink-0 text-xs text-faint", children: t("external.previewBadge") }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+            "button",
+            {
+              onClick: () => setEditing(true),
+              className: "flex shrink-0 items-center gap-1.5 border border-edge2 px-3 py-1 text-xs text-muted transition-colors hover:border-edge2 hover:bg-panel2 hover:text-ink",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+                  "svg",
+                  {
+                    viewBox: "0 0 24 24",
+                    className: "h-3.5 w-3.5",
+                    fill: "none",
+                    stroke: "currentColor",
+                    strokeWidth: "1.8",
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M13 3l4 4L7 17l-4 1 1-4z" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M4 21h16" })
+                    ]
+                  }
+                ),
+                t("external.edit")
+              ]
+            }
+          )
+        ] }),
+        !external && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { ref: exportBoxRef, className: "relative shrink-0", children: [
           /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
             "button",
             {
@@ -371467,9 +371576,7 @@ Component that was made reactive: `,
           if (!alive) return;
           if (file) {
             dispatch3({ type: "externalOpen", file });
-            toast(
-              t("external.banner") + " \u2014 " + file.name
-            );
+            toast(t("external.previewBadge") + " \u2014 " + file.name);
           }
         } catch {
         }
@@ -371481,6 +371588,15 @@ Component that was made reactive: `,
         window.clearTimeout(timer3);
       };
     }, [dispatch3]);
+    (0, import_react6.useEffect)(() => {
+      const teardown = () => exitExternalFileNow();
+      window.addEventListener("pagehide", teardown);
+      window.addEventListener("beforeunload", teardown);
+      return () => {
+        window.removeEventListener("pagehide", teardown);
+        window.removeEventListener("beforeunload", teardown);
+      };
+    }, []);
     const stateRef = (0, import_react6.useRef)(state4);
     stateRef.current = state4;
     const skipFirst = (0, import_react6.useRef)(true);
@@ -371674,11 +371790,6 @@ Component that was made reactive: `,
       },
       [modal, dispatch3]
     );
-    const handleExitExternal = (0, import_react6.useCallback)(() => {
-      void exitExternalFile().finally(() => {
-        dispatch3({ type: "externalExit" });
-      });
-    }, [dispatch3]);
     const inExternalMode = !!state4.externalFile;
     return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex h-full w-full flex-col overflow-hidden bg-bg text-ink", children: [
       /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex min-h-0 flex-1", children: [
@@ -371716,7 +371827,7 @@ Component that was made reactive: `,
             sidebarOpen: sidebarOpen && !inExternalMode,
             onToggleSidebar: () => setSidebarOpen((v5) => !v5),
             external: inExternalMode,
-            onExitExternal: handleExitExternal
+            externalPath: state4.externalFile?.path ?? null
           }
         )
       ] }),

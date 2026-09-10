@@ -33,7 +33,7 @@ TEXT_SUFFIXES = {
 }
 CODE_SUFFIXES = {".cjs", ".html", ".htm", ".js", ".jsx", ".mjs", ".ts", ".tsx", ".vue"}
 APPROVED_GENERATED_HASHES = {
-    "pi.markdown/renderer/assets/app.js": "6aa97ffb981cca16762cec88fc840ab6acc4237941bb4a0fb827a9b7b53f53ff",
+    "pi.markdown/renderer/assets/app.js": "131f8f17518ae1bb60d575727ccd330d477be6600ec9de7474918a6ee9c84b09",
 }
 REQUIRED_MANIFEST_FIELDS = (
     "schemaVersion", "id", "name", "version", "description", "i18n",

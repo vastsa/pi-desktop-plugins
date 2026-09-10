@@ -1,107 +1,427 @@
-/* The editor keeps its warm paper identity; the surrounding chrome follows
-   the compact PI-Desktop rhythm and remains readable on small panels. */
+/* 面板收尾样式表：必须在打包产物 app.css 之后加载（见 index.html）。
+ *
+ * 打包后的 app.css 里，Crepe 自带主题位于应用自身规则之后，因此凡是要压过
+ * Crepe 默认值的覆盖都集中在这里；调色板请看 renderer-src/src/index.css。
+ * 只写实际存在的选择器——本文件曾有一批类名（.sidebar-container / .editor-pane
+ * 等）在组件里并不存在，规则静默失效，反而掩盖了真正的布局意图。
+ *
+ * 视觉基准为 Typora 主题 Inkwell（https://theme.typoraio.cn/theme/Inkwell/）：
+ * 柔和的灰/蓝调、单层圆角代码块（标题栏 + 代码区一体）、引用块带浅底。
+ */
+
 html, body { scrollbar-gutter: stable; }
 body {
   font-size: 13.5px !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Paint the body itself so the host's one-shot capsule color sample
-     (body computed background/color at DOMContentLoaded) always matches the
-     visible page, in both themes and after in-panel theme toggles. */
+  /* 面板自身铺底，宿主在 DOMContentLoaded 对页面取色（窗口控制胶囊）时
+     无论明暗主题都能拿到与可见页面一致的颜色 */
   background: rgb(var(--c-bg));
   color: rgb(var(--c-ink));
 }
 #root {
   background: rgb(var(--c-bg));
-  /* v3 paints through the transparent host overlay; keep the root full-height
-     so the host chrome is not mirrored as an empty strip at the bottom. */
+  /* v3 穿透式 chrome：整页自窗口顶端绘制，宿主只在右上角保留窗口控制胶囊 */
   height: 100%;
 }
 
 button, input, textarea, select { min-height: 32px; }
+/* 状态栏是 28px 紧凑条：豁免最小高度，否则其中的按钮会溢出 4px */
+footer button { min-height: 0; }
+
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 2px solid rgb(var(--c-accent) / 0.28);
+  outline: 2px solid rgb(var(--c-accent) / 0.35);
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
-/* --- v3 chrome: paint-through layout under the host drag map ---------------
-   This page opts in with <meta name="pi-plugin-chrome" content="v3">. The
-   host keeps only the capsule above the page and lets the page draw in the
-   former 46px band. The editor and sidebar own their first visible rows, while
-   standard controls remain clickable through host-generated drag gaps. */
+/* --- v3 chrome 布局 --------------------------------------------------------
+   本页用 <meta name="pi-plugin-chrome" content="v3"> 选择穿透式 chrome：
+   宿主把原来的 46px 标题带交给页面绘制，只在右上角保留窗口控制胶囊。 */
 
-:root {
-  --pimd-titlebar-h: var(--pi-plugin-titlebar-height, 46px);
-  /* Deterministic row metrics for the offsets below (pad + control + pad). */
-  --pimd-sidebar-header-h: 43px;  /* 8 + 28 (search input) + 6 + 1 border */
-  --pimd-tabs-h: 30px;
-  --pimd-title-row-h: 45px;       /* 8 + 32 (title input) + 4 + 1 border  */
-}
+/* 标题行横跨窗口顶端，右侧要让开宿主胶囊，否则导出按钮被压在胶囊之下点不到。
+   （116px ≈ 三个窗口按钮 + 内边距；如宿主改版需同步调整。） */
+.editor-title-row { padding-right: 116px; }
 
-/* Sidebar: the search row now paints into the former host band. */
-.sidebar-container {
-  padding-top: 0;
-  background: rgb(var(--c-sidebar-header));
-}
-.sidebar-container > .sidebar-header {
-  flex: none;
-  box-sizing: border-box;
-  height: var(--pimd-sidebar-header-h);
-  padding-top: 8px;
-  padding-bottom: 6px;
-}
-.sidebar-container > .sidebar-header input { min-height: 28px; }
-.sidebar-container .tab-button { min-height: 27px; }
-.sidebar-container > .sidebar-tabs {
-  flex: none;
-  box-sizing: border-box;
-  height: var(--pimd-tabs-h);
-  align-items: center;
-}
+/* 编辑区不参与宿主拖拽，保证正文可正常选中 */
+.pi-md-scroll { -webkit-app-region: no-drag; app-region: no-drag; }
 
-/* Editor pane: the note title row paints into the former host band; reserve
-   only that row before the document begins and keep the capsule clear. */
-.editor-pane > .editor-title-row {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 30;
-  box-sizing: border-box;
-  height: var(--pimd-title-row-h);
-  padding-top: 8px;
-  padding-bottom: 4px;
-  padding-right: 116px;
-  background: rgb(var(--c-bg));
-}
-.editor-pane > .pi-md-scroll {
-  padding-top: var(--pimd-title-row-h);
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
-}
-.milkdown .milkdown-top-bar {
-  position: sticky;
-  top: var(--pimd-title-row-h);
-  min-height: 36px;
-}
-
-/* --- Editor rhythm ----------------------------------------------------------
-   Crepe's vendored theme ships `.milkdown .ProseMirror { padding: 60px 120px }`
-   LATER in the cascade than the app's own override, so its 60px top padding
-   silently won and text started ~190px below the window top (band spacer +
-   title row + Crepe padding + first-heading margin). This sheet loads last:
-   re-assert compact padding and drop the leading margin of the first block. */
+/* --- 编辑区宽度与内边距 -----------------------------------------------------
+   Inkwell 的 #write 为 max-width: 860px / padding: 2em 2.5em；Typora 本体再按
+   窗口宽度放宽（860 → 1400px 视口 1024 → 1800px 视口 1200），窄窗口则用满可用
+   宽度。本表最后加载，因此压过 Crepe 的 padding: 60px 120px。 */
 .milkdown .ProseMirror {
-  max-width: 900px;
+  max-width: 860px;
   margin-inline: auto;
-  padding: 12px clamp(20px, 6vw, 72px) 40vh;
+  padding: 2em 2.5em 40vh;
 }
-.milkdown .ProseMirror pre { border-radius: 8px; }
-.milkdown .ProseMirror img { border-radius: 8px; }
-.milkdown .ProseMirror > :first-child { margin-top: 0; }
+@media (min-width: 1400px) {
+  .milkdown .ProseMirror { max-width: 1024px; }
+}
+@media (min-width: 1800px) {
+  .milkdown .ProseMirror { max-width: 1200px; }
+}
 @media (max-width: 720px) {
-  .milkdown .ProseMirror { padding-inline: 20px; }
+  .milkdown .ProseMirror { padding-inline: 1.5em; }
 }
+
+/* --- 正文排版：对齐 Inkwell ------------------------------------------------- */
+.milkdown .ProseMirror h1,
+.milkdown .ProseMirror h2,
+.milkdown .ProseMirror h3,
+.milkdown .ProseMirror h4,
+.milkdown .ProseMirror h5,
+.milkdown .ProseMirror h6 {
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.8em;
+  margin-bottom: 0.65em;
+}
+.milkdown .ProseMirror h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin-top: 1.2em;
+  padding-bottom: 0.35em;
+  border-bottom: 2px solid rgb(var(--c-edge));
+  color: rgb(var(--c-heading));
+  letter-spacing: -0.02em;
+}
+.milkdown .ProseMirror h2 {
+  font-size: 1.55em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid rgb(var(--c-edge-light));
+  color: rgb(var(--c-heading2));
+}
+.milkdown .ProseMirror h3 {
+  font-size: 1.3em;
+  color: rgb(var(--c-heading2));
+}
+.milkdown .ProseMirror h4 {
+  font-size: 1.12em;
+  color: rgb(var(--c-heading2));
+}
+.milkdown .ProseMirror h5 {
+  font-size: 1em;
+  color: rgb(var(--c-muted));
+}
+.milkdown .ProseMirror h6 {
+  font-size: 0.92em;
+  font-weight: 500;
+  color: rgb(var(--c-faint));
+}
+
+/* 段落行距（Crepe 为 1.5，Inkwell 正文为 1.75） */
+.milkdown .ProseMirror p {
+  line-height: 1.75;
+}
+
+/* 链接：Inkwell --link-color，无下划线、hover 加深 */
+.milkdown .ProseMirror a {
+  color: rgb(var(--c-link));
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.milkdown .ProseMirror a:hover {
+  border-bottom-color: currentColor;
+}
+
+/* 引用块：Inkwell 为浅底 + 左侧竖线 + 右上右下圆角 */
+.milkdown .ProseMirror blockquote {
+  margin: 1em 0;
+  padding: 0.8em 1.2em;
+  background-color: rgb(var(--c-quote-bg));
+  border-radius: 0 6px 6px 0;
+  color: rgb(var(--c-quote));
+}
+.milkdown .ProseMirror blockquote::before {
+  background: rgb(var(--c-quote-bar));
+  width: 4px;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+}
+
+/* 表格：Inkwell #e2e8f0 / #2d3848 边框 + 表头浅底 + 斑马纹 */
+.milkdown .milkdown-table-block td,
+.milkdown .milkdown-table-block th {
+  border: 1px solid rgb(var(--c-edge));
+  padding: 6px 13px;
+}
+.milkdown .milkdown-table-block th {
+  background: rgb(var(--c-panel2));
+  font-weight: 600;
+}
+
+/* ========== 代码块：单层圆角容器（Inkwell .md-fences） ==========
+ * 修复「双层边框」：Crepe 外层 .milkdown-code-block 是白底 + 8px 20px 20px 内边距，
+ * 而内部的 pre 又各自带边框，视觉上就变成「白框套灰框」。这里把外层改成唯一的
+ * 容器（底色 + 1px 边线 + 8px 圆角 + 微阴影），内部一律透明无边框，
+ * 并让语言工具条成为容器的标题栏。
+ * 公式块（lang=latex）与普通代码块走同一容器，因此一并受益。
+ *
+ * 注意不能用 overflow: hidden 来裁圆角——语言选择下拉是容器内的绝对定位元素，
+ * 会被一并裁掉；改为给首/尾子元素各自补上内侧圆角。 */
+.milkdown .milkdown-code-block {
+  background: rgb(var(--c-code-bg));
+  border: 1px solid rgb(var(--c-code-border));
+  border-radius: 8px;
+  padding: 0;
+  margin: 1.2em 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+[data-theme="dark"] .milkdown .milkdown-code-block {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.milkdown .milkdown-code-block > .tools {
+  border-radius: 7px 7px 0 0;
+}
+.milkdown .milkdown-code-block > :last-child {
+  border-radius: 0 0 7px 7px;
+}
+
+/* 容器内部一律无边框、透明底，避免与外层叠加成双边框 */
+.milkdown .milkdown-code-block pre,
+.milkdown .milkdown-code-block pre code,
+.milkdown .milkdown-code-block .codemirror-host,
+.milkdown .milkdown-code-block .cm-editor,
+.milkdown .milkdown-code-block .cm-gutters,
+.milkdown .milkdown-code-block .preview-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+.milkdown .milkdown-code-block pre,
+.milkdown .milkdown-code-block .cm-editor {
+  padding: 0.5em 0;
+}
+
+/* 语言工具条 = 标题栏（Inkwell .md-fences::before：细窄一行、语言名大写 + 字距）
+ *
+ * 高度全靠按钮撑起。Crepe 给语言按钮留了 margin-bottom: 8px，加上全局
+ * `button { min-height: 32px }`，整条会被撑到 49px——对一行标签过于笨重。
+ * 这里把按钮统一收成 22px、去掉外边距，整条 ≈ 31px，比例贴近 Inkwell。 */
+.milkdown .milkdown-code-block .tools {
+  background: rgb(var(--c-code-head));
+  border-bottom: 1px solid rgb(var(--c-edge));
+  padding: 4px 10px;
+  gap: 8px;
+}
+.milkdown .milkdown-code-block .tools button {
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 22px;
+  border-radius: 4px;
+  background: transparent;
+  color: rgb(var(--c-faint));
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.milkdown .milkdown-code-block .tools button:hover {
+  background: rgb(var(--c-panel2));
+  color: rgb(var(--c-ink));
+}
+.milkdown .milkdown-code-block .tools .language-button {
+  color: rgb(var(--c-lang-tag));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  /* Crepe 默认把语言名做成 hover 才现的浮层（opacity: 0）；这里作为常显的标题栏 */
+  opacity: 1;
+  background: transparent;
+  margin: 0;
+  padding: 0 4px 0 2px;
+  gap: 3px;
+}
+.milkdown .milkdown-code-block .tools .language-button:hover {
+  background: transparent;
+  color: rgb(var(--c-ink));
+}
+.milkdown .milkdown-code-block .tools .language-button .expand-icon {
+  width: 13px;
+  height: 13px;
+}
+.milkdown .milkdown-code-block .tools .language-button .expand-icon svg {
+  width: 11px;
+  height: 11px;
+  color: rgb(var(--c-lang-tag));
+}
+/* 复制 / 预览切换按钮常显。Crepe 的规则是
+   `.milkdown .milkdown-code-block .tools .tools-button-group button { opacity: 0 }`
+   只在悬停时才显露；这里以同特异性、靠最后加载取胜，让「编辑」入口一眼可见。 */
+.milkdown .milkdown-code-block .tools .tools-button-group {
+  gap: 2px;
+}
+.milkdown .milkdown-code-block .tools .tools-button-group button {
+  opacity: 1;
+  padding: 0 8px;
+}
+
+/* --- 语言选择下拉：与代码块容器同一套圆角与配色 ---------------------------- */
+.milkdown .milkdown-code-block .language-picker {
+  padding-top: 6px;
+}
+.milkdown .milkdown-code-block .list-wrapper {
+  width: 224px;
+  padding: 6px;
+  background: rgb(var(--c-panel));
+  border: 1px solid rgb(var(--c-edge));
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+[data-theme="dark"] .milkdown .milkdown-code-block .list-wrapper {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* 搜索框：细边线 + 聚焦时换成主题色，不再用 Crepe 的粗 outline */
+.milkdown .milkdown-code-block .search-box {
+  margin: 0 0 4px;
+  padding: 3px 8px;
+  gap: 6px;
+  background: rgb(var(--c-bg));
+  border: 1px solid rgb(var(--c-edge));
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.milkdown .milkdown-code-block .search-box:has(input:focus) {
+  outline: none;
+  border-color: rgb(var(--c-accent));
+}
+.milkdown .milkdown-code-block .search-box .search-input {
+  min-height: 0;
+  height: 22px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 22px;
+  color: rgb(var(--c-ink));
+  background: transparent;
+  border: none;
+}
+.milkdown .milkdown-code-block .search-box .search-input::placeholder {
+  color: rgb(var(--c-faint));
+}
+.milkdown .milkdown-code-block .search-box .clear-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+.milkdown .milkdown-code-block .search-box .clear-icon svg {
+  width: 14px;
+  height: 14px;
+  color: rgb(var(--c-faint));
+  fill: rgb(var(--c-faint));
+}
+.milkdown .milkdown-code-block .search-box .clear-icon:hover {
+  background: rgb(var(--c-panel2));
+}
+
+/* 列表：更矮、行距更紧凑，条目用小圆角高亮。
+   注意不要在这里写 scrollbar-width / scrollbar-color——Chromium 一旦读到
+   标准属性就会忽略整组 ::-webkit-scrollbar 规则，滚动条会退回带箭头的原生样式。 */
+.milkdown .milkdown-code-block .language-list {
+  height: 260px;
+  /* 右侧留出滚动条宽度，避免高亮条紧贴/压住滚动条 */
+  padding: 0 2px 0 0;
+}
+/* Crepe 给列表内滚动条塞了箭头按钮与浅色滑块，与面板其他滚动条不一致；
+   统一成面板的 8px 直角扁平样式（见 index.css 的 ::-webkit-scrollbar）。 */
+.milkdown .milkdown-code-block .language-list::-webkit-scrollbar {
+  width: 8px;
+}
+.milkdown .milkdown-code-block .language-list::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-scroll));
+  border-radius: 4px;
+}
+.milkdown .milkdown-code-block .language-list::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-scroll-hover));
+}
+.milkdown .milkdown-code-block .language-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.milkdown .milkdown-code-block .language-list::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+.milkdown .milkdown-code-block .language-list-item {
+  padding: 5px 8px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: 5px;
+  color: rgb(var(--c-muted));
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.milkdown .milkdown-code-block .language-list-item:hover,
+.milkdown .milkdown-code-block .language-list-item:focus-visible {
+  background: rgb(var(--c-panel2));
+  color: rgb(var(--c-ink));
+  outline: none;
+}
+.milkdown .milkdown-code-block .language-list-item[aria-selected="true"] {
+  background: rgb(var(--c-sel));
+  color: rgb(var(--c-onsel));
+  font-weight: 500;
+}
+.milkdown .milkdown-code-block .language-list-item .leading,
+.milkdown .milkdown-code-block .language-list-item .leading svg {
+  width: 16px;
+  height: 16px;
+}
+.milkdown .milkdown-code-block .language-list-item.no-result {
+  color: rgb(var(--c-faint));
+}
+
+/* 预览面板（代码块内的公式/图表预览）
+ *
+ * 「预览」标签与分隔线：Crepe 在「编辑态」（源码 + 预览同时可见）会插入
+ * .preview-divider 与 .preview-label。标签没有信息量，直接移除并释放它占的高度
+ * （label 自带 6px 上下外边距 + 一行文字 ≈ 24px），分隔线交给面板自身的上边框。
+ * 默认的「只显示预览」态本就不渲染这两者，因此公式/Mermaid 打开即是一张干净的图。 */
+.milkdown .milkdown-code-block .preview-panel .preview-label {
+  display: none;
+}
+.milkdown .milkdown-code-block .preview-panel .preview-divider {
+  height: 1px;
+  margin: 0;
+  opacity: 0.6;
+}
+
+/* 预览留白：仅「编辑态」需要上分隔线（默认预览态紧贴标题栏，由标题栏的下边框分隔） */
+.milkdown .milkdown-code-block .preview-panel {
+  padding: 8px 16px 12px;
+}
+.milkdown .milkdown-code-block .preview-panel:has(.preview-divider) {
+  border-top: 1px solid rgb(var(--c-edge));
+}
+.milkdown .milkdown-code-block .preview-panel:has(.preview-divider) .preview-divider {
+  display: none;
+}
+
+/* 行内代码：Inkwell 红字 + 浅底 + 小圆角，无边框 */
+.milkdown .ProseMirror :not(pre) > code {
+  background: rgb(var(--c-panel2));
+  color: rgb(var(--c-inline-code));
+  font-size: 0.88em;
+  padding: 0.2em 0.45em;
+  border: none;
+  border-radius: 4px;
+  font-weight: 400;
+}
+
+/* --- 压过 Crepe 默认值的细节 ------------------------------------------------ */
+
+/* 输入光标：Crepe 把虚拟光标取成 --crepe-color-outline（浅色下几乎看不见）。
+   原生 caret 被 .virtual-cursor-enabled 置为透明是预期行为，因此只改虚拟光标色。 */
+.milkdown .ProseMirror-focused {
+  --prosemirror-virtual-cursor-color: rgb(var(--c-caret));
+}
+
+/* 图片圆角（Inkwell 风格略柔） */
+.milkdown .ProseMirror img { border-radius: 6px; }

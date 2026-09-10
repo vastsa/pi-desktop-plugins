@@ -26,7 +26,10 @@ description: Describe when the agent should follow this skill.
   界面语言跟随宿主（`app.getLocale` 桥接通道），主题默认跟随宿主主题。
 - 通道：面板 → 主进程走 `pluginBridge.invoke("skill.setEnabled", { id: "note.sync", tree, activeId, theme, themeSource })`，
   主进程 `onPanelInvoke` 归一化后落盘；`store.path` 返回数据目录；`app.getLocale` 返回宿主语言。
-- Agent 工具 `open_file`：经宿主 `pi.fs` 网关读写用户选定目录内的文件——
-  首次调用会弹出目录选择器（`fs.requestDirectory`，`manifest.fs` 为
-  `userSelected` 根），只能打开/写回选定目录内的 `.md/.markdown/.txt`（≤5MB、
-  utf8 文本）；面板 1s 轮询 `file.pull` 进入单文件模式，`file.save` 自动写回。
+- Agent 工具 `preview_file`：按绝对路径以**只读预览**打开单个 Markdown/文本文件——
+  正文读写直接用 Node.js 的 `fs`，不经宿主 `pi.fs` 网关，因此**无需目录授权**、
+  任意绝对路径均可打开（仅 `.md/.markdown/.txt`、≤5MB、拒绝二进制，保留原 BOM）。
+  面板 1s 轮询 `file.pull` 取走待打开文件并进入单文件模式（无侧边栏），
+  以只读态渲染；用户点标题栏「编辑」后转可编辑，`file.save` 自动写回原文件。
+  同一时刻只允许一个外部文件（占用中调用返回 `CONFLICT`，心跳 60s 过期可接管）；
+  面板关闭时经同步通道发 `file.exit` 立即释放槽位。
