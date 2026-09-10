@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="pi-plugin-chrome" content="v2" />
+    <title>Session Forge</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #181818;
+        --surface: #212121;
+        --fg: #ffffff;
+        --muted: color-mix(in oklab, #ffffff 55%, transparent);
+        --border: color-mix(in oklab, #ffffff 12%, transparent);
+        --accent: #ffffff;
+        --accent-fg: #181818;
+        --danger: #ff6b6b;
+        --ok: #4ade80;
+      }
+      :root[data-base="light"] {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #f6f7f9;
+        --fg: #1a1c1f;
+        --muted: #5d5d5d;
+        --border: color-mix(in oklab, #1a1c1f 12%, transparent);
+        --accent: #1a1c1f;
+        --accent-fg: #ffffff;
+        --danger: #d92d20;
+        --ok: #12805c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: calc(var(--pi-plugin-titlebar-height, 0px) + 12px) 14px 14px;
+        font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      h1 { margin: 0 0 2px; font-size: 15px; }
+      .sub { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+      .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+      button {
+        border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px;
+        background: var(--accent); color: var(--accent-fg); cursor: pointer; font: inherit;
+      }
+      button.ghost { background: transparent; color: var(--fg); }
+      button:disabled { opacity: .45; cursor: not-allowed; }
+      input[type="text"], select, textarea {
+        background: var(--surface); color: var(--fg); border: 1px solid var(--border);
+        border-radius: 8px; padding: 6px 9px; font: inherit;
+      }
+      input[type="text"] { flex: 1; min-width: 180px; }
+      textarea { width: 100%; min-height: 60px; resize: vertical; }
+      .panel {
+        border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+        padding: 10px; margin-bottom: 12px;
+      }
+      .list { max-height: 240px; overflow: auto; }
+      .item {
+        display: flex; gap: 8px; align-items: flex-start; padding: 6px 4px;
+        border-bottom: 1px solid var(--border);
+      }
+      .item:last-child { border-bottom: none; }
+      .item label { flex: 1; cursor: pointer; }
+      .item .meta { display: block; color: var(--muted); font-size: 11px; }
+      #status { color: var(--muted); font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+      #status.err { color: var(--danger); }
+      #status.ok { color: var(--ok); }
+      pre {
+        margin: 0; white-space: pre-wrap; word-break: break-word;
+        max-height: 340px; overflow: auto; font-size: 12px; line-height: 1.5;
+      }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>会话熔炉</h1>
+    <p class="sub">读回本插件导入的会话，用宿主额度蒸馏成项目约定与可复用做法。</p>
+
+    <div id="status">准备中…</div>
+
+    <div class="panel">
+      <div class="row">
+        <button id="reload" class="ghost">刷新会话</button>
+        <span id="count" class="sub" style="margin:0"></span>
+        <span style="flex:1"></span>
+        <button id="selectAll" class="ghost">全选</button>
+        <button id="clear" class="ghost">清空</button>
+      </div>
+      <div class="list" id="sessions"></div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <select id="model"><option value="">默认模型</option></select>
+        <input type="text" id="goal" placeholder="本次提炼重点（可选），例如：只关注部署与 CI 问题" />
+      </div>
+      <div class="row">
+        <input type="text" id="path" value="AGENTS.md" />
+        <button id="distill">蒸馏</button>
+        <button id="save" class="ghost" disabled>保存到工作区</button>
+      </div>
+    </div>
+
+    <div id="resultWrap" class="panel hidden">
+      <pre id="result"></pre>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const status = (msg, kind) => {
+        $("status").textContent = msg;
+        $("status").className = kind || "";
+      };
+
+      let sessionRows = [];
+      let lastText = "";
+
+      const applyAppearance = (a) => {
+        const base = a?.base;
+        document.documentElement.dataset.base =
+          base === "light" || base === "dark"
+            ? base
+            : window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      };
+      window.pluginBridge?.on("appearance:changed", applyAppearance);
+      window.pluginBridge
+        ?.invoke("app.getAppearance")
+        .then(applyAppearance)
+        .catch(() => applyAppearance(null));
+
+      const call = (channel, payload) => window.pluginBridge.invoke(channel, payload);
+
+      async function loadModels() {
+        try {
+          const { models } = await call("forge.models", {});
+          const sel = $("model");
+          for (const m of models) {
+            const key = m.modelKey || `${m.providerId}/${m.modelId}`;
+            if (!key || key.startsWith("undefined")) continue;
+            const opt = document.createElement("option");
+            opt.value = key;
+            opt.textContent = m.label || key;
+            sel.appendChild(opt);
+          }
+        } catch {}
+      }
+
+      async function loadSessions() {
+        status("读取已导入会话…");
+        try {
+          const { sessions } = await call("forge.sessions", { limit: 200 });
+          sessionRows = sessions || [];
+          render();
+          status(
+            sessionRows.length
+              ? `已导入 ${sessionRows.length} 个会话，勾选后蒸馏。`
+              : "还没有导入过会话 —— 先用「一体化会话导入」导入一批。",
+            sessionRows.length ? "ok" : "",
+          );
+        } catch (e) {
+          status(`读取失败：${e?.message || e}`, "err");
+        }
+      }
+
+      function render() {
+        const box = $("sessions");
+        box.innerHTML = "";
+        $("count").textContent = sessionRows.length ? `共 ${sessionRows.length} 个` : "";
+        sessionRows.forEach((s) => {
+          const row = document.createElement("div");
+          row.className = "item";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.dataset.id = String(s.id);
+          const label = document.createElement("label");
+          const title = document.createElement("span");
+          title.textContent = s.title || "(无标题)";
+          const meta = document.createElement("span");
+          meta.className = "meta";
+          meta.textContent = [s.source, s.projectPath, s.updatedAt ? new Date(s.updatedAt).toLocaleString() : ""]
+            .filter(Boolean)
+            .join(" · ");
+          label.append(title, meta);
+          row.append(cb, label);
+          box.appendChild(row);
+        });
+      }
+
+      const selected = () =>
+        Array.from(document.querySelectorAll("#sessions input:checked")).map((c) => c.dataset.id);
+
+      $("reload").addEventListener("click", loadSessions);
+      $("selectAll").addEventListener("click", () =>
+        document.querySelectorAll("#sessions input").forEach((c) => (c.checked = true)),
+      );
+      $("clear").addEventListener("click", () =>
+        document.querySelectorAll("#sessions input").forEach((c) => (c.checked = false)),
+      );
+
+      $("distill").addEventListener("click", async () => {
+        const ids = selected();
+        if (ids.length === 0) return status("先勾选至少一个会话。", "err");
+        $("distill").disabled = true;
+        status(`正在蒸馏 ${ids.length} 个会话…（限速 8 次/分钟）`);
+        try {
+          const res = await call("forge.distill", {
+            sessionIds: ids,
+            sessions: sessionRows,
+            modelKey: $("model").value || undefined,
+            goal: $("goal").value || undefined,
+          });
+          lastText = res.distilled || "";
+          $("result").textContent = lastText;
+          $("resultWrap").classList.remove("hidden");
+          $("save").disabled = !lastText.trim();
+          status(
+            `完成${res.unreadable ? `，${res.unreadable} 个会话读取失败` : ""}。`,
+            "ok",
+          );
+        } catch (e) {
+          const code = e?.code === "RATE_LIMITED" ? `（限速，约 ${Math.ceil((e.retryAfterMs || 0) / 1000)}s 后重试）` : "";
+          status(`蒸馏失败：${e?.message || e}${code}`, "err");
+        } finally {
+          $("distill").disabled = false;
+        }
+      });
+
+      $("save").addEventListener("click", async () => {
+        const path = $("path").value.trim() || "AGENTS.md";
+        try {
+          const res = await call("forge.save", { path, content: lastText });
+          status(`已写入 ${res.path}（${res.bytes} 字节）。`, "ok");
+        } catch (e) {
+          status(`保存失败：${e?.message || e}`, "err");
+        }
+      });
+
+      (async () => {
+        try {
+          const caps = await call("forge.capabilities", {});
+          const missing = Object.entries(caps)
+            .filter(([, v]) => !v)
+            .map(([k]) => k);
+          if (missing.length) {
+            status(`当前宿主缺少能力：${missing.join(", ")}。请升级 PI-Desktop 或重新授权权限。`, "err");
+          }
+        } catch {}
+        await loadModels();
+        await loadSessions();
+      })();
+    </script>
+  </body>
+</html>
