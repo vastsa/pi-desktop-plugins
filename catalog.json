@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-10T16:23:21Z",
+  "updatedAt": "2026-09-10T17:21:33Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -802,6 +802,49 @@
           "sizeBytes": 171505,
           "permissions": [
             "ui.panel",
+            "agent.tool.register"
+          ],
+          "fs": {}
+        }
+      ]
+    },
+    {
+      "id": "pi.workspace-file-guard",
+      "name": "Workspace File Guard",
+      "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Works on any machine: Windows, macOS, Linux, any drive letter, any username.",
+      "i18n": {
+        "en": {
+          "name": "Workspace File Guard",
+          "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Never spill onto the system volume, Desktop, Downloads, Documents or system temp.",
+          "safetyNotes": "Behavioral confinement only. The plugin classifies paths and injects agent rules; it does not lock disks, change ACLs, or access the network."
+        },
+        "zh-CN": {
+          "name": "工作区文件护栏",
+          "description": "把测试、临时、草稿、日志、缓存等垃圾文件关在当前工作区或 PI scratch 里。任意机器、任意盘符、任意用户名都可用，不写死 C: 或本机路径。",
+          "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。"
+        }
+      },
+      "author": "xingleiwu",
+      "categories": [
+        "productivity"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.workspace-file-guard",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# 工作区文件护栏\n\n把测试、临时、草稿、日志、缓存等垃圾文件关在当前工作区或 PI scratch 里。这是行为约束，不是磁盘锁。\n\n便携的 PI-Desktop skill 包：启用一次后，每个会话都会注入规则并注册分类工具。路径按当前操作系统、用户主目录、工作区和环境变量解析，不写死 `C:`、用户名或某台机器的目录。\n\n## 提供什么\n\n- Skill：`skills/workspace-file-guard.md`（插件启用期间注入 Agent）\n- 工具：`project_root` / `check_path` / `temp_env` / `tmp_layout`\n- 拒绝清单：`references/denied-paths.md`\n- 分类器：`guard.js`\n\n## 文件该写到哪\n\n| 类型 | 位置 |\n| --- | --- |\n| 用户要求保留的源码 | 工作区（`src/`、`tests/` 等） |\n| 一次性草稿、转储、日志 | `$PI_SCRATCH_DIR` |\n| 项目本地缓存 | `$project/.tmp/cache` |\n\n禁止：桌面、下载、文档、系统临时目录；项目在其他盘时禁止写到系统盘；Program Files、`/usr`、`/Applications`。\n\n## 权限\n\n| 权限 | 用途 |\n| --- | --- |\n| `agent.prompt.inject` | 注入护栏规则，让 Agent 默认把垃圾文件关在工作区 / scratch |\n| `agent.tool.register` | 注册路径分类工具，供 Agent 在写文件前查询 |\n\n不申请文件系统、网络、剪贴板或后台服务权限。插件本身不写盘、不改 ACL、不联网；真正落盘的仍是 Agent 自己的 Write / Bash。\n\n## 安装\n\n1. PI-Desktop → 扩展 → 安装插件包，选择 `packages/pi.workspace-file-guard-0.2.4.piplug`。\n2. 若出现权限确认，勾选 `agent.prompt.inject` 与 `agent.tool.register`（当前宿主对本地 `.piplug` 可能按清单静默全授）。\n3. 新开一个 Agent 会话，skill 才会注入。\n\n也可把本目录当作开发插件加载（保存后热重载）。开发插件扩权后请重新「加载开发插件」，不要只点「重新加载」。\n\n## 开发验证\n\n```bash\nnode tests/workspace-file-guard-guard.test.js\nnode tests/workspace-file-guard-main.test.js\npython scripts/pack_plugin.py plugins/pi.workspace-file-guard\npython scripts/rebuild_catalog.py\npython scripts/security_audit.py --check-packages\n```\n\n## 能力边界\n\n- 不是事后清理磁盘。\n- 不是跨项目访问隔离。\n- 不是操作系统沙箱、BitLocker、SIP 或文件夹 ACL。\n- `explicit=true` 只是模型自称用户点名了目标；桌面、下载、文档和系统临时目录即使标了也禁止。\n\n## 能力 / 数据流\n\n| 能力 | 数据 | 方向 |\n| --- | --- | --- |\n| `agent.prompt.inject` | 本插件 `skills/workspace-file-guard.md` 规则文本 | 注入当前会话的系统提示，不读聊天记录 |\n| `agent.tool.register` | 调用参数里的路径字符串；`pi.workspace.get()` 的工作区路径；`PI_SCRATCH_DIR` / 主目录 / 常见系统目录 | 只返回分类结果与环境变量建议，不写盘 |\n| 文件系统 / 网络 / 剪贴板 / 后台服务 | 无 | 不申请、不使用 |\n\n失败路径：没有打开工作区且未传 `root` 时工具返回 `ok: false`，不会回退到插件安装目录或 cwd。桌面、下载、文档、系统临时目录即使 `explicit=true` 也拒绝。\n",
+      "safetyNotes": "Behavioral confinement only. The plugin classifies paths and injects agent rules; it does not lock disks, change ACLs, or access the network.",
+      "versions": [
+        {
+          "version": "0.2.4",
+          "publishedAt": "2026-09-10T17:21:33Z",
+          "changelog": "0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
+          "minPiDesktop": ">=0.2.0",
+          "shasum": "9ea6f9f4809b0ea635c0ef0e3e2f77dc12bd8593563c4dead15a92228c84aba6",
+          "url": "packages/pi.workspace-file-guard-0.2.4.piplug",
+          "sizeBytes": 32360,
+          "permissions": [
+            "agent.prompt.inject",
             "agent.tool.register"
           ],
           "fs": {}

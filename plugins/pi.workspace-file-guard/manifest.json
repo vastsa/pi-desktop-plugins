@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.workspace-file-guard",
+  "name": "Workspace File Guard",
+  "version": "0.2.4",
+  "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Works on any machine: Windows, macOS, Linux, any drive letter, any username.",
+  "i18n": {
+    "en": {
+      "name": "Workspace File Guard",
+      "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Never spill onto the system volume, Desktop, Downloads, Documents or system temp.",
+      "safetyNotes": "Behavioral confinement only. The plugin classifies paths and injects agent rules; it does not lock disks, change ACLs, or access the network."
+    },
+    "zh-CN": {
+      "name": "工作区文件护栏",
+      "description": "把测试、临时、草稿、日志、缓存等垃圾文件关在当前工作区或 PI scratch 里。任意机器、任意盘符、任意用户名都可用，不写死 C: 或本机路径。",
+      "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。"
+    }
+  },
+  "author": "xingleiwu",
+  "main": "main.js",
+  "contributes": {
+    "skills": ["skills/workspace-file-guard.md"],
+    "agentTools": [
+      {
+        "name": "project_root",
+        "description": "Resolve the open PI-Desktop workspace, PI scratch directory, and recommended .tmp layout. Fails if no workspace is open and root is omitted.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "root": { "type": "string", "description": "Optional project root override" }
+          }
+        }
+      },
+      {
+        "name": "check_path",
+        "description": "Classify whether a write path is allowed. Read allowed, not ok. Relative paths are resolved against the workspace, not the plugin process cwd. allowed=false must be redirected into the workspace or PI scratch.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "Path that would be written" },
+            "root": { "type": "string", "description": "Optional project root override" },
+            "explicit": {
+              "type": "boolean",
+              "description": "Set true only when the user clearly named this destination"
+            }
+          },
+          "required": ["path"]
+        }
+      },
+      {
+        "name": "temp_env",
+        "description": "Return TMP/TEMP/cache environment assignments that keep tool junk inside the project .tmp and PI scratch.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "root": { "type": "string", "description": "Optional project root override" },
+            "shell": {
+              "type": "string",
+              "enum": ["powershell", "cmd", "bash", "json"],
+              "description": "Script dialect for the env assignments. Defaults to PowerShell on Windows and bash elsewhere."
+            }
+          }
+        }
+      },
+      {
+        "name": "tmp_layout",
+        "description": "Return the recommended $project/.tmp/{tests,scripts,cache,out} layout without creating files.",
+        "risk": "low",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "root": { "type": "string", "description": "Optional project root override" }
+          }
+        }
+      }
+    ]
+  },
+  "permissions": ["agent.prompt.inject", "agent.tool.register"],
+  "engines": { "piDesktop": ">=0.2.0" },
+  "categories": ["productivity"],
+  "changelog": "0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
+  "safetyNotes": "Behavioral confinement only. The plugin classifies paths and injects agent rules; it does not lock disks, change ACLs, or access the network.",
+  "activationEvents": ["onStartup"]
+}
