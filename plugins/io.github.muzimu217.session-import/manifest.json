@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.muzimu217.session-import",
   "name": "Universal Session Import",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "一体化会话导入与熔炉：扫描本机的 ZCode、WorkBuddy、Claude Code、Codex、OpenCode、Pi 并导入会话；再读回这些会话，用宿主额度蒸馏成项目约定与可复用做法。",
   "i18n": {
     "en": {
@@ -17,7 +17,7 @@
     }
   },
   "categories": ["developer-tools", "productivity", "community"],
-  "changelog": "Release 0.4.1：补齐市场元数据（i18n 双语名称/描述/安全说明、categories、changelog、safetyNotes）。0.4.0 新增会话熔炉（views/forge.html）：读回本插件导入的会话，用宿主 pi.agent.complete 蒸馏成项目约定、已验证做法与反复出现的坑并写入工作区；含语料预算裁剪（单会话 200k 字符上限）、ADR 0174 限速保护（8 次/60 秒）与宿主能力自检。同时修正 contributes.sessionSources 为对象数组，移除未使用的 fs.read。",
+  "changelog": "Release 0.4.2：声明正式会话导入所需的 session.import 权限，移除未使用的 session.read 权限。Release 0.4.1：补齐市场元数据（i18n 双语名称/描述/安全说明、categories、changelog、safetyNotes）。0.4.0 新增会话熔炉（views/forge.html）：读回本插件导入的会话，用宿主 pi.agent.complete 蒸馏成项目约定、已验证做法与反复出现的坑并写入工作区；含语料预算裁剪（单会话 200k 字符上限）、ADR 0174 限速保护（8 次/60 秒）与宿主能力自检。同时修正 contributes.sessionSources 为对象数组，移除未使用的 fs.read。",
   "safetyNotes": "以只读方式打开各工具的本地会话数据库；会话写入走宿主 session 导入接口。熔炉使用宿主自身额度调用模型，插件不接触 API Key。fs.write 仅用于保存蒸馏结果，范围限定在工作区内的 AGENTS.md、*.md、docs/**、.agents/skills/**。不发起网络请求，无遥测。",
   "author": "muzimu217",
   "main": "main.js",
@@ -102,7 +102,7 @@
   "permissions": [
     "ui.panel",
     "ui.view",
-    "session.read",
+    "session.import",
     "session.read.own",
     "agent.complete",
     "models.list",

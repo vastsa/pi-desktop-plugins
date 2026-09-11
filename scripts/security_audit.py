@@ -42,7 +42,8 @@ REQUIRED_MANIFEST_FIELDS = (
 KNOWN_PERMISSIONS = {
     "agent.complete", "agent.prompt.inject", "agent.tool.register", "background.service",
     "clipboard.read", "clipboard.write", "desktop.control", "fs.read", "fs.read.workspace",
-    "fs.write", "fs.write.workspace", "models.list", "net.fetch", "notify", "session.read",
+    "fs.write", "fs.write.workspace", "models.list", "net.fetch", "notify", "session.import",
+    "session.read", "session.read.own",
     "shell.openExternal", "ui.microphone", "ui.panel", "ui.theme", "ui.view", "usage.read",
 }
 
