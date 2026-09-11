@@ -19,13 +19,13 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import path, { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
-const PLUGIN_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PLUGIN_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 const wb = require(`${PLUGIN_DIR}/lib/sources/workbuddy.js`);
 
 let tmp;
