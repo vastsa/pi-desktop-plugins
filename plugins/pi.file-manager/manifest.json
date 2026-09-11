@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.file-manager",
+  "name": "文件管理器",
+  "version": "0.2.0",
+  "description": "在右侧工作面板中浏览并编辑当前项目的文件：完整目录树（图标随文件类型变化）、左右分栏、代码高亮编辑与保存、Markdown 预览/编辑切换，以及右键新建、重命名/移动、按文件名搜索。",
+  "i18n": {
+    "en": {
+      "name": "File Manager",
+      "description": "Browse and edit the open project in the right work panel: a full directory tree with per-file-type icons, syntax-highlighted editing, a Markdown preview/edit toggle, a context menu for creating and renaming, and filename search.",
+      "safetyNotes": "Reads and writes files in the open project through Node's fs inside the plugin's own process — the host permission gateway does not mediate these calls, and the manifest cannot declare a whole-tree write. Access is confined to the project root by the plugin itself: resolved paths must stay inside the root (symlink and junction escapes are refused), credential paths (.env*, .ssh/, *.pem, .git/**) are refused, saves are atomic (temp file + rename), and overwriting a file changed outside the editor asks first. No network access; the plugin data directory only holds settings and a write audit log."
+    },
+    "zh-CN": {
+      "name": "文件管理器",
+      "description": "在右侧工作面板中浏览并编辑当前项目的文件：完整目录树（图标随文件类型变化）、左右分栏、代码高亮编辑与保存、Markdown 预览/编辑切换，以及右键新建、重命名/移动、按文件名搜索。",
+      "safetyNotes": "插件在自己的进程内通过 Node fs 读写当前项目的文件——宿主的权限网关不介入这些调用，manifest 也无法申报「整树写入」。访问范围由插件自身限定在项目根目录内：解析后的路径必须仍在根内（拒绝符号链接与 junction 逃逸）、拒绝凭据类路径（.env*、.ssh/、*.pem、.git/**）、保存采用原子写（临时文件 + 重命名）、覆盖在编辑器外被改动过的文件前会先询问。无网络访问；插件数据目录只保存设置与写入审计日志。"
+    }
+  },
+  "author": "Tioit-Wang",
+  "categories": ["productivity", "community"],
+  "main": "main.js",
+  "contributes": {
+    "views": [
+      {
+        "id": "manager",
+        "title": { "en": "File Manager", "zh-CN": "文件管理器" },
+        "icon": "folder",
+        "entry": "views/index.html",
+        "order": 40
+      }
+    ]
+  },
+  "permissions": ["ui.view"],
+  "engines": { "piDesktop": ">=0.9.0" },
+  "activationEvents": ["onStartup"]
+}
