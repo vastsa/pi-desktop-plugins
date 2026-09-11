@@ -1,151 +1,181 @@
 /**
- * OpenCode adapter: reads ~/.local/share/opencode/storage
- * (session/message/part as one JSON file each).
- * Ported from the built-in opencode.ts importer.
+ * OpenCode adapter: reads ~/.local/share/opencode/opencode.db (SQLite).
+ *
+ * OpenCode moved off the old per-file JSON tree (storage/session|message|part)
+ * to a single SQLite database at v1.x. The on-disk schema is the same
+ * three-layer model as ZCode — session -> message -> part, with each row's
+ * payload in a `data` JSON column — so this adapter mirrors lib/sources/zcode.js
+ * but queries the DB instead of walking directories.
+ *
+ * Read-only via the built-in node:sqlite; never mutates the user's OpenCode data.
  */
 "use strict";
 
 const os = require("node:os");
 const path = require("node:path");
-const fsp = require("node:fs").promises;
 const { toIso, truncateTitle, projectNameOf } = require("../util");
 
 const SOURCE = "opencode";
 
-const storageDirFor = (home = os.homedir()) =>
-  path.join(home, ".local", "share", "opencode", "storage");
+const dbPathFor = (home = os.homedir()) =>
+  path.join(home, ".local", "share", "opencode", "opencode.db");
 
-async function readJson(filePath) {
+function parseJsonColumn(raw) {
+  if (raw == null) return null;
   try {
-    return JSON.parse(await fsp.readFile(filePath, "utf8"));
+    return JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-async function listJsonFiles(dir) {
-  try {
-    return (await fsp.readdir(dir)).filter((f) => f.endsWith(".json")).sort();
-  } catch {
-    return [];
-  }
+function mapToolStatus(status) {
+  if (status === "error") return "error";
+  if (status === "completed") return "success";
+  return "running";
 }
 
-async function loadMessages(storageDir, sessionId) {
-  const dir = path.join(storageDir, "message", sessionId);
-  const out = [];
-  for (const file of await listJsonFiles(dir)) {
-    const msg = await readJson(path.join(dir, file));
-    if (msg) out.push(msg);
-  }
-  out.sort((a, b) => (a.time?.created ?? 0) - (b.time?.created ?? 0));
-  return out;
+function openDb(dbPath) {
+  const { DatabaseSync } = require("node:sqlite");
+  return new DatabaseSync(dbPath, { readOnly: true });
 }
 
 async function scan() {
-  const storageDir = storageDirFor();
-  const sessionRoot = path.join(storageDir, "session");
-  let projectDirs = [];
+  const dbPath = dbPathFor();
+  let db;
   try {
-    projectDirs = await fsp.readdir(sessionRoot);
+    db = openDb(dbPath);
   } catch {
+    // DB absent (OpenCode never run / different layout) — nothing to import.
     return [];
   }
-  const sessions = [];
-  for (const dir of projectDirs) {
-    const dirPath = path.join(sessionRoot, dir);
-    let stat;
-    try {
-      stat = await fsp.stat(dirPath);
-    } catch {
-      continue;
-    }
-    if (!stat.isDirectory()) continue;
-    for (const file of await listJsonFiles(dirPath)) {
-      const session = await readJson(path.join(dirPath, file));
-      if (!session?.id) continue;
-      let messageCount = 0;
-      try {
-        messageCount = (
-          await fsp.readdir(path.join(storageDir, "message", session.id))
-        ).filter((f) => f.endsWith(".json")).length;
-      } catch {
-        continue;
-      }
-      if (messageCount === 0) continue;
+  try {
+    const rows = db
+      .prepare(
+        `SELECT s.id, s.directory, s.title, s.time_created, s.time_updated,
+                COALESCE(m.message_count, 0) AS message_count
+         FROM session s
+         LEFT JOIN (
+           SELECT session_id, COUNT(*) AS message_count
+           FROM message
+           GROUP BY session_id
+         ) m ON m.session_id = s.id
+         WHERE m.message_count > 0`,
+      )
+      .all();
+    const sessions = [];
+    for (const row of rows) {
+      if (!row.id) continue;
       sessions.push({
         source: SOURCE,
-        externalId: session.id,
-        title: truncateTitle(session.title ?? "") || session.id,
-        fullTitle: String(session.title ?? ""),
-        projectName: projectNameOf(session.directory) ?? "OpenCode",
-        projectPath: session.directory ?? null,
+        externalId: row.id,
+        title: truncateTitle(row.title) || row.id,
+        fullTitle: String(row.title ?? ""),
+        projectName: projectNameOf(row.directory) ?? "OpenCode",
+        projectPath: row.directory ?? null,
         modelId: null,
         providerId: null,
-        createdAt: toIso(session.time?.created),
-        updatedAt: toIso(session.time?.updated, toIso(session.time?.created)),
-        messageCount,
-        filePath: path.join(dirPath, file),
+        createdAt: toIso(row.time_created),
+        updatedAt: toIso(row.time_updated, toIso(row.time_created)),
+        messageCount: Number(row.message_count),
+        filePath: dbPath,
       });
     }
+    return sessions;
+  } finally {
+    db.close();
   }
-  sessions.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
-  return sessions;
 }
 
 async function convert(summary) {
-  const storageDir = storageDirFor();
-  const ocMessages = await loadMessages(storageDir, summary.externalId);
-  const messages = [];
-  let modelId = null;
-  let providerId = null;
+  const db = openDb(summary.filePath || dbPathFor());
+  try {
+    const messageRows = db
+      .prepare(
+        `SELECT id, time_created, data FROM message
+         WHERE session_id = ?
+         ORDER BY time_created, id`,
+      )
+      .all(summary.externalId);
+    const partRows = db
+      .prepare(
+        `SELECT message_id, data FROM part
+         WHERE session_id = ?
+         ORDER BY time_created, id`,
+      )
+      .all(summary.externalId);
 
-  for (const msg of ocMessages) {
-    if (msg.role === "assistant") {
-      modelId = msg.modelID ?? modelId;
-      providerId = msg.providerID ?? providerId;
+    const partsByMessage = new Map();
+    for (const row of partRows) {
+      const part = parseJsonColumn(row.data);
+      if (!part?.type || !row.message_id) continue;
+      const bucket = partsByMessage.get(row.message_id) ?? [];
+      bucket.push(part);
+      partsByMessage.set(row.message_id, bucket);
     }
-    const createdAt = toIso(msg.time?.created);
-    const partDir = path.join(storageDir, "part", msg.id);
-    const texts = [];
-    for (const file of await listJsonFiles(partDir)) {
-      const part = await readJson(path.join(partDir, file));
-      if (!part) continue;
-      if (part.type === "text" && part.text && part.synthetic !== true) {
-        texts.push(part.text);
-      } else if (part.type === "tool") {
-        const output = part.state?.output;
-        const outputText =
-          typeof output === "string" ? output : output ? JSON.stringify(output) : "";
-        messages.push({
-          role: "tool",
-          content: outputText,
-          createdAt,
-          toolName: part.tool ?? "tool",
-          toolCallId: part.callID,
-          toolStatus: part.state?.status === "error" ? "error" : "success",
-          toolArgs: part.state?.input,
-          toolResult: outputText,
-        });
+
+    const messages = [];
+    let modelId = null;
+    let providerId = null;
+
+    const flushText = (role, createdAt, texts) => {
+      const text = texts.join("\n").trim();
+      texts.length = 0;
+      if (!text) return;
+      messages.push({ role, content: text, createdAt });
+    };
+
+    for (const row of messageRows) {
+      const msg = parseJsonColumn(row.data);
+      if (!msg || !row.id) continue;
+      if (msg.role !== "user" && msg.role !== "assistant") continue;
+      const role = msg.role;
+      const createdAt = toIso(msg.time?.created ?? row.time_created);
+      if (role === "assistant") {
+        modelId = msg.modelID ?? modelId;
+        providerId = msg.providerID ?? providerId;
       }
-    }
-    const text = texts.join("\n").trim();
-    if (text) messages.push({ role: msg.role === "user" ? "user" : "assistant", content: text, createdAt });
-  }
 
-  return {
-    session: {
-      id: `import-opencode-${summary.externalId}`,
-      title: summary.fullTitle || summary.title,
-      projectPath: summary.projectPath,
-      modelId,
-      providerId,
-      mode: "agent",
-      createdAt: summary.createdAt,
-      updatedAt: summary.updatedAt,
-    },
-    messages,
-  };
+      // Emit parts in stored order so tool calls keep their place.
+      const texts = [];
+      for (const part of partsByMessage.get(row.id) ?? []) {
+        if (part.type === "text" && part.text && part.synthetic !== true) {
+          texts.push(part.text);
+        } else if (part.type === "tool") {
+          flushText(role, createdAt, texts);
+          const output = part.state?.output;
+          const outputText =
+            typeof output === "string" ? output : output ? JSON.stringify(output) : "";
+          messages.push({
+            role: "tool",
+            content: outputText,
+            toolName: part.tool ?? "tool",
+            toolStatus: mapToolStatus(part.state?.status),
+            toolArgs: part.state?.input ?? null,
+            toolResult: outputText,
+            createdAt,
+          });
+        }
+      }
+      flushText(role, createdAt, texts);
+    }
+
+    return {
+      session: {
+        id: `import-opencode-${summary.externalId}`,
+        title: summary.fullTitle || summary.title,
+        projectPath: summary.projectPath,
+        modelId,
+        providerId,
+        mode: "agent",
+        createdAt: summary.createdAt,
+        updatedAt: summary.updatedAt,
+      },
+      messages,
+    };
+  } finally {
+    db.close();
+  }
 }
 
-module.exports = { source: SOURCE, label: "OpenCode", storageDirFor, scan, convert };
+module.exports = { source: SOURCE, label: "OpenCode", dbPathFor, scan, convert };

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.muzimu217.session-import",
   "name": "Universal Session Import",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "一体化会话导入与熔炉：扫描本机的 ZCode、WorkBuddy、Claude Code、Codex、OpenCode、Pi 并导入会话；再读回这些会话，用宿主额度蒸馏成项目约定与可复用做法。",
   "i18n": {
     "en": {
@@ -21,7 +21,7 @@
     "productivity",
     "import"
   ],
-  "changelog": "Release 0.4.2：适配已合入官方 main 的 pi.session.importBatch 正式契约（#169）——工具载荷按整批输入深度≤8 收紧护栏（toolArgs/toolResult 自身深度>3 降级为字符串）；逐条预检 title/externalId 非空，坏条目跳过不再污染整批；消息数按官方 2000 上限截断；导入统一走 import.commit 单一入口（官方优先，运行时探测宿主未接线自动回退旧 session.import 桥接）；forge 适配官方 session.list 的 {items} 返回形状。真实 UI 端到端验证通过（扫描→导入→幂等→侧栏刷新→点开渲染）。",
+  "changelog": "Release 0.4.5（修复版）：修复 OpenCode 适配器在 OpenCode v1.x 下完全扫不到会话的缺陷——OpenCode 在 v1.2.10 起把旧的「逐文件 JSON 树（storage/session|message|part）」存储迁移为单一 SQLite 数据库 ~/.local/share/opencode/opencode.db，旧适配器仍在读已不存在的目录故恒返回 0 条；本版改用 node:sqlite 只读打开 opencode.db，沿用与 zcode.js 相同的 session→message→part 三层模型还原对话（含 text/tool/reasoning 等 part 类型）。0.4.4 因上游在修复提交落地前即合入而携带旧的坏适配器，本版为独立修复版本，0.4.4 保留不动。",
   "safetyNotes": "以只读方式打开各工具的本地会话数据库；会话写入走宿主 session 导入接口。熔炉使用宿主自身额度调用模型，插件不接触 API Key。fs.write 仅用于保存蒸馏结果，范围限定在工作区内的 AGENTS.md、*.md、docs/**、.agents/skills/**。不发起网络请求，无遥测。",
   "author": "muzimu217",
   "main": "main.js",
