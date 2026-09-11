@@ -57,6 +57,30 @@ class StaticFindingTests(unittest.TestCase):
         security_audit.audit_text(findings, "sample/renderer/assets/app.js", "renderer/assets/app.js", "eval(input);")
         self.assertTrue(any(item.severity == "BLOCKER" for item in findings))
 
+    def test_host_import_api_is_not_dynamic_module_loading(self):
+        findings = []
+        security_audit.audit_text(
+            findings,
+            "sample/main.js",
+            "main.js",
+            "const res = await pi.session.import({ session, messages });\n"
+            "await pi.session.importBatch({ sessions });\n",
+        )
+        self.assertFalse(
+            [item for item in findings if item.severity == "BLOCKER"],
+            findings,
+        )
+
+    def test_dynamic_require_expression_is_a_blocker(self):
+        findings = []
+        security_audit.audit_text(findings, "sample/main.js", "main.js", "const mod = require(name);\n")
+        self.assertTrue(
+            any(
+                item.severity == "BLOCKER" and "dynamic module loading" in item.message
+                for item in findings
+            ),
+            findings,
+        )
 
     def test_approved_generated_dependency_requires_exact_hash(self):
         path = ROOT / "plugins" / "pi.markdown" / "renderer" / "assets" / "app.js"
@@ -68,6 +92,8 @@ class StaticFindingTests(unittest.TestCase):
             path.read_text(encoding="utf-8"),
         )
         self.assertFalse([item for item in findings if item.severity == "BLOCKER"], findings)
+
+
 class ManifestAndPackageTests(unittest.TestCase):
     def test_current_sample_has_no_automatic_blocker(self):
         findings, _ = security_audit.audit_plugin(ROOT / "plugins" / "demo.hello", include_review=False)

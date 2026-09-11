@@ -10,14 +10,18 @@ const manifest = JSON.parse(readFileSync(join(pluginRoot, "manifest.json"), "utf
 
 test("session import manifest declares the exact runtime permissions", () => {
   assert.equal(manifest.id, "io.github.muzimu217.session-import");
-  assert.equal(manifest.version, "0.4.2");
+  assert.equal(manifest.version, "0.4.4");
   assert.deepEqual(manifest.permissions, [
     "ui.panel",
     "ui.view",
-    "session.import",
+    "notify",
+    "session.read",
     "session.read.own",
+    "session.import",
+    "project.create",
     "agent.complete",
     "models.list",
+    "fs.read",
     "fs.write",
   ]);
   assert.deepEqual(

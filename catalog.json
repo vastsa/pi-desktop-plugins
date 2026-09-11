@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-11T14:01:26Z",
+  "updatedAt": "2026-09-11T18:24:40Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -184,9 +184,9 @@
           "publishedAt": "2026-09-11T06:58:56Z",
           "changelog": "Release 0.4.2\uff1a\u9002\u914d\u5df2\u5408\u5165\u5b98\u65b9 main \u7684 pi.session.importBatch \u6b63\u5f0f\u5951\u7ea6\uff08#169\uff09\u2014\u2014\u5de5\u5177\u8f7d\u8377\u6309\u6574\u6279\u8f93\u5165\u6df1\u5ea6\u22648 \u6536\u7d27\u62a4\u680f\uff08toolArgs/toolResult \u81ea\u8eab\u6df1\u5ea6>3 \u964d\u7ea7\u4e3a\u5b57\u7b26\u4e32\uff09\uff1b\u9010\u6761\u9884\u68c0 title/externalId \u975e\u7a7a\uff0c\u574f\u6761\u76ee\u8df3\u8fc7\u4e0d\u518d\u6c61\u67d3\u6574\u6279\uff1b\u6d88\u606f\u6570\u6309\u5b98\u65b9 2000 \u4e0a\u9650\u622a\u65ad\uff1b\u5bfc\u5165\u7edf\u4e00\u8d70 import.commit \u5355\u4e00\u5165\u53e3\uff08\u5b98\u65b9\u4f18\u5148\uff0c\u8fd0\u884c\u65f6\u63a2\u6d4b\u5bbf\u4e3b\u672a\u63a5\u7ebf\u81ea\u52a8\u56de\u9000\u65e7 session.import \u6865\u63a5\uff09\uff1bforge \u9002\u914d\u5b98\u65b9 session.list \u7684 {items} \u8fd4\u56de\u5f62\u72b6\u3002\u771f\u5b9e UI \u7aef\u5230\u7aef\u9a8c\u8bc1\u901a\u8fc7\uff08\u626b\u63cf\u2192\u5bfc\u5165\u2192\u5e42\u7b49\u2192\u4fa7\u680f\u5237\u65b0\u2192\u70b9\u5f00\u6e32\u67d3\uff09\u3002",
           "minPiDesktop": ">=0.14.3",
-          "shasum": "8b924831426744603f650936911bc0e139eee639e3708b74254ad930d1b256db",
+          "shasum": "2509b263d49cc3a8b861f987d9dee2dc980c6e6bb48e65388439fdfa1fdb1bbd",
           "url": "packages/io.github.muzimu217.session-import-0.4.4.piplug",
-          "sizeBytes": 3418162,
+          "sizeBytes": 3418657,
           "permissions": [
             "ui.panel",
             "ui.view",
