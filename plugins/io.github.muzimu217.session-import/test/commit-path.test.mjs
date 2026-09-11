@@ -1,9 +1,11 @@
 // End-to-end harness for the official-session-API commit path (no host needed).
 import { createRequire } from "node:module";
 import assert from "node:assert";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const require = createRequire(import.meta.url);
-const PLUGIN_DIR = "/Users/blackevil/dev/pi-desktop-session-import";
+const PLUGIN_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const importBatchCalls = [];
 const stubAdapter = {
@@ -111,4 +113,88 @@ assert.strictEqual(toolMsg.toolStatus, "error");
 assert.strictEqual(typeof toolMsg.toolArgs, "string", "deep JSON degraded to string");
 assert.ok(toolMsg.toolCallId === "c1" && toolMsg.toolName === "Read");
 
+// 4. Escape-inflation guard.
+//
+// The host validates `JSON.stringify(field)` bytes, not raw string bytes.
+// JSON escaping can add ~44% to a string of quotes/newlines/backslashes, so a
+// payload truncated by *raw* byte count could still exceed the host's limit
+// and get the whole batch rejected with "toolResult exceeds 256 KiB".
+// Regression: every field must fit once re-serialized.
+const MAX_CONTENT = 512 * 1024;
+const MAX_TOOL = 256 * 1024;
+const serializedBytes = (v) => {
+  const json = JSON.stringify(v);
+  return json === undefined ? Infinity : Buffer.byteLength(json, "utf8");
+};
+
+const escapeHeavy = '{"a":"b\\nc"},\n'.repeat(40000); // ~560KB of escape-dense text
+const huge = escapeHeavy + "x".repeat(600 * 1024);
+assert.ok(
+  serializedBytes(huge) > MAX_TOOL,
+  "fixture must start above the toolResult limit",
+);
+
+const stubAdapterHeavy = {
+  source: "heavy",
+  label: "Heavy",
+  scan: async () => [],
+  convert: async () => ({
+    session: {
+      id: "import-heavy-1",
+      title: "heavy",
+      createdAt: "2026-09-08T00:00:00.000Z",
+      updatedAt: "2026-09-08T00:00:00.000Z",
+    },
+    messages: [
+      {
+        role: "assistant",
+        content: huge, // escape-dense content, over the 512 KiB content budget
+        createdAt: "2026-09-08T00:00:00.000Z",
+      },
+      {
+        role: "tool",
+        content: "done",
+        createdAt: "2026-09-08T00:00:01.000Z",
+        toolName: "Bash",
+        toolCallId: "c-heavy",
+        toolStatus: "success",
+        toolArgs: huge,
+        toolResult: huge,
+      },
+    ],
+  }),
+};
+// Re-inject the registry so the heavy adapter is reachable, then re-require main.
+const registryPath2 = require.resolve(`${PLUGIN_DIR}/lib/registry.js`);
+require.cache[registryPath2].exports = {
+  ADAPTERS: [stubAdapter, stubAdapterHeavy],
+  getAdapter: (id) => (id === "stub" ? stubAdapter : id === "heavy" ? stubAdapterHeavy : null),
+};
+delete require.cache[require.resolve(`${PLUGIN_DIR}/main.js`)];
+const main2 = require(`${PLUGIN_DIR}/main.js`);
+
+importBatchCalls.length = 0;
+await main2.onPanelInvoke("import.commit", {
+  source: "heavy",
+  items: [{ externalId: "heavy-1", title: "heavy" }],
+});
+const heavyPayload = importBatchCalls[0];
+assert.ok(heavyPayload, "heavy batch captured");
+const heavySession = heavyPayload.sessions[0];
+for (const m of heavySession.messages) {
+  assert.ok(
+    serializedBytes(m.content) <= MAX_CONTENT,
+    `content must fit 512 KiB once serialized (got ${serializedBytes(m.content)})`,
+  );
+  if (m.role !== "tool") continue;
+  for (const field of ["toolArgs", "toolResult"]) {
+    if (m[field] === undefined) continue;
+    assert.ok(
+      serializedBytes(m[field]) <= MAX_TOOL,
+      `${field} must fit 256 KiB once serialized (got ${serializedBytes(m[field])})`,
+    );
+  }
+}
+
 console.log("ALL COMMIT-PATH ASSERTIONS PASSED (150 sessions, 2 batches, contract guards verified)");
+console.log("ESCAPE-INFLATION GUARD VERIFIED (content/toolArgs/toolResult fit serialized limits)");

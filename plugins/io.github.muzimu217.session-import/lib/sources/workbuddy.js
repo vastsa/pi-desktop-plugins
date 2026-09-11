@@ -9,9 +9,15 @@
 const os = require("node:os");
 const path = require("node:path");
 const fsp = require("node:fs").promises;
-const { toIso, truncateTitle, projectNameOf } = require("../util");
+const { createReadStream } = require("node:fs");
+const readline = require("node:readline");
+const { toIso, truncateTitle, projectNameOf, mapValuesWithConcurrency } = require("../util");
 
 const SOURCE = "workbuddy";
+
+// Reading every project transcript for a list row is I/O bound; fan out so the
+// panel does not wait on one file at a time.
+const SCAN_CONCURRENCY = 12;
 
 const projectsDirFor = (home = os.homedir()) =>
   path.join(home, ".workbuddy", "projects");
@@ -171,6 +177,81 @@ function summarize(filePath, lines, messages) {
   };
 }
 
+/**
+ * Streaming variant of {@link summarize}: parse the transcript line by line
+ * instead of materialising the whole file.
+ *
+ * WorkBuddy's list row needs the *last* line (`updatedAt`) and a trailing
+ * `ai-title` record, so this cannot abort early the way the Codex/Claude
+ * scans do. What it does avoid is `readFile` + `split("\n")` over transcripts
+ * that reach tens of MB, which dominated the scan on a large `~/.workbuddy`.
+ * Only the fields the row renders are retained, so peak memory stays flat.
+ */
+async function summarizeFile(filePath) {
+  let firstTimestamp = null;
+  let lastTimestamp = null;
+  let aiTitle = null;
+  let firstUserText = null;
+  let cwd = null;
+  let model = null;
+  let convoCount = 0;
+
+  const stream = createReadStream(filePath, { encoding: "utf8" });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  try {
+    for await (const raw of rl) {
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      let line;
+      try {
+        line = JSON.parse(trimmed);
+      } catch {
+        continue; // malformed line — skip
+      }
+      if (line.timestamp) {
+        if (!firstTimestamp) firstTimestamp = line.timestamp;
+        lastTimestamp = line.timestamp;
+      }
+      if (line.type === "ai-title" && line.aiTitle) {
+        aiTitle = line.aiTitle; // last one wins, matching summarize()
+        continue;
+      }
+      if (!cwd && line.cwd) cwd = line.cwd;
+      if (!isConversationLine(line)) continue;
+      convoCount += 1;
+      if (line.role === "assistant" && !model && line.providerData?.model) {
+        model = line.providerData.model;
+      }
+      if (!firstUserText && line.role === "user") {
+        const text = stripInjected(blockText(line.content));
+        if (text) firstUserText = text;
+      }
+    }
+  } catch {
+    return null; // unreadable session file — skip
+  } finally {
+    rl.close();
+    stream.destroy();
+  }
+  if (convoCount === 0) return null;
+
+  const externalId = path.basename(filePath, ".jsonl");
+  return {
+    source: SOURCE,
+    externalId,
+    title: truncateTitle(aiTitle ?? "") || truncateTitle(firstUserText || "") || externalId,
+    fullTitle: String(aiTitle ?? firstUserText ?? ""),
+    projectName: projectNameOf(cwd) ?? "WorkBuddy",
+    projectPath: cwd,
+    modelId: model,
+    providerId: null,
+    createdAt: toIso(firstTimestamp),
+    updatedAt: toIso(lastTimestamp, toIso(firstTimestamp)),
+    messageCount: convoCount,
+    filePath,
+  };
+}
+
 async function scan() {
   const projectsDir = projectsDirFor();
   let projectDirs = [];
@@ -179,29 +260,25 @@ async function scan() {
   } catch {
     return [];
   }
-  const sessions = [];
-  for (const dir of projectDirs) {
-    const dirPath = path.join(projectsDir, dir);
-    let files = [];
-    try {
-      files = (await fsp.readdir(dirPath)).filter((f) => f.endsWith(".jsonl"));
-    } catch {
-      continue;
-    }
-    for (const file of files) {
-      const filePath = path.join(dirPath, file);
+  const filesByDir = await Promise.all(
+    projectDirs.map(async (dir) => {
+      const dirPath = path.join(projectsDir, dir);
       try {
-        const lines = await readLines(filePath);
-        const convoCount = lines.filter(isConversationLine).length;
-        if (convoCount === 0) continue;
-        sessions.push(summarize(filePath, lines, convoCount));
+        const files = (await fsp.readdir(dirPath)).filter((f) => f.endsWith(".jsonl"));
+        return files.map((f) => path.join(dirPath, f));
       } catch {
-        // unreadable session file — skip
+        return [];
       }
-    }
-  }
-  sessions.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
-  return sessions;
+    }),
+  );
+  const filePaths = filesByDir.flat();
+  const found = await mapValuesWithConcurrency(
+    filePaths,
+    SCAN_CONCURRENCY,
+    (filePath) => summarizeFile(filePath),
+  );
+  found.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  return found;
 }
 
 async function convert(summary) {
