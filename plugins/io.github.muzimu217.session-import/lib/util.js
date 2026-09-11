@@ -25,4 +25,44 @@ function projectNameOf(projectPath) {
   return clean.split(/[\\/]/).pop() || null;
 }
 
-module.exports = { toIso, truncateTitle, projectNameOf };
+/**
+ * Bounded-concurrency map that preserves input order.
+ *
+ * Scans are I/O bound (hundreds of multi-MB transcripts), so running them one
+ * at a time wastes the whole scan on read latency. `limit` caps how many file
+ * handles we hold open at once. A throwing worker resolves to `{ok:false}` so
+ * one bad file never sinks the batch — callers filter on `.ok`.
+ */
+async function mapWithConcurrency(items, limit, worker) {
+  const list = Array.isArray(items) ? items : [];
+  const results = new Array(list.length);
+  const width = Math.max(1, Math.min(Number(limit) || 1, list.length || 1));
+  let cursor = 0;
+  const runners = Array.from({ length: width }, async () => {
+    while (cursor < list.length) {
+      const index = cursor;
+      cursor += 1;
+      try {
+        results[index] = { ok: true, value: await worker(list[index], index) };
+      } catch (error) {
+        results[index] = { ok: false, error };
+      }
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
+/** Same as {@link mapWithConcurrency} but returns the successful values only. */
+async function mapValuesWithConcurrency(items, limit, worker) {
+  const results = await mapWithConcurrency(items, limit, worker);
+  return results.filter((r) => r.ok).map((r) => r.value);
+}
+
+module.exports = {
+  toIso,
+  truncateTitle,
+  projectNameOf,
+  mapWithConcurrency,
+  mapValuesWithConcurrency,
+};

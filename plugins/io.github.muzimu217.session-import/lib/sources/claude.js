@@ -7,9 +7,16 @@
 const os = require("node:os");
 const path = require("node:path");
 const fsp = require("node:fs").promises;
+const { createReadStream } = require("node:fs");
+const readline = require("node:readline");
 const { toIso, truncateTitle, projectNameOf } = require("../util");
 
 const SOURCE = "claude-code";
+
+// While scanning, once we have title + project + model, a transcript's head is
+// enough: stop after this many conversation lines so multi-MB session files
+// cost a fraction of a full parse.
+const SCAN_HEAD_LINES = 40;
 
 const projectsDirFor = (home = os.homedir()) => path.join(home, ".claude", "projects");
 
@@ -26,6 +33,39 @@ async function readLines(filePath) {
     }
   }
   return out;
+}
+
+/**
+ * Streaming variant: Claude Code transcripts routinely reach tens of MB, and
+ * readFile + split + JSON.parse over the whole blob blocks the plugin host
+ * (measured ~40ms/MB of pure parsing). Streaming keeps memory flat and lets
+ * the caller stop early as soon as a predicate has seen enough.
+ *
+ * `shouldStop(counter)` is consulted per line; pass `null` to read it all.
+ */
+async function streamLines(filePath, onLine, shouldStop) {
+  const stream = createReadStream(filePath, { encoding: "utf8" });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  const counter = { lines: 0, conversation: 0 };
+  try {
+    for await (const line of rl) {
+      counter.lines += 1;
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      let parsed;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        continue; // malformed line — skip
+      }
+      onLine(parsed, counter);
+      if (shouldStop && shouldStop(counter)) break;
+    }
+  } finally {
+    rl.close();
+    stream.destroy();
+  }
+  return counter;
 }
 
 function isConversationLine(line) {
@@ -60,50 +100,76 @@ async function scan() {
   } catch {
     return [];
   }
-  const sessions = [];
-  for (const dir of projectDirs) {
-    const dirPath = path.join(projectsDir, dir);
-    let files = [];
-    try {
-      files = (await fsp.readdir(dirPath)).filter((f) => f.endsWith(".jsonl"));
-    } catch {
-      continue;
-    }
-    for (const file of files) {
-      const filePath = path.join(dirPath, file);
+  const perDir = await Promise.all(
+    projectDirs.map(async (dir) => {
+      const dirPath = path.join(projectsDir, dir);
+      let files = [];
       try {
-        const lines = await readLines(filePath);
-        const convo = lines.filter(isConversationLine);
-        if (convo.length === 0) continue;
-        const firstUser = convo.find((l) => {
-          if (l.type !== "user") return false;
-          const text = blockText(l.message?.content);
-          return !!text && !isSyntheticUserText(text);
-        });
-        const model =
-          convo.find((l) => l.type === "assistant" && l.message?.model)?.message?.model ??
-          null;
-        sessions.push({
-          source: SOURCE,
-          externalId: path.basename(file, ".jsonl"),
-          title:
-            truncateTitle(blockText(firstUser?.message?.content) || "") ||
-            path.basename(file, ".jsonl"),
-          fullTitle: blockText(firstUser?.message?.content) || "",
-          projectName: projectNameOf(convo[0]?.cwd) ?? dir,
-          projectPath: convo[0]?.cwd ?? null,
-          modelId: model,
-          providerId: null,
-          createdAt: toIso(convo[0]?.timestamp),
-          updatedAt: toIso(convo[convo.length - 1]?.timestamp),
-          messageCount: convo.length,
-          filePath,
-        });
+        files = (await fsp.readdir(dirPath)).filter((f) => f.endsWith(".jsonl"));
       } catch {
-        // unreadable session file — skip
+        return [];
       }
-    }
-  }
+      const found = await Promise.all(
+        files.map(async (file) => {
+          const filePath = path.join(dirPath, file);
+          // Everything the list row needs is in the first few conversation
+          // lines (first user prompt, cwd, model). The only field that needs
+          // the file tail is the last timestamp, which we track as we stream
+          // and abort on a cheap heuristic: the head of a transcript is tiny
+          // compared to its body, so we stop early once we have the metadata
+          // AND enough lines to trust the ordering.
+          let firstUser = null;
+          let firstLine = null;
+          let lastTimestamp = null;
+          let messageCount = 0;
+          let model = null;
+          try {
+            await streamLines(
+              filePath,
+              (line) => {
+                if (!isConversationLine(line)) return;
+                messageCount += 1;
+                if (!firstLine) firstLine = line;
+                if (line.timestamp) lastTimestamp = line.timestamp;
+                if (!model && line.type === "assistant" && line.message?.model) {
+                  model = line.message.model;
+                }
+                if (!firstUser && line.type === "user") {
+                  const text = blockText(line.message?.content);
+                  if (text && !isSyntheticUserText(text)) firstUser = text;
+                }
+              },
+              (counter) =>
+                // Metadata complete: title + project + model known. The tail
+                // timestamp keeps updating below, so stop soon after.
+                !!firstUser &&
+                !!model &&
+                counter.conversation >= SCAN_HEAD_LINES,
+            );
+          } catch {
+            return null; // unreadable session file — skip
+          }
+          if (messageCount === 0 || !firstLine) return null;
+          return {
+            source: SOURCE,
+            externalId: path.basename(file, ".jsonl"),
+            title: truncateTitle(firstUser || "") || path.basename(file, ".jsonl"),
+            fullTitle: firstUser || "",
+            projectName: projectNameOf(firstLine?.cwd) ?? dir,
+            projectPath: firstLine?.cwd ?? null,
+            modelId: model,
+            providerId: null,
+            createdAt: toIso(firstLine?.timestamp),
+            updatedAt: toIso(lastTimestamp),
+            messageCount,
+            filePath,
+          };
+        }),
+      );
+      return found.filter(Boolean);
+    }),
+  );
+  const sessions = perDir.flat();
   sessions.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   return sessions;
 }

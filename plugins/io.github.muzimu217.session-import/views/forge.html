@@ -1,15 +1,10 @@
 <!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!--
-      PI-Desktop owns exactly a 46px drag band and a minimal three-button
-      window-control capsule. This panel uses pi-plugin-chrome=v3: page content
-      may paint through the band; fixed or sticky UI uses
-      var(--pi-plugin-titlebar-height, 46px).
-    -->
+<html lang="zh-CN" data-page-node-id="EpAIyLfJkYKkP4HoBFvimZ">
+  <head data-page-node-id="m2NsKZo4F98qOzOmnfSIEp">
+    <meta charset="UTF-8" data-page-node-id="VsXTxSR4xJK7c6t5cFLVEX" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="t1vTa5zWPsSGzBvRgXTYt6" />
     <meta name="pi-plugin-chrome" content="v3" />
+    <!-- v3 paint-through chrome contract: PI-Desktop owns exactly a 46px drag band at the top; the three-button window-control capsule is drawn by the host. Panels reserve this strip via var(--pi-plugin-titlebar-height, 46px). -->
     <title>Session Forge</title>
     <style>
       :root {
@@ -39,7 +34,7 @@
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        padding: 12px 14px 14px;
+        padding: calc(var(--pi-plugin-titlebar-height, 46px) + 12px) 14px 14px;
         font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
         background: var(--bg);
         color: var(--fg);
@@ -79,43 +74,82 @@
         max-height: 340px; overflow: auto; font-size: 12px; line-height: 1.5;
       }
       .hidden { display: none; }
+      .imported-banner {
+        position: fixed;
+        top: calc(var(--pi-plugin-titlebar-height, 46px) + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        background: var(--accent);
+        color: var(--accent-fg);
+        padding: 7px 14px;
+        border-radius: 999px;
+        font: 600 12px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+        animation: banner-fade 0.32s ease;
+      }
+      @keyframes banner-fade {
+        from { opacity: 0; transform: translate(-50%, -8px); }
+        to   { opacity: 1; transform: translate(-50%, 0); }
+      }
     </style>
   </head>
-  <body>
-    <h1>会话熔炉</h1>
-    <p class="sub">读回本插件导入的会话，用宿主额度蒸馏成项目约定与可复用做法。</p>
+  <body data-page-node-id="4EH25meBZqA0ggOIiXg7st">
+    <h1 data-page-node-id="EIEMnIZOVmZgwii2nQ58Ua">会话熔炉</h1>
+    <p class="sub" id="forge-sub" data-page-node-id="eXEPlJbFjoICd0JVVI61H7">读回本插件导入的会话，用宿主额度蒸馏成项目约定与可复用做法。</p>
 
-    <div id="status">准备中…</div>
+    <div id="status" data-page-node-id="oDbERbZxOvR0vLxUzHDqx6">准备中…</div>
 
-    <div class="panel">
-      <div class="row">
-        <button id="reload" class="ghost">刷新会话</button>
-        <span id="count" class="sub" style="margin:0"></span>
-        <span style="flex:1"></span>
-        <button id="selectAll" class="ghost">全选</button>
-        <button id="clear" class="ghost">清空</button>
+    <div class="panel" data-page-node-id="D8YzCzBAFI5Gj0Q6eBmpln">
+      <div class="row" data-page-node-id="K0dmC5BUDM11c5vrLPiP7P">
+        <button id="reload" class="ghost" data-page-node-id="UjHoHDRycxEx4idMjA4Leg">刷新会话</button>
+        <span id="count" class="sub" style="margin:0" data-page-node-id="VeAhzV8uduwkv0ciD2w6No"></span>
+        <span style="flex:1" data-page-node-id="bD1GgUCJayAFOe0TaWSuUq"></span>
+        <button id="historyBtn" class="ghost" data-page-node-id="ETmn8k2CH5IWhQZqefZvLA">蒸馏历史</button>
+        <button id="selectAll" class="ghost" data-page-node-id="MBtW2VOq1iVAVZLNotNgxP">全选</button>
+        <button id="clear" class="ghost" data-page-node-id="hER8ILxCxccKupqhvEUsF3">清空</button>
       </div>
-      <div class="list" id="sessions"></div>
+      <div class="list" id="sessions" data-page-node-id="idVUjXhd1IJt9jN3VX2hzH"></div>
     </div>
 
-    <div class="panel">
-      <div class="row">
-        <select id="model"><option value="">默认模型</option></select>
-        <input type="text" id="goal" placeholder="本次提炼重点（可选），例如：只关注部署与 CI 问题" />
+    <div class="panel" data-page-node-id="xr70NSJH4iKl7PduEcpXXb">
+      <div class="row" data-page-node-id="ZXIVWl9ezny8yO38FAX9tc">
+        <select id="model" data-page-node-id="HY1KvrO2GKTYgH6gGzUYna"><option value="" id="model-default" data-page-node-id="q5qnmCilUQXMF9yuw83PCH">默认模型</option></select>
+        <input type="text" id="goal" placeholder="本次提炼重点（可选），例如：只关注部署与 CI 问题" data-page-node-id="oLXAKp84R0LrmPHJlvWBME" />
       </div>
-      <div class="row">
-        <input type="text" id="path" value="AGENTS.md" />
-        <button id="distill">蒸馏</button>
-        <button id="save" class="ghost" disabled>保存到工作区</button>
+      <div class="row" data-page-node-id="bxemRNYVyhJ0fWkoazGHs1">
+        <input type="text" id="path" value="AGENTS.md" data-page-node-id="sdydRzVpIrItJjPquZRqHz" />
+        <select id="saveMode" title="保存方式" data-page-node-id="6HI9IAlMXP6q1LRi9ofIeP">
+          <option value="overwrite" data-page-node-id="APVzdM5PdBkGUZ1KCfRjFf">覆盖</option>
+          <option value="append" data-page-node-id="rlWiXlh2OIeVN7zlUGBRdi">追加</option>
+          <option value="merge" data-page-node-id="CqHWaXgcQ0BauR7UlgAQtt">合并（带标记）</option>
+        </select>
+        <button id="distill" data-page-node-id="nAzTTTyrKSrjLvg9Vb1qto">蒸馏</button>
+        <button id="save" class="ghost" disabled data-page-node-id="dru9CUkbNOyfBdnHZTNOij">保存到工作区</button>
       </div>
     </div>
 
-    <div id="resultWrap" class="panel hidden">
-      <pre id="result"></pre>
+    <div id="historyPanel" class="panel hidden" data-page-node-id="yDC0D3JtUXWngZg7zvxggT">
+      <div class="row" data-page-node-id="uxV4aHvTGBLEacWg89w7Tk">
+        <h2 id="historyTitle" style="margin:0;font-size:13px;" data-page-node-id="uKfcJZjPeeqoBChsMlXtHd">蒸馏历史</h2>
+        <span style="flex:1" data-page-node-id="GE2LtkE36I9EAe9NvwOLFh"></span>
+        <button id="historyClose" class="ghost" data-page-node-id="7nZYJEGoxxAPdwJhmh2sGT">关闭</button>
+      </div>
+      <div class="list" id="historyList" data-page-node-id="YFHnRGDTZwQ1xUCDXelCYc"></div>
     </div>
 
+    <div id="resultWrap" class="panel hidden" data-page-node-id="bBVLOEOLAa3JS3ACMSD7ol">
+      <pre id="result" data-page-node-id="d8LvJn3phaMgnyIHm6EULA"></pre>
+    </div>
+
+    <script src="../lib/i18n.js"></script>
     <script>
+      const SI = window.SI18n;
+      let locale = SI.detectLocale();
+      const t = (key, params) => SI.getMessage(locale, key, params);
+
       const $ = (id) => document.getElementById(id);
+      const clear = (el) => { while (el && el.firstChild) el.removeChild(el.firstChild); };
       const status = (msg, kind) => {
         $("status").textContent = msg;
         $("status").className = kind || "";
@@ -123,6 +157,58 @@
 
       let sessionRows = [];
       let lastText = "";
+
+      // --- P1-U1: i18n chrome + locale resolution ---
+      function paintChrome() {
+        document.documentElement.lang = locale === "zh-CN" ? "zh-CN" : "en";
+        document.title = t("app.title");
+        const h1 = document.querySelector("h1");
+        if (h1) h1.textContent = t("forge.title");
+        const sub = $("forge-sub");
+        if (sub) sub.textContent = t("forge.sub");
+        const reload = $("reload");
+        if (reload) reload.textContent = t("forge.reload");
+        const selAll = $("selectAll");
+        if (selAll) selAll.textContent = t("forge.selectAll");
+        const clr = $("clear");
+        if (clr) clr.textContent = t("forge.clear");
+        const def = $("model-default");
+        if (def) def.textContent = t("forge.model.default");
+        const goal = $("goal");
+        if (goal) goal.placeholder = t("forge.goal.placeholder");
+        const distill = $("distill");
+        if (distill) distill.textContent = t("forge.distill");
+        const save = $("save");
+        if (save) save.textContent = t("forge.save");
+        const saveMode = $("saveMode");
+        if (saveMode) {
+          for (const opt of saveMode.options) opt.textContent = t("forge.saveMode." + opt.value);
+        }
+        const historyBtn = $("historyBtn");
+        if (historyBtn) historyBtn.textContent = t("forge.history.open");
+        const historyTitle = $("historyTitle");
+        if (historyTitle) historyTitle.textContent = t("forge.history.title");
+        const historyClose = $("historyClose");
+        if (historyClose) historyClose.textContent = t("forge.history.close");
+      }
+      async function initLocale() {
+        try {
+          const hostLocale = await window.pluginBridge.invoke("app.locale");
+          if (hostLocale) locale = /^zh/i.test(String(hostLocale)) ? "zh-CN" : "en";
+        } catch {
+          // host SDK does not expose a locale — fall back to navigator
+        }
+        if (!locale) locale = SI.detectLocale();
+        paintChrome();
+      }
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") relocalize();
+      });
+      async function relocalize() {
+        await initLocale();
+        paintChrome();
+        render();
+      }
 
       const applyAppearance = (a) => {
         const base = a?.base;
@@ -143,6 +229,7 @@
         try {
           const { models } = await call("forge.models", {});
           const sel = $("model");
+          let added = 0;
           for (const m of models) {
             const key = m.modelKey || `${m.providerId}/${m.modelId}`;
             if (!key || key.startsWith("undefined")) continue;
@@ -150,40 +237,80 @@
             opt.value = key;
             opt.textContent = m.label || key;
             sel.appendChild(opt);
+            added++;
+          }
+          // P1#3: 保证有合法默认模型，蒸馏不再透传空 modelKey 触发 INVALID_ARGUMENT
+          if (added > 0) {
+            sel.querySelector('option[value=""]')?.remove();
+            sel.selectedIndex = 0;
           }
         } catch {}
       }
 
+      /**
+       * P0-F1: cross-view state. Poll the main.js bus snapshot to show
+       * "the importer view just imported N sessions" right when the forge
+       * view boots, so the user does not have to click "Reload" after every
+       * import to see the new sessions.
+       */
+      function fmtAgo(iso) {
+        const ts = Date.parse(iso);
+        if (Number.isNaN(ts)) return iso;
+        const sec = Math.max(1, Math.round((Date.now() - ts) / 1000));
+        if (sec < 60) return t("forge.ago.seconds", { sec });
+        if (sec < 3600) return t("forge.ago.minutes", { min: Math.round(sec / 60) });
+        return new Date(ts).toLocaleString();
+      }
+
+      async function paintImportedBanner() {
+        let recent;
+        try {
+          recent = await call("import.recent", {});
+        } catch {
+          return; // channel missing — older host, fail silent
+        }
+        if (!recent || !recent.lastImportAt) return;
+        const banner = document.createElement("div");
+        banner.className = "imported-banner";
+        banner.textContent = t("forge.banner", {
+          count: recent.lastImportCount,
+          ago: fmtAgo(recent.lastImportAt),
+        });
+        // Insert at the top of the body, before any panel.
+        document.body.prepend(banner);
+        setTimeout(() => banner.remove(), 8000);
+      }
+
       async function loadSessions() {
-        status("读取已导入会话…");
+        status(t("forge.status.reading"));
         try {
           const { sessions } = await call("forge.sessions", { limit: 200 });
           sessionRows = sessions || [];
           render();
           status(
             sessionRows.length
-              ? `已导入 ${sessionRows.length} 个会话，勾选后蒸馏。`
-              : "还没有导入过会话 —— 先用「一体化会话导入」导入一批。",
+              ? t("forge.status.hasSessions", { count: sessionRows.length })
+              : t("forge.status.noSessions"),
             sessionRows.length ? "ok" : "",
           );
         } catch (e) {
-          status(`读取失败：${e?.message || e}`, "err");
+          status(t("forge.status.readFailed", { error: e?.message || e }), "err");
         }
       }
 
       function render() {
         const box = $("sessions");
-        box.innerHTML = "";
-        $("count").textContent = sessionRows.length ? `共 ${sessionRows.length} 个` : "";
+        clear(box);
+        $("count").textContent = sessionRows.length ? t("forge.count.total", { count: sessionRows.length }) : "";
         sessionRows.forEach((s) => {
           const row = document.createElement("div");
           row.className = "item";
           const cb = document.createElement("input");
           cb.type = "checkbox";
-          cb.dataset.id = String(s.id);
+          cb.dataset.id = String(s.sessionId ?? s.id);
           const label = document.createElement("label");
           const title = document.createElement("span");
-          title.textContent = s.title || "(无标题)";
+          title.textContent = s.title || t("forge.session.untitled");
           const meta = document.createElement("span");
           meta.className = "meta";
           meta.textContent = [s.source, s.projectPath, s.updatedAt ? new Date(s.updatedAt).toLocaleString() : ""]
@@ -193,6 +320,53 @@
           row.append(cb, label);
           box.appendChild(row);
         });
+      }
+
+      // --- P1-F3: distillation history drawer ---
+      async function loadHistory() {
+        let entries = [];
+        try {
+          const res = await call("forge.history.load", {});
+          entries = res.entries || [];
+        } catch {
+          entries = [];
+        }
+        renderHistory(entries);
+      }
+      function renderHistory(entries) {
+        const box = $("historyList");
+        clear(box);
+        if (!entries.length) {
+          const empty = document.createElement("div");
+          empty.className = "sub";
+          empty.textContent = t("forge.history.empty");
+          box.appendChild(empty);
+          return;
+        }
+        const head = document.createElement("div");
+        head.className = "sub";
+        head.textContent = t("forge.history.count", { count: entries.length });
+        box.appendChild(head);
+        for (const e of entries) {
+          const row = document.createElement("div");
+          row.className = "item";
+          const label = document.createElement("label");
+          const title = document.createElement("span");
+          title.textContent = e.path || "(unknown path)";
+          const meta = document.createElement("span");
+          meta.className = "meta";
+          const parts = [
+            e.at ? fmtDate(e.at) : "",
+            e.modelKey || "",
+            e.goal || "",
+            e.bytes != null ? `${e.bytes} B` : "",
+            e.mode ? t("forge.saveMode." + e.mode) : "",
+          ].filter(Boolean);
+          meta.textContent = parts.join(" · ");
+          label.append(title, meta);
+          row.appendChild(label);
+          box.appendChild(row);
+        }
       }
 
       const selected = () =>
@@ -205,12 +379,18 @@
       $("clear").addEventListener("click", () =>
         document.querySelectorAll("#sessions input").forEach((c) => (c.checked = false)),
       );
+      $("historyBtn").addEventListener("click", () => {
+        const panel = $("historyPanel");
+        const hidden = panel.classList.toggle("hidden");
+        if (!hidden) loadHistory();
+      });
+      $("historyClose").addEventListener("click", () => $("historyPanel").classList.add("hidden"));
 
       $("distill").addEventListener("click", async () => {
         const ids = selected();
-        if (ids.length === 0) return status("先勾选至少一个会话。", "err");
+        if (ids.length === 0) return status(t("forge.distill.pickOne"), "err");
         $("distill").disabled = true;
-        status(`正在蒸馏 ${ids.length} 个会话…（限速 8 次/分钟）`);
+        status(t("forge.distill.working", { count: ids.length }));
         try {
           const res = await call("forge.distill", {
             sessionIds: ids,
@@ -222,13 +402,13 @@
           $("result").textContent = lastText;
           $("resultWrap").classList.remove("hidden");
           $("save").disabled = !lastText.trim();
-          status(
-            `完成${res.unreadable ? `，${res.unreadable} 个会话读取失败` : ""}。`,
-            "ok",
-          );
+          const done = res.unreadable
+            ? t("forge.distill.done") + t("forge.distill.unreadable", { count: res.unreadable })
+            : t("forge.distill.done");
+          status(done, "ok");
         } catch (e) {
-          const code = e?.code === "RATE_LIMITED" ? `（限速，约 ${Math.ceil((e.retryAfterMs || 0) / 1000)}s 后重试）` : "";
-          status(`蒸馏失败：${e?.message || e}${code}`, "err");
+          const code = e?.code === "RATE_LIMITED" ? t("forge.distill.rateLimited", { sec: Math.ceil((e.retryAfterMs || 0) / 1000) }) : "";
+          status(t("forge.distill.failed", { error: e?.message || e }) + code, "err");
         } finally {
           $("distill").disabled = false;
         }
@@ -236,25 +416,37 @@
 
       $("save").addEventListener("click", async () => {
         const path = $("path").value.trim() || "AGENTS.md";
+        const mode = $("saveMode").value || "overwrite";
         try {
-          const res = await call("forge.save", { path, content: lastText });
-          status(`已写入 ${res.path}（${res.bytes} 字节）。`, "ok");
+          const res = await call("forge.save", {
+            path,
+            content: lastText,
+            mode,
+            modelKey: $("model").value || undefined,
+            goal: $("goal").value || undefined,
+          });
+          const modeLabel = t("forge.saveMode." + res.mode);
+          status(`${t("forge.save.written", { path: res.path, bytes: res.bytes })} · ${modeLabel}`, "ok");
+          // P1-F3: keep the history drawer fresh if it is open.
+          if (!$("historyPanel").classList.contains("hidden")) loadHistory();
         } catch (e) {
-          status(`保存失败：${e?.message || e}`, "err");
+          status(t("forge.save.failed", { error: e?.message || e }), "err");
         }
       });
 
       (async () => {
+        await initLocale();
         try {
           const caps = await call("forge.capabilities", {});
           const missing = Object.entries(caps)
             .filter(([, v]) => !v)
             .map(([k]) => k);
           if (missing.length) {
-            status(`当前宿主缺少能力：${missing.join(", ")}。请升级 PI-Desktop 或重新授权权限。`, "err");
+            status(t("forge.caps.missing", { list: missing.join(", ") }), "err");
           }
         } catch {}
         await loadModels();
+        await paintImportedBanner();
         await loadSessions();
       })();
     </script>

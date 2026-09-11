@@ -1,15 +1,10 @@
 <!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!--
-      PI-Desktop owns exactly a 46px drag band and a minimal three-button
-      window-control capsule. This panel uses pi-plugin-chrome=v3: page content
-      may paint through the band; fixed or sticky UI uses
-      var(--pi-plugin-titlebar-height, 46px).
-    -->
+<html lang="zh-CN" data-page-node-id="2yMnFxDGNsAyRj9YiT6X1N">
+  <head data-page-node-id="7mhf1F0cuq8UIGkJEqxw5L">
+    <meta charset="UTF-8" data-page-node-id="R3mDSNoEiUkBsm8PbtZCBJ" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="qH7OpOM8vf6FqRo0rVwbK2" />
     <meta name="pi-plugin-chrome" content="v3" />
+    <!-- v3 paint-through chrome contract: PI-Desktop owns exactly a 46px drag band at the top; the three-button window-control capsule is drawn by the host. Panels reserve this strip via var(--pi-plugin-titlebar-height, 46px). -->
     <title>一体化会话导入</title>
     <style>
       :root {
@@ -48,7 +43,7 @@
       body {
         margin: 0;
         min-height: 100%;
-        padding: 14px;
+        padding: var(--pi-plugin-titlebar-height, 46px) 14px 14px;
         font: 13px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
         background: var(--bg);
         color: var(--fg);
@@ -57,7 +52,7 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        height: calc(100vh - 28px);
+        height: calc(100vh - var(--pi-plugin-titlebar-height, 46px) - 28px);
       }
       header.topbar {
         display: flex;
@@ -300,6 +295,8 @@
         overflow-wrap: anywhere;
       }
       footer.bar { display: flex; align-items: center; gap: 10px; }
+      .bind-opt { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; cursor: pointer; white-space: nowrap; }
+      .bind-opt input { accent-color: var(--accent, #4c8dff); cursor: pointer; }
       #status { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #status.ok { color: var(--ok); }
       #status.err { color: var(--err); }
@@ -311,47 +308,56 @@
       main.panes { container-type: inline-size; }
     </style>
   </head>
-  <body>
-    <div class="app">
-      <header class="topbar">
-        <h1>一体化会话导入</h1>
-        <span class="hint">扫描本机安装的编程工具，选择来源后勾选会话导入</span>
-        <span class="spacer"></span>
-        <button class="primary" id="scan-btn">扫描本机工具</button>
+  <body data-page-node-id="0BNBnLcttcjmtFjmnSIlbD">
+    <div class="app" data-page-node-id="KJs9uM0CGTFRm7g7XfiMjB">
+      <header class="topbar" data-page-node-id="PrGabOBwhf0UeVzH2WaKXF">
+        <h1 data-page-node-id="pwDKjz5pchd59UFdO6vjpj">一体化会话导入</h1>
+        <span class="hint" id="importer-hint" data-page-node-id="FhA08dcpFGcxh1oMGVQ6bT">扫描本机安装的编程工具，选择来源后勾选会话导入</span>
+        <span class="spacer" data-page-node-id="EGoGbtataDF8F5QaMxFkMA"></span>
+        <button class="primary" id="scan-btn" data-page-node-id="ajITBhhFIY58MxTeEvsUrE">扫描本机工具</button>
       </header>
 
-      <div class="source-grid" id="source-grid"></div>
+      <div class="source-grid" id="source-grid" data-page-node-id="TEcs3jQlPQfKR4H4CKqlB3"></div>
 
-      <main class="panes hidden" id="panes">
-        <section class="list-pane">
-          <div class="list-tools">
-            <input type="search" id="filter" placeholder="搜索标题或项目…" />
-            <button class="link" id="select-all">全选</button>
-            <button class="link" id="clear-all">清除</button>
+      <main class="panes hidden" id="panes" data-page-node-id="eLfqAsqde06wzLhsuEGmCR">
+        <section class="list-pane" data-page-node-id="rh7Vhm1FOdwvnAjJgDfTyx">
+          <div class="list-tools" data-page-node-id="LHLTZQrZTeRx1F6zdZ13ap">
+            <input type="search" id="filter" placeholder="搜索标题或项目…" data-page-node-id="vJcMmVrpUmXJnjLsOeBAJI" />
+            <button class="link" id="select-all" data-page-node-id="GsfWHgNBXTVsI2b6zWUp71">全选</button>
+            <button class="link" id="clear-all" data-page-node-id="CHOZtdrqLhdtLzcZWT9CyA">清除</button>
           </div>
-          <div id="session-list" role="listbox" aria-label="会话列表"></div>
+          <div id="session-list" role="listbox" aria-label="会话列表" data-page-node-id="A4xXuv0GToepshH3M8W8EY"></div>
         </section>
 
-        <section class="preview-pane">
-          <div class="empty" id="preview-empty">在左侧选择一个会话进行预览</div>
-          <div class="preview-head hidden" id="preview-head">
-            <div class="t" id="pv-title"></div>
-            <div class="m" id="pv-meta"></div>
+        <section class="preview-pane" data-page-node-id="Qdd3l5dA6Hvto5s3cZ6ppX">
+          <div class="empty" id="preview-empty" data-page-node-id="DfbOVkR5IASBz5uMNnY1c3">在左侧选择一个会话进行预览</div>
+          <div class="preview-head hidden" id="preview-head" data-page-node-id="ZGgKTaoxi4XYw9ZzcUIRqU">
+            <div class="t" id="pv-title" data-page-node-id="rG2LYXqu3j008a96IYUf9j"></div>
+            <div class="m" id="pv-meta" data-page-node-id="npeM2h6KLBwJt0Zh9iB9nq"></div>
           </div>
-          <div id="messages" class="hidden"></div>
+          <div id="messages" class="hidden" data-page-node-id="gIl8Ati55QbeaE0gLgu2gH"></div>
         </section>
       </main>
 
-      <footer class="bar">
-        <span class="count" id="count">已选 0 / 0</span>
-        <button id="import-btn" disabled>导入为会话</button>
-        <span id="status"></span>
+      <footer class="bar" data-page-node-id="ApsTMyHNvjshRWqpbWubS4">
+        <span class="count" id="count" data-page-node-id="booAhN6l1hmSgYohOWmZcb">已选 0 / 0</span>
+        <label class="bind-opt" id="bind-opt" title="勾选后按项目归组导入；不勾选则进入左侧会话列表，立即可见">
+          <input type="checkbox" id="bind-projects" checked />
+          <span id="bind-projects-label">归组到项目</span>
+        </label>
+        <button id="import-btn" disabled data-page-node-id="mw8vcteK4JbYMjpEe9OUAd">导入为会话</button>
+        <span id="status" data-page-node-id="tUbxRmOH70DWLBHl8T0pLD"></span>
       </footer>
     </div>
 
+    <script src="../lib/i18n.js"></script>
     <script>
       "use strict";
       const bridge = window.pluginBridge;
+      const SI = window.SI18n;
+      let locale = SI.detectLocale();
+      const t = (key, params) => SI.getMessage(locale, key, params);
+      const SEP = () => (locale === "zh-CN" ? "，" : ", ");
       const $ = (id) => document.getElementById(id);
       const state = {
         adapters: [],
@@ -362,6 +368,56 @@
         activeKey: null,
         cache: new Map(), // `${source}:${externalId}` -> converted session
       };
+
+      // --- P1-U1: i18n chrome + locale resolution ---
+      function paintChrome() {
+        document.documentElement.lang = locale === "zh-CN" ? "zh-CN" : "en";
+        document.title = t("app.title");
+        const h1 = document.querySelector("h1");
+        if (h1) h1.textContent = t("importer.heading");
+        const hint = $("importer-hint");
+        if (hint) hint.textContent = t("importer.hint");
+        const scan = $("scan-btn");
+        if (scan) scan.textContent = t("importer.scan");
+        const filter = $("filter");
+        if (filter) filter.placeholder = t("importer.filter.placeholder");
+        const selAll = $("select-all");
+        if (selAll) selAll.textContent = t("importer.selectAll");
+        const clr = $("clear-all");
+        if (clr) clr.textContent = t("importer.clearAll");
+        const list = $("session-list");
+        if (list) list.setAttribute("aria-label", t("importer.listbox.label"));
+        const pe = $("preview-empty");
+        if (pe) pe.textContent = t("importer.previewEmpty");
+        const imp = $("import-btn");
+        if (imp) imp.textContent = t("importer.import");
+        const bindLabel = $("bind-projects-label");
+        if (bindLabel) bindLabel.textContent = t("importer.bindProjects");
+        const bindOpt = $("bind-opt");
+        if (bindOpt) bindOpt.title = t("importer.bindProjects.hint");
+      }
+      async function initLocale() {
+        try {
+          const hostLocale = await bridge.invoke("app.locale");
+          if (hostLocale) locale = /^zh/i.test(String(hostLocale)) ? "zh-CN" : "en";
+        } catch {
+          // host SDK does not expose a locale — fall back to navigator
+        }
+        if (!locale) locale = SI.detectLocale();
+        paintChrome();
+      }
+      // The work-panel has no native push channel; re-localize when the
+      // panel regains focus as a proxy for "host locale changed".
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") relocalize();
+      });
+      async function relocalize() {
+        await initLocale();
+        if (state.sessions.length) {
+          renderList();
+          updateCount();
+        }
+      }
 
       const applyAppearance = (appearance) => {
         const base = appearance?.base;
@@ -376,23 +432,28 @@
         const d = new Date(iso);
         return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
       };
-      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      // P1-U2: escape helper removed — all dynamic content is now set via
+      // textContent / DOM API, so no innerHTML interpolation is needed.
+      const clear = (el) => { while (el && el.firstChild) el.removeChild(el.firstChild); };
       const setStatus = (text, kind = "") => {
         const el = $("status");
         el.textContent = text;
         el.className = kind;
       };
       const updateCount = () => {
-        $("count").textContent = `已选 ${state.selected.size} / ${state.sessions.length}`;
+        $("count").textContent = t("importer.count.selected", {
+          selected: state.selected.size,
+          total: state.sessions.length,
+        });
         $("import-btn").disabled = state.selected.size === 0;
       };
 
       async function scanSources() {
         $("scan-btn").disabled = true;
         const grid = $("source-grid");
-        grid.innerHTML = "";
+        clear(grid);
         $("panes").classList.add("hidden");
-        setStatus("正在扫描本机工具…");
+        setStatus(t("importer.status.scanning"));
         state.sources = new Map();
         state.activeSource = null;
         state.selected.clear();
@@ -402,7 +463,13 @@
         for (const a of state.adapters) {
           const card = document.createElement("div");
           card.className = "source-card dim";
-          card.innerHTML = `<div class="sname">${esc(a.label)}</div><div class="scount">检测中…</div>`;
+          const sname = document.createElement("div");
+          sname.className = "sname";
+          sname.textContent = a.label;
+          const scount = document.createElement("div");
+          scount.className = "scount";
+          scount.textContent = t("importer.source.detecting");
+          card.append(sname, scount);
           card.addEventListener("click", () => openSource(a.source));
           grid.appendChild(card);
           cards.push({ adapter: a, card });
@@ -418,14 +485,54 @@
             state.sources.set(adapter.source, res);
             card.classList.remove("dim");
             if (res.found) {
-              card.querySelector(".scount").textContent = `${res.count} 个会话`;
-              card.querySelector(".scount").classList.add("ok");
+              const sc = card.querySelector(".scount");
+              paintCount(sc, res, adapter.source);
+              sc.classList.add("ok");
             } else {
-              card.querySelector(".scount").textContent = "未检测到";
+              card.querySelector(".scount").textContent = t("importer.source.notFound");
             }
           }),
         );
-        setStatus("扫描完成：点击上方工具选择来源", "ok");
+        setStatus(t("importer.status.scanDone"), "ok");
+        // A partial result came from a cheap first pass; the plugin keeps
+        // scanning and updates the count in place once it is complete.
+        void refreshPartialSources(cards);
+      }
+
+      function paintCount(node, res, source) {
+        if (!node) return;
+        const base = t("importer.count.sessions", { count: res.count });
+        node.textContent = res.partial ? `${base} ${t("importer.count.scanningMore")}` : base;
+        node.dataset.source = source;
+      }
+
+      async function refreshPartialSources(cards) {
+        const partial = cards.filter(({ adapter }) => {
+          const info = state.sources.get(adapter.source);
+          return info?.partial === true;
+        });
+        if (!partial.length) return;
+        // The plugin promotes partial scans in the background; poll a few
+        // times so the card count settles without the user re-clicking.
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          await new Promise((r) => setTimeout(r, 1200));
+          let anyPartial = false;
+          await Promise.all(
+            partial.map(async ({ adapter, card }) => {
+              let res;
+              try {
+                res = await bridge.invoke("import.scanSource", { source: adapter.source });
+              } catch {
+                return;
+              }
+              state.sources.set(adapter.source, res);
+              const sc = card.querySelector(".scount");
+              paintCount(sc, res, adapter.source);
+              if (res.partial) anyPartial = true;
+            }),
+          );
+          if (!anyPartial) return;
+        }
       }
 
       function openSource(source) {
@@ -439,9 +546,9 @@
           card.classList.toggle("active", state.adapters[i]?.source === source);
         });
         $("panes").classList.remove("hidden");
-        $("session-list").innerHTML = "";
+        clear($("session-list"));
         renderPreviewEmpty();
-        setStatus("正在载入会话列表…");
+        setStatus(t("importer.status.loadingList"));
         bridge
           .invoke("import.sessions", { source })
           .then((res) => {
@@ -449,9 +556,9 @@
             renderList();
             renderPreviewEmpty();
             updateCount();
-            setStatus(`${res.sessions.length} 个会话`);
+            setStatus(t("importer.count.sessions", { count: res.sessions.length }));
           })
-          .catch((error) => setStatus(`载入失败：${error}`, "err"));
+          .catch((error) => setStatus(t("importer.status.loadFailed", { error }), "err"));
       }
 
       const matchesFilter = (s, q) =>
@@ -475,7 +582,7 @@
       function renderList() {
         const q = $("filter").value.trim().toLowerCase();
         const list = $("session-list");
-        list.innerHTML = "";
+        clear(list);
         const visible = state.sessions.filter((s) => matchesFilter(s, q));
         const groups = new Map();
         for (const s of visible) {
@@ -498,12 +605,21 @@
           head.title = projectPath || "";
           const name = projectPath
             ? projectPath.replace(/[\\/]+$/, "").split(/[\\/]/).pop()
-            : "未关联项目";
-          head.innerHTML = `<span class="chev">▶</span><span class="gname">${esc(name)}</span><span class="gcount">${sessions.length} 个会话</span>`;
+            : t("importer.group.noProject");
+          const chev = document.createElement("span");
+          chev.className = "chev";
+          chev.textContent = "▶";
+          const gname = document.createElement("span");
+          gname.className = "gname";
+          gname.textContent = name;
+          const gcount = document.createElement("span");
+          gcount.className = "gcount";
+          gcount.textContent = t("importer.count.sessions", { count: sessions.length });
+          head.append(chev, gname, gcount);
 
           const allSelected = sessions.every((s) => state.selected.has(s.externalId));
           const btn = document.createElement("button");
-          btn.textContent = allSelected ? "取消全选" : "全选该项目";
+          btn.textContent = allSelected ? t("importer.group.deselectAll") : t("importer.group.selectAll");
           // Selecting a whole project must not toggle the accordion.
           btn.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -549,8 +665,19 @@
               updateCount();
             });
             const text = document.createElement("div");
-            text.innerHTML = `<div class="title">${esc(s.title)}</div>
-              <div class="meta"><span>${fmtDate(s.updatedAt)}</span><span>·</span><span>${s.messageCount} 条</span></div>`;
+            const titleEl = document.createElement("div");
+            titleEl.className = "title";
+            titleEl.textContent = s.title;
+            const metaEl = document.createElement("div");
+            metaEl.className = "meta";
+            const mDate = document.createElement("span");
+            mDate.textContent = fmtDate(s.updatedAt);
+            const mDot = document.createElement("span");
+            mDot.textContent = "·";
+            const mCount = document.createElement("span");
+            mCount.textContent = t("importer.preview.Nmessages", { count: s.messageCount });
+            metaEl.append(mDate, mDot, mCount);
+            text.append(titleEl, metaEl);
             row.append(cb, text);
             row.addEventListener("click", () => selectSession(s));
             inner.appendChild(row);
@@ -566,7 +693,7 @@
         $("preview-empty").classList.remove("hidden");
         $("preview-head").classList.add("hidden");
         $("messages").classList.add("hidden");
-        $("messages").innerHTML = "";
+        clear($("messages"));
       }
 
       async function selectSession(summary) {
@@ -575,8 +702,8 @@
         $("preview-empty").classList.add("hidden");
         $("preview-head").classList.remove("hidden");
         $("messages").classList.remove("hidden");
-        $("messages").innerHTML = "";
-        setStatus("正在载入会话…");
+        clear($("messages"));
+        setStatus(t("importer.status.loadingList"));
         try {
           const cacheKey = `${state.activeSource}:${summary.externalId}`;
           let converted = state.cache.get(cacheKey);
@@ -590,10 +717,10 @@
           }
           $("pv-title").textContent = converted.session.title;
           $("pv-meta").textContent = [
-            converted.session.projectPath ?? "未关联项目",
-            converted.session.modelId ?? "未知模型",
-            `${converted.messages.length} 条消息`,
-            `更新于 ${fmtDate(converted.session.updatedAt)}`,
+            converted.session.projectPath ?? t("importer.preview.noProject"),
+            converted.session.modelId ?? t("importer.preview.unknownModel"),
+            t("importer.preview.Nmessages", { count: converted.messages.length }),
+            t("importer.preview.updatedAt", { date: fmtDate(converted.session.updatedAt) }),
           ].join(" · ");
           const box = $("messages");
           for (const m of converted.messages) {
@@ -601,8 +728,14 @@
               const details = document.createElement("details");
               details.className = "msg tool";
               const mark = m.toolStatus === "error" ? "❌" : "🔧";
-              details.innerHTML = `<summary><span>${mark} ${esc(m.toolName)}</span>
-                <span class="tool-status ${esc(m.toolStatus)}">${esc(m.toolStatus)}</span></summary>`;
+              const summary = document.createElement("summary");
+              const markSpan = document.createElement("span");
+              markSpan.textContent = `${mark} ${m.toolName}`;
+              const statusSpan = document.createElement("span");
+              statusSpan.className = `tool-status ${m.toolStatus}`;
+              statusSpan.textContent = m.toolStatus;
+              summary.append(markSpan, statusSpan);
+              details.appendChild(summary);
               const pre = document.createElement("pre");
               pre.textContent = [
                 m.toolArgs != null ? "args: " + JSON.stringify(m.toolArgs, null, 2) : null,
@@ -617,9 +750,9 @@
               box.appendChild(div);
             }
           }
-          setStatus(`已载入 ${converted.messages.length} 条消息`);
+          setStatus(t("importer.status.loadedMessages", { count: converted.messages.length }));
         } catch (error) {
-          setStatus(`载入失败：${error}`, "err");
+          setStatus(t("importer.status.loadFailed", { error }), "err");
         }
       }
 
@@ -627,46 +760,53 @@
         const summaries = state.sessions.filter((s) => state.selected.has(s.externalId));
         if (summaries.length === 0) return;
         $("import-btn").disabled = true;
-        setStatus(`正在导入 ${summaries.length} 个会话…`);
+        setStatus(t("importer.importing", { count: summaries.length }));
         try {
-          let caps = { officialSessionApi: false };
-          try {
-            caps = await bridge.invoke("import.capabilities");
-          } catch {}
-          if (caps.officialSessionApi) {
-            // Official pi.session.importBatch path (#169 P0/P1)
-            const r = await bridge.invoke("import.commit", {
-              source: state.activeSource,
-              items: summaries,
-            });
-            const parts = [`已导入 ${r.imported} 个会话`];
-            if (r.skipped) parts.push(`跳过 ${r.skipped} 个重复/不可读`);
-            if (r.failed?.length) parts.push(`${r.failed.length} 个失败`);
-            setStatus(
-              `${parts.join("，")}——左侧会话列表即刻可见`,
-              r.failed?.length ? "err" : "ok",
-            );
-          } else {
-            // Legacy dev-build bridge fallback (local patched host only)
-            const res = await bridge.invoke("import.convertBatch", {
-              source: state.activeSource,
-              items: summaries,
-            });
-            let imported = 0;
-            let skipped = 0;
-            for (const conv of res.sessions) {
-              const r = await bridge.invoke("session.import", conv);
-              if (r?.imported) imported += 1;
-              else skipped += 1;
-            }
-            if (res.unreadable) skipped += res.unreadable;
-            setStatus(
-              `已导入 ${imported} 个会话（跳过 ${skipped} 个重复/不可读）——左侧项目列表即刻可见`,
-              "ok",
+          // Single entry point: main.js decides official importBatch vs the
+          // legacy session.import bridge, and falls back gracefully when the
+          // host exposes no session-import API at all.
+          const r = await bridge.invoke("import.commit", {
+            source: state.activeSource,
+            items: summaries,
+            placement: $("bind-projects").checked ? "project" : "standalone",
+          });
+          window.__lastTimings = r.timings || null;
+          const parts = [t("importer.imported", { count: r.imported })];
+          if (r.skipped) parts.push(t("importer.skipped", { count: r.skipped }));
+          if (r.unreadable) parts.push(t("importer.unreadable", { count: r.unreadable }));
+          if (r.failed?.length) parts.push(t("importer.failed", { count: r.failed.length }));
+          if (r.imported === 0 && r.failed?.length) parts.push(t("importer.hostHint"));
+          if (r.timings) {
+            parts.push(
+              t("importer.importDone.timing", {
+                total: (
+                  (r.timings.convertMs + r.timings.buildMs + r.timings.importMs) /
+                  1000
+                ).toFixed(1),
+                convert: (r.timings.convertMs / 1000).toFixed(1),
+                host: (r.timings.importMs / 1000).toFixed(1),
+              }),
             );
           }
+          parts.push(
+            $("bind-projects").checked
+              ? t("importer.importDone.project")
+              : t("importer.importDone.tail"),
+          );
+          setStatus(parts.join(SEP()), r.failed?.length ? "err" : "ok");
+          // P0-F2: native notification telling the user to switch to the
+          // forge view. pluginBridge cannot reach pi.ui.* from the sandboxed
+          // view, so we route through the host via a dedicated channel.
+          if (r.imported > 0) {
+            try {
+              await bridge.invoke("import.notify", {
+                title: t("importer.notify.title"),
+                body: t("importer.notify.body", { source: state.activeSource, count: r.imported }),
+              });
+            } catch { /* host missing the channel — silent */ }
+          }
         } catch (error) {
-          setStatus(`导入失败：${error}`, "err");
+          setStatus(t("importer.importFailed", { error }), "err");
         } finally {
           $("import-btn").disabled = state.selected.size === 0;
         }
@@ -674,6 +814,21 @@
 
       $("scan-btn").addEventListener("click", scanSources);
       $("import-btn").addEventListener("click", importSelected);
+      // Project grouping is the default: imported sessions belong under the
+      // project they came from, matching the left sidebar's PROJECTS list.
+      // Unchecked imports land in the standalone session list instead. The
+      // choice is remembered per panel.
+      const BIND_KEY = "pi-universal-import.bindProjects";
+      const bindBox = $("bind-projects");
+      try {
+        const stored = localStorage.getItem(BIND_KEY);
+        bindBox.checked = stored === null ? true : stored === "1";
+      } catch { /* best-effort */ }
+      bindBox.addEventListener("change", () => {
+        try {
+          localStorage.setItem(BIND_KEY, bindBox.checked ? "1" : "0");
+        } catch { /* best-effort */ }
+      });
       $("filter").addEventListener("input", renderList);
       $("select-all").addEventListener("click", () => {
         const q = $("filter").value.trim().toLowerCase();
@@ -688,6 +843,7 @@
       });
 
       (async () => {
+        await initLocale();
         state.adapters = await bridge.invoke("import.adapters");
       })();
     </script>

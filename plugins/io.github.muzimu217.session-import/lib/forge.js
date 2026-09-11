@@ -145,13 +145,15 @@ async function listImported({ source, limit = 100 } = {}) {
   const args = { limit: Math.min(Math.max(Number(limit) || 100, 1), 200) };
   if (source) args.source = source;
   const res = await pi.session.list(args);
-  // 不同宿主版本可能返回 { sessions } 或直接数组
-  return Array.isArray(res) ? res : (res?.sessions ?? []);
+  // 宿主（v0.14+）返回 { items: [...] }；兼容旧形态 { sessions } 与裸数组。
+  // 同时把 sessionId 投影到 id，下游（视图复选框 / 蒸馏查找）只认 id。
+  const raw = Array.isArray(res) ? res : (res?.items ?? res?.sessions ?? []);
+  return raw.map((s) => ({ ...s, sessionId: s.sessionId ?? s.id, id: s.sessionId ?? s.id }));
 }
 
 async function readMessages(sessionId, { limit = 500 } = {}) {
   const res = await pi.session.listMessages({ sessionId, limit });
-  return Array.isArray(res) ? res : (res?.messages ?? []);
+  return Array.isArray(res) ? res : (res?.items ?? res?.messages ?? []);
 }
 
 module.exports = {
