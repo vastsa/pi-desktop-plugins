@@ -3,6 +3,12 @@
 All notable changes to this plugin are documented here. Versions follow
 semver; the plugin id is `io.github.muzimu217.session-import`.
 
+## 0.4.2 — 2026-09-11
+
+- 声明正式会话导入 API 所需的 `session.import` 权限，修复宿主权限网关拒绝
+  `pi.session.importBatch()` 的问题。
+- 移除未使用的 `session.read` 权限，继续使用 `session.read.own` 读取本插件导入的会话。
+
 ## 0.4.1 — 2026-09-09
 
 - 补齐市场元数据以符合官方仓 CONTRIBUTING 的推荐字段：新增 `i18n`（en / zh-CN 双语的

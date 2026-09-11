@@ -52,7 +52,8 @@ PI-Desktop 插件：**扫描本机安装的编程工具，把它们（ZCode、Wo
 | 权限 | 用途 |
 | --- | --- |
 | `ui.panel` / `ui.view` | 导入面板与「会话熔炉」工作面板视图 |
-| `session.read` / `session.read.own` | 读回本插件导入过的会话，供熔炉蒸馏 |
+| `session.import` | 将外部工具会话导入 PI-Desktop 声明的数据源 |
+| `session.read.own` | 读回本插件导入过的会话，供熔炉蒸馏 |
 | `agent.complete` / `models.list` | 调用宿主模型做蒸馏（使用宿主凭据与额度，插件不接触 API Key） |
 | `fs.write` | **仅**用于保存蒸馏结果，范围限定在工作区内的 `AGENTS.md`、`*.md`、`docs/**`、`.agents/skills/**` |
 
