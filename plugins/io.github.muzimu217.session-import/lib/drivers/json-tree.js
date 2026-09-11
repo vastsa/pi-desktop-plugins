@@ -19,7 +19,7 @@ const path = require("node:path");
 const fsp = require("node:fs/promises");
 const { toIso, truncateTitle, projectNameOf } = require("../util");
 const { getPath, toIso: tsToIso } = require("./extract");
-const { resolveSafe, listFiles, readText } = require("./fsutil");
+const { resolveSafe, listFiles, readText, isInside } = require("./fsutil");
 const { mapEntries } = require("./entry-map");
 
 const DRIVER = "json-tree";
@@ -96,7 +96,9 @@ async function scan(spec, sourceId) {
 }
 
 async function convert(spec, summary) {
-  const file = summary.filePath || resolveSafe(spec.root);
+  const root = resolveSafe(spec.root);
+  const file = typeof summary.filePath === "string" ? path.resolve(summary.filePath) : "";
+  if (!file || !isInside(file, root)) return { session: null, messages: [] };
   const loaded = await loadSession(spec, file);
   if (!loaded) return { session: null, messages: [] };
 

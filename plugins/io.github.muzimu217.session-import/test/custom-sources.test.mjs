@@ -19,9 +19,10 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const PLUGIN_DIR = "/Users/blackevil/dev/pi-desktop-session-import";
+const PLUGIN_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cs = require(`${PLUGIN_DIR}/lib/custom-sources.js`);
 const { makeDeclarativeSource } = require(`${PLUGIN_DIR}/lib/sources/declarative.js`);
 
@@ -101,12 +102,18 @@ describe("validateSpec", () => {
     assert.equal(ok, false);
     assert.ok(errors.some((e) => e.includes("must be one of")), errors.join("; "));
   });
-
   test("rejects absurdly broad data roots", () => {
-    for (const root of ["/", os.homedir()]) {
+    for (const root of ["/", os.homedir(), "C:\\", "C:/"]) {
       const { ok, errors } = cs.validateSpec(validSpec({ root }), 0);
       assert.equal(ok, false, `root "${root}" must be rejected`);
       assert.ok(errors.some((e) => e.includes("refusing")), errors.join("; "));
+    }
+  });
+
+  test("rejects empty or wildcard extensions", () => {
+    for (const extension of ["", "*", ".", ".jsonl.exe"]) {
+      const { ok, errors } = cs.validateSpec(validSpec({ extension }), 0);
+      assert.equal(ok, false, `extension "${extension}" must be rejected`);
     }
   });
 

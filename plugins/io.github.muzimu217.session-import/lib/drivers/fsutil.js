@@ -26,10 +26,28 @@ function expandHome(p, home = os.homedir()) {
   return p;
 }
 
-/** Resolve/normalise a configured path to an absolute one. */
+const EXTENSION_RE = /^\.[A-Za-z0-9]{1,16}$/;
+
+/** True for POSIX `/` and Windows drive roots such as `C:\`. */
+function isFilesystemRoot(p) {
+  if (typeof p !== "string" || !p) return false;
+  const n = path.normalize(p);
+  if (n === path.sep) return true;
+  if (/^[A-Za-z]:[\\/]?$/.test(n) || /^[A-Za-z]:[\\/]?$/.test(p.trim())) return true;
+  const root = path.parse(n).root;
+  return Boolean(root) && n === path.normalize(root);
+}
+
 function resolveSafe(p, home = os.homedir()) {
   const expanded = expandHome(p, home);
   return path.normalize(path.isAbsolute(expanded) ? expanded : path.resolve(expanded));
+}
+
+function isInside(file, root) {
+  if (typeof file !== "string" || typeof root !== "string" || !file || !root) return false;
+  const a = path.resolve(file);
+  const b = path.resolve(root);
+  return a === b || a.startsWith(b + path.sep);
 }
 
 /** True when the path exists (file or dir). */
@@ -58,6 +76,8 @@ async function listFiles(root, options = {}) {
     // deeper subdirectories, so unbounded recursion picks up junk.
     maxDepth = Infinity,
   } = options;
+  // Empty/`*` extensions would match every file. Require a real suffix.
+  if (typeof extension !== "string" || !EXTENSION_RE.test(extension)) return [];
   const out = [];
   const depthCap = Number.isFinite(maxDepth) ? Math.max(1, Math.trunc(maxDepth)) : Infinity;
 
@@ -129,7 +149,10 @@ function parseLines(raw, maxLines = 20000) {
 module.exports = {
   DEFAULT_MAX_FILES,
   DEFAULT_MAX_FILE_BYTES,
+  EXTENSION_RE,
   expandHome,
+  isFilesystemRoot,
+  isInside,
   resolveSafe,
   exists,
   listFiles,

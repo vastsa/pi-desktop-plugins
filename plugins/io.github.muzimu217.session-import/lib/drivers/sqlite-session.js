@@ -21,6 +21,7 @@
 
 const { toIso, truncateTitle, projectNameOf } = require("../util");
 const { extractValue, getPath, asText, toIso: tsToIso } = require("./extract");
+const path = require("node:path");
 const { resolveSafe } = require("./fsutil");
 
 const DRIVER = "sqlite-session";
@@ -46,9 +47,15 @@ function mapToolStatus(status) {
   return "running";
 }
 
+const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
 /** Quote an identifier for safe interpolation into SQL (columns can't be bound). */
 function ident(name) {
-  return `"${String(name).replace(/"/g, '""')}"`;
+  const s = String(name ?? "");
+  if (!IDENT_RE.test(s) || s.length > 64) {
+    throw new Error(`invalid SQL identifier: ${s}`);
+  }
+  return `"${s}"`;
 }
 
 function tsValue(row, col, fallback, unit) {
@@ -187,7 +194,10 @@ async function scan(spec, sourceId) {
 }
 
 async function convert(spec, summary) {
-  const dbPath = summary.filePath || resolveSafe(spec.db);
+  const dbPath = resolveSafe(spec.db);
+  if (typeof summary.filePath === "string" && path.resolve(summary.filePath) !== dbPath) {
+    return { session: null, messages: [] };
+  }
   const db = openDb(dbPath);
   const m = spec.message ?? {};
   const p = spec.part ?? null;

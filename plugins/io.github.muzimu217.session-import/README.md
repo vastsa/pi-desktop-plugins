@@ -44,7 +44,7 @@ PI-Desktop 插件：**扫描本机安装的编程工具，把它们（ZCode、Wo
 | WorkBuddy | `~/.workbuddy/projects/**/*.jsonl` | 剥离 `<system-reminder>`/`<cb_summary>` 注入块；`function_call` 按 `callId` 配对；外置大结果安全回读；`ai-title` 优先 |
 | Claude Code | `~/.claude/projects/**/*.jsonl` | 过滤 sidechain 与合成用户行；`tool_use`/`tool_result` 配对 |
 | Codex | `~/.codex/sessions/**/*.jsonl` | 兼容新旧两种格式；过滤 `# AGENTS.md` 等合成行 |
-| OpenCode | `~/.local/share/opencode/storage/` | message→part 按 `time.created` 还原 |
+| OpenCode | `~/.local/share/opencode/opencode.db` | `node:sqlite` 只读；session→message→part 三层还原（OpenCode v1.x SQLite） |
 | Pi | `~/.pi/agent/sessions/**/*.jsonl` | `toolCall`/`toolResult` 配对；`session_info.name` 优先 |
 
 ## 自定义来源（无需改代码）

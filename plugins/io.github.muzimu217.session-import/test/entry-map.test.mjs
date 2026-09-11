@@ -20,9 +20,10 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const PLUGIN_DIR = "/Users/blackevil/dev/pi-desktop-session-import";
+const PLUGIN_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const { mapEntries } = require(`${PLUGIN_DIR}/lib/drivers/entry-map.js`);
 const { applyTextOps } = require(`${PLUGIN_DIR}/lib/drivers/extract.js`);

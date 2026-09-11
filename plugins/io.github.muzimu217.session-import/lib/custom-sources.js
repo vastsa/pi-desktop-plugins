@@ -22,6 +22,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 const { driverNames } = require("./drivers");
+const { isFilesystemRoot, EXTENSION_RE } = require("./drivers/fsutil");
 
 /** Relative to the workspace root; inside the declared fs.read scope. */
 const CONFIG_PATH = "docs/session-import-sources.json";
@@ -91,11 +92,16 @@ function resolveAndGuard(p, errors, field) {
     errors.push(`${field}: must be a non-empty string path`);
     return null;
   }
+  const trimmed = p.trim();
+  if (trimmed === "/" || trimmed === "\\" || /^[A-Za-z]:[\\/]?$/.test(trimmed)) {
+    errors.push(`${field}: refusing to scan the filesystem root`);
+    return null;
+  }
   const home = os.homedir();
   const expanded =
-    p === "~" ? home : p.startsWith("~/") ? path.join(home, p.slice(2)) : p;
+    trimmed === "~" ? home : trimmed.startsWith("~/") ? path.join(home, trimmed.slice(2)) : trimmed;
   const abs = path.normalize(path.isAbsolute(expanded) ? expanded : path.resolve(expanded));
-  if (abs === path.sep) {
+  if (isFilesystemRoot(abs)) {
     errors.push(`${field}: refusing to scan the filesystem root`);
     return null;
   }
@@ -142,6 +148,9 @@ function validateSpec(raw, index) {
   } else {
     const root = resolveAndGuard(raw.root, errors, `${at}.root`);
     if (root) spec.root = root;
+    if (raw.extension != null && (typeof raw.extension !== "string" || !EXTENSION_RE.test(raw.extension))) {
+      errors.push(`${at}.extension: must be a dotted suffix like .jsonl`);
+    }
   }
 
   if (errors.length) return { ok: false, errors, spec: null };

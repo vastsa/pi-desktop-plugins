@@ -20,7 +20,7 @@ const path = require("node:path");
 const fsp = require("node:fs/promises");
 const { toIso, truncateTitle, projectNameOf } = require("../util");
 const { extractText, getPath } = require("./extract");
-const { resolveSafe, listFiles, readText, parseLines } = require("./fsutil");
+const { resolveSafe, listFiles, readText, parseLines, isInside } = require("./fsutil");
 const { mapEntries, firstUserText } = require("./entry-map");
 
 const DRIVER = "jsonl-transcript";
@@ -122,7 +122,9 @@ async function scan(spec, sourceId) {
 }
 
 async function convert(spec, summary) {
-  const file = summary.filePath || resolveSafe(spec.root);
+  const root = resolveSafe(spec.root);
+  const file = typeof summary.filePath === "string" ? path.resolve(summary.filePath) : "";
+  if (!file || !isInside(file, root)) return { session: null, messages: [] };
   const raw = await readText(file, spec.maxBytes);
   if (raw == null) return { session: null, messages: [] };
   const entries = parseLines(raw, spec.maxLines);
