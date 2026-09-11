@@ -47,13 +47,40 @@ PI-Desktop 插件：**扫描本机安装的编程工具，把它们（ZCode、Wo
 | OpenCode | `~/.local/share/opencode/storage/` | message→part 按 `time.created` 还原 |
 | Pi | `~/.pi/agent/sessions/**/*.jsonl` | `toolCall`/`toolResult` 配对；`session_info.name` 优先 |
 
+## 自定义来源（无需改代码）
+
+内置 6 个来源之外，你可以在**当前工作区**放一份纯 JSON，描述自己的工具：
+
+```
+docs/session-import-sources.json
+```
+
+内置驱动覆盖三类磁盘格式，绝大多数工具都能落在其中一个上：
+
+| driver | 适用 | 内置使用者 |
+| --- | --- | --- |
+| `jsonl-transcript` | 一行一条记录的 JSONL 对话文件 | Claude Code、Codex、WorkBuddy、Pi |
+| `sqlite-session` | SQLite：`session → message → part` 三层（或 session+message 两层） | ZCode、OpenCode |
+| `json-tree` | 一个 JSON 文件即一个会话 | 旧版 OpenCode / Claude 布局 |
+
+面板「自定义来源 → 重新加载」即可热加载，新来源带 `自定义` 标签出现。完整字段见
+[`docs/CUSTOM-SOURCES.md`](docs/CUSTOM-SOURCES.md)，里面有可直接复制的三个 driver 示例。
+
+> **安全边界**：配置**只允许纯数据**。任何 `eval` / `code` / `require` / `transform` / `script`
+> 之类的键（任意层级）都会被拒绝——插件对用户主目录有读权限，允许配置携带代码等同于任意代码执行。
+> 数据根目录也不接受 `/` 或整个 home。
+
 ## 权限
 
 | 权限 | 用途 |
 | --- | --- |
 | `ui.panel` / `ui.view` | 导入面板与「会话熔炉」工作面板视图 |
+| `notify` | 扫描 / 导入完成或失败时发一条通知 |
 | `session.read` / `session.read.own` | 读回本插件导入过的会话，供熔炉蒸馏 |
+| `session.import` | 把选中的会话写入 PI-Desktop 会话库 |
+| `project.create` | 按会话的 `projectPath` 幂等解析 / 绑定 projectId（无此能力的宿主退回未绑定导入） |
 | `agent.complete` / `models.list` | 调用宿主模型做蒸馏（使用宿主凭据与额度，插件不接触 API Key） |
+| `fs.read` | 只读各工具的本地会话数据（`.jsonl` / SQLite 的 `readOnly` 模式）；并读取工作区 `docs/session-import-sources.json` 里的自定义来源配置 |
 | `fs.write` | **仅**用于保存蒸馏结果，范围限定在工作区内的 `AGENTS.md`、`*.md`、`docs/**`、`.agents/skills/**` |
 
 读取各工具本地数据由插件进程**只读**完成（`node:sqlite` 的 `readOnly` 模式，或直接读取
