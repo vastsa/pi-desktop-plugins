@@ -12,9 +12,11 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const PLUGIN_DIR = "/Users/blackevil/dev/pi-desktop-session-import";
+const PLUGIN_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // Each test starts with a clean slate — clear require cache for forge.js so
 // its module-level state (callLog) resets.

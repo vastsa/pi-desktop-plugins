@@ -62,7 +62,9 @@ DYNAMIC_CODE = (
     (re.compile(r"\b(?:new\s+)?Function\s*\("), "Function()"),
     (re.compile(r"\b(?:vm\.(?:run|compile)|vm\.Script)\b"), "Node VM dynamic execution"),
     (re.compile(r"\b(?:import|require)\s*\(\s*['\"](?:https?://|data:)"), "remote module loading"),
-    (re.compile(r"\b(?:import|require)\s*\(\s*(?!['\"?])"), "dynamic module loading"),
+    # Bare import()/require() with a non-literal argument. Do not use a leading
+    # \b: `.import(` (pi.session.import) is a host method call, not dynamic load.
+    (re.compile(r"(?<![.\w$])(?:import|require)\s*\(\s*(?!['\"?])"), "dynamic module loading"),
 )
 REMOTE_EXECUTABLE_SCRIPT = re.compile(
     r"<(?:script|iframe)\b[^>]+\b(?:src|data)\s*=\s*['\"]\s*(?:https?://|data:)",
