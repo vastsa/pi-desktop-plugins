@@ -262,6 +262,48 @@
               ]
             }
           }
+        },
+        {
+          "version": "0.4.6",
+          "publishedAt": "2026-09-11T15:49:34Z",
+          "changelog": "Release 0.4.6（健壮性 / 安全加固）：为全部来源的扫描与转换调用加看门狗超时（单源扫描 90s、后台全量预热 5min、单条转换 30s），损坏或挂载式数据库、异常适配器不再卡死导入面板；扫描阶段按 externalId 去重并标记超大会话（oversized）；导入阶段契约截断（单条消息 512KiB、工具载荷 256KiB、单会话 2000 消息）现在显式回传 truncated 标记，UI 以「警告」呈现被截断导入，扫描计数徽标展示 oversized 数量；扫描失败按超时 / 失败分别提示。基于 0.4.5（OpenCode v1.x SQLite 存储修复）之上发布。",
+          "minPiDesktop": ">=0.14.3",
+          "shasum": "ff9bf46c0102ea58165365dfdf7fe2200e96c4b58299ca1a417280f776ed854b",
+          "url": "packages/io.github.muzimu217.session-import-0.4.6.piplug",
+          "sizeBytes": 3424867,
+          "permissions": [
+            "ui.panel",
+            "ui.view",
+            "notify",
+            "session.read",
+            "session.read.own",
+            "session.import",
+            "project.create",
+            "agent.complete",
+            "models.list",
+            "fs.read",
+            "fs.write"
+          ],
+          "fs": {
+            "read": {
+              "root": "workspace",
+              "scope": [
+                "AGENTS.md",
+                "*.md",
+                "docs/**",
+                ".agents/skills/**"
+              ]
+            },
+            "write": {
+              "root": "workspace",
+              "scope": [
+                "AGENTS.md",
+                "*.md",
+                "docs/**",
+                ".agents/skills/**"
+              ]
+            }
+          }
         }
       ]
     },
