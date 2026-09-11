@@ -105,6 +105,40 @@
       .source-card .sname { font-weight: 650; font-size: 13px; }
       .source-card .scount { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
       .source-card .scount.ok { color: var(--ok); }
+      .source-card .sbadge {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 0 5px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 600;
+        vertical-align: 1px;
+      }
+      .custom-sources {
+        margin-top: 10px;
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 11.5px;
+        color: var(--muted);
+        background: var(--surface);
+      }
+      .custom-sources .cs-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-weight: 650;
+        color: var(--text);
+      }
+      .custom-sources .cs-body { margin-top: 4px; line-height: 1.55; }
+      .custom-sources .cs-errors { margin-top: 4px; color: var(--warn, #b58900); white-space: pre-wrap; }
+      .custom-sources code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+      }
       main.panes {
         flex: 1;
         min-height: 0;
@@ -318,6 +352,18 @@
       </header>
 
       <div class="source-grid" id="source-grid" data-page-node-id="TEcs3jQlPQfKR4H4CKqlB3"></div>
+      <div class="custom-sources" id="custom-sources">
+        <div class="cs-head">
+          <span id="cs-title"></span>
+          <button class="link" id="cs-reload" type="button"></button>
+        </div>
+        <div class="cs-body">
+          <div id="cs-hint"></div>
+          <div id="cs-count"></div>
+          <div id="cs-drivers"></div>
+          <div class="cs-errors" id="cs-errors"></div>
+        </div>
+      </div>
 
       <main class="panes hidden" id="panes" data-page-node-id="eLfqAsqde06wzLhsuEGmCR">
         <section class="list-pane" data-page-node-id="rh7Vhm1FOdwvnAjJgDfTyx">
@@ -466,6 +512,12 @@
           const sname = document.createElement("div");
           sname.className = "sname";
           sname.textContent = a.label;
+          if (a.custom) {
+            const badge = document.createElement("span");
+            badge.className = "sbadge";
+            badge.textContent = t("importer.custom.badge");
+            sname.appendChild(badge);
+          }
           const scount = document.createElement("div");
           scount.className = "scount";
           scount.textContent = t("importer.source.detecting");
@@ -488,6 +540,14 @@
               const sc = card.querySelector(".scount");
               paintCount(sc, res, adapter.source);
               sc.classList.add("ok");
+            } else if (res.error && res.error.code === "TIMEOUT") {
+              const sc = card.querySelector(".scount");
+              sc.textContent = t("importer.source.scanTimeout");
+              sc.classList.add("warn");
+            } else if (res.error) {
+              const sc = card.querySelector(".scount");
+              sc.textContent = t("importer.source.scanFailed");
+              sc.classList.add("warn");
             } else {
               card.querySelector(".scount").textContent = t("importer.source.notFound");
             }
@@ -503,6 +563,10 @@
         if (!node) return;
         const base = t("importer.count.sessions", { count: res.count });
         node.textContent = res.partial ? `${base} ${t("importer.count.scanningMore")}` : base;
+        if (res.oversized > 0) {
+          node.textContent += ` ${t("importer.count.oversized", { count: res.oversized })}`;
+          node.classList.add("warn");
+        }
         node.dataset.source = source;
       }
 
@@ -775,6 +839,7 @@
           if (r.skipped) parts.push(t("importer.skipped", { count: r.skipped }));
           if (r.unreadable) parts.push(t("importer.unreadable", { count: r.unreadable }));
           if (r.failed?.length) parts.push(t("importer.failed", { count: r.failed.length }));
+          if (r.truncated) parts.push(t("importer.truncated", { count: r.truncated }));
           if (r.imported === 0 && r.failed?.length) parts.push(t("importer.hostHint"));
           if (r.timings) {
             parts.push(
@@ -793,7 +858,7 @@
               ? t("importer.importDone.project")
               : t("importer.importDone.tail"),
           );
-          setStatus(parts.join(SEP()), r.failed?.length ? "err" : "ok");
+          setStatus(parts.join(SEP()), r.failed?.length ? "err" : r.truncated ? "warn" : "ok");
           // P0-F2: native notification telling the user to switch to the
           // forge view. pluginBridge cannot reach pi.ui.* from the sandboxed
           // view, so we route through the host via a dedicated channel.
@@ -842,9 +907,60 @@
         updateCount();
       });
 
+      async function loadCustomSourcesInfo() {
+        try {
+          const info = await bridge.invoke("import.customSources");
+          renderCustomSources(info);
+          return info;
+        } catch {
+          // Host without the channel (older build) -> hide the panel entirely.
+          const panel = $("custom-sources");
+          if (panel) panel.hidden = true;
+          return null;
+        }
+      }
+
+      function renderCustomSources(info) {
+        const panel = $("custom-sources");
+        if (!panel || !info) return;
+        $("cs-title").textContent = t("importer.custom.title");
+        $("cs-reload").textContent = t("importer.custom.reload");
+        $("cs-hint").textContent = t("importer.custom.hint", {
+          path: info.configPath || "docs/session-import-sources.json",
+        });
+        $("cs-count").textContent = t("importer.custom.count", { count: info.count || 0 });
+        $("cs-drivers").textContent =
+          Array.isArray(info.drivers) && info.drivers.length
+            ? t("importer.custom.drivers", { drivers: info.drivers.join(", ") })
+            : "";
+        const errs = Array.isArray(info.errors) ? info.errors : [];
+        const errNode = $("cs-errors");
+        errNode.textContent = errs.length
+          ? t("importer.custom.errors", { errors: errs.join("; ") })
+          : "";
+        errNode.style.display = errs.length ? "" : "none";
+      }
+
       (async () => {
         await initLocale();
         state.adapters = await bridge.invoke("import.adapters");
+        await loadCustomSourcesInfo();
+
+        $("cs-reload").addEventListener("click", async () => {
+          try {
+            const info = await bridge.invoke("import.reloadCustomSources");
+            state.adapters = await bridge.invoke("import.adapters");
+            renderCustomSources(info);
+            // Re-scan so a newly added source shows up immediately.
+            await scanSources();
+            setStatus(t("importer.custom.reloaded"), "ok");
+          } catch (err) {
+            setStatus(
+              t("importer.custom.reloadFailed", { error: String((err && err.message) || err) }),
+              "err",
+            );
+          }
+        });
       })();
     </script>
   </body>
