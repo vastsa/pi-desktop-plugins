@@ -76,6 +76,50 @@ html, body, #root {
 .message-row.user .message-user-text {
   color: inherit;
 }
+/* The host pins some elements to dark colors, so filenames/links become
+   invisible on the dark user bubble: .message-attachment ->
+   --ds-text-secondary (the file chip), .chat-image-chip ->
+   --ds-text-primary, hover states -> --ds-accent, and inline code -> dark
+   via the .prose-chat code rule. Re-apply paper tones inside the dark
+   user bubble only. */
+.message-row.user .message-bubble .message-attachment,
+.message-row.user .message-bubble .message-attachment-image,
+.message-row.user .message-bubble .chat-image-chip,
+.message-row.user .message-bubble .chat-file-chip,
+.message-row.user .message-bubble .chat-command-chip {
+  color: var(--ds-bg-primary);
+  background: rgba(241, 235, 223, 0.09);
+}
+.message-row.user .message-bubble .message-attachment:hover,
+.message-row.user .message-bubble .message-attachment:focus-visible,
+.message-row.user .message-bubble .chat-image-chip:hover,
+.message-row.user .message-bubble .chat-file-chip:hover,
+.message-row.user .message-bubble .chat-command-chip:hover {
+  color: var(--ds-bg-primary);
+  background: rgba(241, 235, 223, 0.18);
+}
+.message-row.user .message-bubble .chat-text-link,
+.message-row.user .message-bubble .chat-code-link {
+  color: var(--ds-bg-primary);
+  text-decoration-color: rgba(241, 235, 223, 0.55);
+}
+.message-row.user .message-bubble .chat-text-link:hover,
+.message-row.user .message-bubble .chat-text-link:focus-visible,
+.message-row.user .message-bubble .chat-code-link:hover,
+.message-row.user .message-bubble .chat-code-link:focus-visible {
+  color: var(--ds-bg-primary);
+  text-decoration-color: rgba(241, 235, 223, 0.9);
+}
+.message-row.user .message-bubble .prose-chat code,
+.message-row.user .message-bubble code {
+  color: var(--ds-bg-primary) !important;
+  background: rgba(241, 235, 223, 0.1) !important;
+}
+.message-row.user .message-bubble .prose-chat pre,
+.message-row.user .message-bubble .prose-chat .code-block {
+  background: rgba(17, 14, 11, 0.45) !important;
+  color: var(--ds-bg-primary) !important;
+}
 
 /* Assistant messages: soft paper card */
 .message-row.assistant .message-bubble {
@@ -107,12 +151,12 @@ html, body, #root {
 }
 
 /* Code blocks: warm paper instead of cool gray.
-   The host light theme wins the plain .code-block / .prose-chat pre cascade
-   (equal-or-higher specificity, host stylesheet loaded after theme CSS) and
-   pins the nested pre to `background: transparent !important`. Defend with
-   the host's own scope + an extra class + !important so the warm palette
-   applies regardless of stylesheet order; if the host sanitizer strips
-   !important, these selectors still outperform the 1.0.1 ones. */
+The host light theme wins the plain .code-block / .prose-chat pre cascade
+(equal-or-higher specificity, host stylesheet loaded after theme CSS) and
+pins the nested pre to `background: transparent !important`. Defend with
+the host's own scope + an extra class + !important so the warm palette
+applies regardless of stylesheet order; if the host sanitizer strips
+!important, these selectors still outperform the 1.0.1 ones. */
 :root[data-theme="light"] .code-block,
 :root[data-theme="light"] .prose-chat .code-block {
   background: #efe7d4 !important;
@@ -139,18 +183,28 @@ html, body, #root {
   color: #fffcf5;
 }
 
-/* Width alignment: match assistant message cards to the composer width.
-   Host: thread-content 760px - 64px side padding = 696px, but composer-stack
-   is min(100%, var(--chat-composer-max-width)) = 768px (640px when the
-   sidebar is collapsed). Track the same variable so edges stay aligned
-   in both layouts. */
+/* Wider chat column: override the host's 760/768px defaults (and the 640px
+   sidebar-collapsed variants) so messages and composer share one wider column.
+   !important is required because the host stylesheet is loaded after the
+   theme CSS and pins .message-bubble{max-width:min(100%,720px)} at equal
+   specificity. Tune 820px to taste (window ~1500px => box ~55%). */
+.main-pane {
+  --chat-content-max-width: 820px !important;
+  --chat-composer-max-width: 820px !important;
+}
+.message-bubble {
+  max-width: min(100%, 820px) !important;
+}
+.message-row.user .message-col:has(.message-edit) {
+  max-width: min(100%, 820px) !important;
+}
 .thread-content {
-  width: min(100%, var(--chat-composer-max-width, 768px));
+  width: min(100%, var(--chat-composer-max-width, 820px)) !important;
   padding-left: 0;
   padding-right: 0;
 }
 .message-row.assistant .message-col,
 .message-row.system .message-col,
 .message-row.tool .message-col {
-  width: min(100%, var(--chat-composer-max-width, 768px));
+  width: min(100%, var(--chat-composer-max-width, 820px)) !important;
 }
