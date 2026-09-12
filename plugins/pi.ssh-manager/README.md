@@ -26,7 +26,7 @@
 
 插件不会持久化密码、passphrase、私钥内容、命令输出或远程 transcript。需要密码
 认证时，可以在面板的「密码（不保存）」输入框中录入；密码只在当前插件进程内保存
-最多 30 分钟，通过一次性 `SSH_ASKPASS` helper 交给 OpenSSH，插件重启、卸载或
+最多 30 分钟，通过一次性本地 IPC broker 和 `SSH_ASKPASS` helper 交给 OpenSSH；密码不会进入 `ssh` 进程环境，避免被宽泛的 `SendEnv` 配置发送到远端。插件重启、卸载或
 超时后会自动清除。AI 工具永远不会接收密码参数，但可以复用当前内存中的密码状态。
 请优先在本机配置 OpenSSH：
 

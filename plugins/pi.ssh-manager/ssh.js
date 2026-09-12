@@ -4,13 +4,14 @@
  * SSH transport primitives for pi.ssh-manager.
  *
  * The plugin deliberately delegates authentication to the user's OpenSSH
- * config, agent, or an identity file path. It never reads or stores private
- * key contents, passwords, command output, or a remote transcript.
+ * config, agent, or an identity file path. It never reads private-key contents
+ * or persists passwords, command output, or a remote transcript.
  */
 
 const { execFile } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
+const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 
@@ -26,6 +27,7 @@ const MAX_CONFIG_FILES = 32;
 const MAX_CONFIG_TOTAL_BYTES = 1024 * 1024;
 const MAX_CONFIG_INCLUDE_DEPTH = 8;
 const MAX_CONFIG_INCLUDE_MATCHES = 256;
+const ASKPASS_BROKER_TIMEOUT_MS = 5000;
 const WINDOWS_ENV_KEEP = [
   "ALLUSERSPROFILE", "APPDATA", "LOCALAPPDATA", "ProgramData",
   "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432",
@@ -41,6 +43,7 @@ const SSH_DIAGNOSTIC_PATTERN = /permission denied|could not resolve|connection r
 let execFileImpl = execFile;
 const activeProcesses = new Set();
 const activeTimers = new Set();
+const activeAskpassBrokers = new Set();
 
 function fail(message) {
   const error = new Error(message);
@@ -844,6 +847,7 @@ function killActiveProcesses() {
     activeProcesses.delete(child);
     killChild(child);
   }
+  for (const cleanup of [...activeAskpassBrokers]) cleanup();
 }
 
 function buildEnvironment(profile, options = {}) {
@@ -867,13 +871,13 @@ function buildEnvironment(profile, options = {}) {
     env.SSH_ASKPASS = options.askpassPath;
     env.SSH_ASKPASS_REQUIRE = "force";
     env.DISPLAY = "pi-ssh-manager";
-    env.PI_SSH_ASKPASS_PASSWORD = options.password;
-    if (platform === "win32") {
-      // The launcher reads the password inside Node. It must never expand the
-      // password in cmd.exe, where characters such as %, &, and > are syntax.
-      env.PI_SSH_ASKPASS_NODE = process.execPath;
-      env.ELECTRON_RUN_AS_NODE = "1";
-    }
+    env.PI_SSH_ASKPASS_ENDPOINT = options.askpassEndpoint;
+    env.PI_SSH_ASKPASS_TOKEN = options.askpassToken;
+    env.PI_SSH_ASKPASS_NODE = process.execPath;
+    env.PI_SSH_ASKPASS_SCRIPT = path.join(__dirname, "askpass-client.js");
+    // PI-Desktop uses its Electron executable as the plugin's Node runtime.
+    // This flag is harmless under stock Node and required under Electron.
+    env.ELECTRON_RUN_AS_NODE = "1";
   }
   return env;
 }
@@ -955,37 +959,23 @@ function createAskpassHelper() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ssh-"));
   const windows = process.platform === "win32";
   const file = path.join(directory, windows ? "askpass.cmd" : "askpass.sh");
-  const files = [file];
-  if (windows) {
-    const script = path.join(directory, "askpass.js");
-    const launcher = [
+  const launcher = windows
+    ? [
       "@echo off",
       "setlocal DisableDelayedExpansion",
-      "\"%PI_SSH_ASKPASS_NODE%\" \"%~dp0askpass.js\"",
+      "\"%PI_SSH_ASKPASS_NODE%\" \"%PI_SSH_ASKPASS_SCRIPT%\"",
       "",
-    ].join("\r\n");
-    const source = [
-      "\"use strict\";",
-      "process.stdout.write(String(process.env.PI_SSH_ASKPASS_PASSWORD || \"\"));",
-      "process.stdout.write(\"\\n\");",
-      "",
-    ].join("\n");
-    fs.writeFileSync(script, source, { encoding: "utf8", mode: 0o700 });
-    files.push(script);
-    fs.writeFileSync(file, launcher, { encoding: "utf8", mode: 0o700 });
-  } else {
-    const source = "#!/bin/sh\nprintf '%s\\n' \"$PI_SSH_ASKPASS_PASSWORD\"\n";
-    fs.writeFileSync(file, source, { encoding: "utf8", mode: 0o700 });
-  }
+    ].join("\r\n")
+    : "#!/bin/sh\nexec \"$PI_SSH_ASKPASS_NODE\" \"$PI_SSH_ASKPASS_SCRIPT\"\n";
+  fs.writeFileSync(file, launcher, { encoding: "utf8", mode: 0o700 });
   return {
+    directory,
     file,
     cleanup() {
-      for (const helperFile of files) {
-        try {
-          fs.unlinkSync(helperFile);
-        } catch {
-          // Best effort: helper files contain no credential value.
-        }
+      try {
+        fs.unlinkSync(file);
+      } catch {
+        // Best effort: the launcher contains no credential value.
       }
       try {
         fs.rmdirSync(directory);
@@ -994,6 +984,96 @@ function createAskpassHelper() {
       }
     },
   };
+}
+
+function askpassTokensEqual(value, expected) {
+  const left = Buffer.from(String(value || ""));
+  const right = Buffer.from(expected);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+async function createAskpassBroker(password) {
+  const helper = createAskpassHelper();
+  const endpoint = process.platform === "win32"
+    ? `\\\\.\\pipe\\pi-ssh-${crypto.randomUUID()}`
+    : path.join(helper.directory, "askpass.sock");
+  const token = crypto.randomBytes(32).toString("hex");
+  const sockets = new Set();
+  let served = false;
+  let cleaned = false;
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding("utf8");
+    let request = "";
+    const timer = setTimeout(() => socket.destroy(), ASKPASS_BROKER_TIMEOUT_MS);
+    socket.on("data", (chunk) => {
+      if (served) {
+        socket.destroy();
+        return;
+      }
+      request += chunk;
+      if (request.length > token.length + 2) {
+        socket.destroy();
+        return;
+      }
+      const newline = request.indexOf("\n");
+      if (newline < 0) return;
+      const supplied = request.slice(0, newline).replace(/\r$/, "");
+      if (!askpassTokensEqual(supplied, token)) {
+        socket.destroy();
+        return;
+      }
+      served = true;
+      socket.end(`${password}\n`);
+      try {
+        server.close();
+      } catch {
+        // The first authenticated request may already have closed the server.
+      }
+    });
+    socket.on("error", () => {});
+    socket.on("close", () => {
+      clearTimeout(timer);
+      sockets.delete(socket);
+    });
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      const onError = (error) => reject(error);
+      server.once("error", onError);
+      server.listen(endpoint, () => {
+        server.off("error", onError);
+        server.on("error", () => {});
+        resolve();
+      });
+    });
+  } catch (error) {
+    helper.cleanup();
+    throw error;
+  }
+
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    activeAskpassBrokers.delete(cleanup);
+    for (const socket of [...sockets]) socket.destroy();
+    try {
+      server.close();
+    } catch {
+      // The one-shot broker may already be closed.
+    }
+    if (process.platform !== "win32") {
+      try {
+        fs.unlinkSync(endpoint);
+      } catch {
+        // Node normally removes the socket path when the server closes.
+      }
+    }
+    helper.cleanup();
+  };
+  activeAskpassBrokers.add(cleanup);
+  return { file: helper.file, endpoint, token, cleanup };
 }
 
 function runProcess(file, args, options) {
@@ -1057,7 +1137,7 @@ async function runSsh(profile, options = {}) {
   const password = normalizePassword(options.password);
   const timeoutSeconds = normalizeTimeout(options.timeoutSeconds);
   const maxOutputChars = normalizeMaxOutput(options.maxOutputChars);
-  const askpass = password ? createAskpassHelper() : null;
+  const askpass = password ? await createAskpassBroker(password) : null;
   try {
     const args = buildSshArgs(normalized, {
       remoteCommand: options.remoteCommand,
@@ -1069,7 +1149,8 @@ async function runSsh(profile, options = {}) {
       timeoutSeconds: timeoutSeconds + 5,
       env: buildEnvironment(normalized, {
         askpassPath: askpass?.file,
-        password,
+        askpassEndpoint: askpass?.endpoint,
+        askpassToken: askpass?.token,
       }),
     });
     const stdout = clip(result.stdout, maxOutputChars);
@@ -1194,6 +1275,9 @@ module.exports = {
     expandConfigFile,
     activeProcessCount() {
       return activeProcesses.size;
+    },
+    activeAskpassBrokerCount() {
+      return activeAskpassBrokers.size;
     },
   },
 };

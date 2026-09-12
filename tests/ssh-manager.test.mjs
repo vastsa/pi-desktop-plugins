@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFile as nodeExecFile } from "node:child_process";
+import { createConnection } from "node:net";
 import {
   existsSync,
   mkdtempSync,
@@ -11,12 +12,14 @@ import { basename, dirname, join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import test from "node:test";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const ssh = require("../plugins/pi.ssh-manager/ssh.js");
 const main = require("../plugins/pi.ssh-manager/main.js");
+const execFileAsync = promisify(nodeExecFile);
 const manifest = JSON.parse(
   readFileSync(join(here, "../plugins/pi.ssh-manager/manifest.json"), "utf8"),
 );
@@ -42,17 +45,35 @@ function makeExecFile({ stdout = "", stderr = "", error = null, onCall = null } 
   const execFile = (file, args, options, callback) => {
     const call = { file, args: [...args], options: { ...options } };
     calls.push(call);
-    if (onCall) onCall(call);
     const child = {
       killed: false,
       kill() {
         this.killed = true;
       },
     };
-    queueMicrotask(() => callback(error, stdout, stderr));
+    queueMicrotask(async () => {
+      try {
+        if (onCall) await onCall(call);
+        callback(error, stdout, stderr);
+      } catch (callError) {
+        callback(callError, "", String(callError?.message || callError));
+      }
+    });
     return child;
   };
   return { calls, execFile };
+}
+
+function readAskpassBroker(endpoint, token) {
+  return new Promise((resolve) => {
+    const socket = createConnection(endpoint);
+    let output = "";
+    socket.setEncoding("utf8");
+    socket.on("connect", () => socket.write(`${token}\n`));
+    socket.on("data", (chunk) => { output += chunk; });
+    socket.on("error", () => resolve(output));
+    socket.on("close", () => resolve(output));
+  });
 }
 
 test("manifest declares a high-risk SSH agent surface with the smallest plugin permissions", () => {
@@ -242,27 +263,43 @@ test("SSH commands use execFile argument boundaries and cap output", async () =>
 test("password authentication uses a transient askpass helper without returning the password", async () => {
   const password = "p%PATH%!bang^caret&pipe|redirect><()\"'$";
   let helperOutput = null;
+  let helperScriptPath = null;
   const fake = makeExecFile({
     stdout: "password auth ok\n",
-    onCall(call) {
+    async onCall(call) {
       const helperPath = call.options.env.SSH_ASKPASS;
       const helperSource = readFileSync(helperPath, "utf8");
       assert.equal(helperSource.includes(password), false);
+      assert.equal(JSON.stringify(call.options.env).includes(password), false);
+      const brokerToken = call.options.env.PI_SSH_ASKPASS_TOKEN;
+      const invalidToken = `${brokerToken[0] === "0" ? "1" : "0"}${brokerToken.slice(1)}`;
+      const rejectedOutput = await readAskpassBroker(
+        call.options.env.PI_SSH_ASKPASS_ENDPOINT,
+        invalidToken,
+      );
+      assert.equal(rejectedOutput, "");
       if (process.platform === "win32") {
         assert.match(helperSource, /DisableDelayedExpansion/);
         assert.doesNotMatch(helperSource, /echo\s+%PI_SSH_ASKPASS_PASSWORD%/i);
-        assert.equal(existsSync(join(dirname(helperPath), "askpass.js")), true);
+        helperScriptPath = call.options.env.PI_SSH_ASKPASS_SCRIPT;
+        assert.equal(existsSync(helperScriptPath), true);
+        assert.equal(readFileSync(helperScriptPath, "utf8").includes(password), false);
         const commandShell = call.options.env.ComSpec || call.options.env.COMSPEC || "cmd.exe";
-        helperOutput = execFileSync(
+        const result = await execFileAsync(
           commandShell,
           ["/d", "/s", "/c", "call", helperPath, "Password:"],
           { encoding: "utf8", env: call.options.env, windowsHide: true },
         );
+        helperOutput = result.stdout;
       } else {
-        helperOutput = execFileSync(helperPath, ["Password:"], {
+        helperScriptPath = call.options.env.PI_SSH_ASKPASS_SCRIPT;
+        assert.equal(existsSync(helperScriptPath), true);
+        assert.equal(readFileSync(helperScriptPath, "utf8").includes(password), false);
+        const result = await execFileAsync(helperPath, ["Password:"], {
           encoding: "utf8",
           env: call.options.env,
         });
+        helperOutput = result.stdout;
       }
     },
   });
@@ -283,7 +320,11 @@ test("password authentication uses a transient askpass helper without returning 
     assert.equal(result.ok, true);
     assert.ok(fake.calls[0].options.env.SSH_ASKPASS);
     assert.equal(existsSync(fake.calls[0].options.env.SSH_ASKPASS), false);
-    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, password);
+    assert.equal(existsSync(helperScriptPath), true);
+    assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, undefined);
+    assert.ok(fake.calls[0].options.env.PI_SSH_ASKPASS_ENDPOINT);
+    assert.ok(fake.calls[0].options.env.PI_SSH_ASKPASS_TOKEN);
     assert.equal(helperOutput, `${password}\n`);
     assert.ok(fake.calls[0].args.includes("BatchMode=no"));
     assert.ok(fake.calls[0].args.includes("NumberOfPasswordPrompts=1"));
@@ -415,7 +456,8 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
     assert.equal(connected.ok, true);
     assert.match(connected.session_id, /^ssh-/);
     assert.equal(connected.host, "prod.example.com");
-    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, "test-only-password");
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, undefined);
+    assert.equal(JSON.stringify(fake.calls[0].options.env).includes("test-only-password"), false);
 
     const executeTool = registered.find((item) => item.value.name === "ssh_execute").value;
     assert.equal("allow_destructive" in executeTool.schema.properties, false);
