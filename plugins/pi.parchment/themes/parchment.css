@@ -76,6 +76,50 @@ html, body, #root {
 .message-row.user .message-user-text {
   color: inherit;
 }
+/* The host pins some elements to dark colors, so filenames/links become
+   invisible on the dark user bubble: .message-attachment ->
+   --ds-text-secondary (the file chip), .chat-image-chip ->
+   --ds-text-primary, hover states -> --ds-accent, and inline code -> dark
+   via the .prose-chat code rule. Re-apply paper tones inside the dark
+   user bubble only. */
+.message-row.user .message-bubble .message-attachment,
+.message-row.user .message-bubble .message-attachment-image,
+.message-row.user .message-bubble .chat-image-chip,
+.message-row.user .message-bubble .chat-file-chip,
+.message-row.user .message-bubble .chat-command-chip {
+  color: var(--ds-bg-primary);
+  background: rgba(241, 235, 223, 0.09);
+}
+.message-row.user .message-bubble .message-attachment:hover,
+.message-row.user .message-bubble .message-attachment:focus-visible,
+.message-row.user .message-bubble .chat-image-chip:hover,
+.message-row.user .message-bubble .chat-file-chip:hover,
+.message-row.user .message-bubble .chat-command-chip:hover {
+  color: var(--ds-bg-primary);
+  background: rgba(241, 235, 223, 0.18);
+}
+.message-row.user .message-bubble .chat-text-link,
+.message-row.user .message-bubble .chat-code-link {
+  color: var(--ds-bg-primary);
+  text-decoration-color: rgba(241, 235, 223, 0.55);
+}
+.message-row.user .message-bubble .chat-text-link:hover,
+.message-row.user .message-bubble .chat-text-link:focus-visible,
+.message-row.user .message-bubble .chat-code-link:hover,
+.message-row.user .message-bubble .chat-code-link:focus-visible {
+  color: var(--ds-bg-primary);
+  text-decoration-color: rgba(241, 235, 223, 0.9);
+}
+.message-row.user .message-bubble .prose-chat code,
+.message-row.user .message-bubble code {
+  color: var(--ds-bg-primary) !important;
+  background: rgba(241, 235, 223, 0.1) !important;
+}
+.message-row.user .message-bubble .prose-chat pre,
+.message-row.user .message-bubble .prose-chat .code-block {
+  background: rgba(17, 14, 11, 0.45) !important;
+  color: var(--ds-bg-primary) !important;
+}
 
 /* Assistant messages: soft paper card */
 .message-row.assistant .message-bubble {
@@ -153,4 +197,15 @@ html, body, #root {
 .message-row.system .message-col,
 .message-row.tool .message-col {
   width: min(100%, var(--chat-composer-max-width, 768px));
+}
+/* Right-panel file preview (host 0.14.x): .file-viewer-markdown has NO
+   padding rule in the host stylesheet (code files get .file-viewer-code
+   padding, markdown gets nothing) -> content is flush against the edges.
+   Restore sensible inset + bottom breathing room. */
+.file-viewer-body .file-viewer-markdown {
+  padding: 16px 20px 24px;
+}
+.file-viewer-body .file-viewer-markdown code,
+.file-viewer-body .file-viewer-markdown pre {
+  max-width: 100%;
 }

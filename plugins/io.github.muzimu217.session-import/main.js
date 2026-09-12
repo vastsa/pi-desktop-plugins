@@ -154,7 +154,11 @@ async function onPanelInvoke(channel, payload) {
       const official = officialSessionApi();
       if (official) {
         try {
-          const placement = payload?.placement === "project" ? "project" : "standalone";
+          // Default to project binding: a source session that records a project
+          // path is bound to that project by the host (ensure_project on the
+          // path). Only an explicit "standalone" placement skips binding, which
+          // is the data-loss-safe fallback for sessions with no projectPath.
+          const placement = payload?.placement === "standalone" ? "standalone" : "project";
           return await commitOfficial(source, items, placement);
         } catch (e) {
           if (!hostLacksImportApi(e)) throw e; // genuine failure — surface it
@@ -184,15 +188,6 @@ async function onPanelInvoke(channel, payload) {
         lastImportCount: bus.recentImport.count,
         lastImportSource: bus.recentImport.source,
       };
-    // --- P0-F2: importer view asks main to emit a native notification,
-    // telling the user to switch to the forge view. pluginBridge cannot
-    // reach pi.ui.* directly from inside the sandboxed view.
-    case "import.notify":
-      await pi.ui.notify({
-        title: String(payload?.title ?? "Session Import"),
-        body: String(payload?.body ?? ""),
-      });
-      return { ok: true };
     // --- P1-U1: best-effort host locale so the work-panel views can pick
     // en / zh-CN without guessing. Falls back to zh-CN when the host SDK
     // does not expose a locale (older builds). ---
@@ -817,6 +812,12 @@ function toContractSession(item, conv, projectId) {
   const session = {
     externalId: String(item.externalId ?? conv.session.id).slice(0, CONTRACT.externalIdMax),
     title: String(conv.session.title ?? item.title ?? "").slice(0, CONTRACT.titleMax),
+    // Sessions imported from a source that records a project path are bound to
+    // that project: the host's import_session runs ensure_project(path) whenever
+    // projectPath is non-empty, so simply carrying it is enough to bind — no
+    // projectId is needed from the plugin. Sessions with no projectPath carry
+    // neither field and fall back to the standalone SESSIONS list via the NULL
+    // project_id index, so data is never lost.
     projectPath: conv.session.projectPath ?? null,
     modelId: conv.session.modelId ?? null,
     providerId: conv.session.providerId ?? null,
@@ -824,12 +825,10 @@ function toContractSession(item, conv, projectId) {
     updatedAt,
     messages,
   };
-  // Host contract: only an explicit host-created projectId binds the session
-  // to a project. The official host opens plugin-created projects in the
-  // renderer when project.create succeeds, so project-bound imports appear in
-  // the sidebar as well as the Projects index. An unbound session
-  // (projectId omitted) lands in the standalone SESSIONS list. Binding remains
-  // opt-in ("placement: project").
+  // A host-created projectId (when resolveProjectId succeeded) is sent along so
+  // the session binds to the exact project row; when project.create is
+  // unavailable the host still binds via projectPath alone. Sessions with no
+  // projectPath carry neither field and land in the standalone SESSIONS list.
   if (projectId !== undefined && projectId !== null) session.projectId = projectId;
   const enforced = enforceContractLimits(session);
   // A session whose message count was capped at the host's 2000-message hard
