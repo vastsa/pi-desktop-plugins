@@ -105,14 +105,20 @@ function execProbe(bin) {
 /**
  * Resolve the workspace-relative manifest names against the host fs gateway
  * (review F3/F4): nothing on disk is read outside the declared `fs.read`
- * scope. Returns `[{ name, content }]` for every manifest that exists.
+ * scope. `wanted` is strictly allowlisted against the known manifest set —
+ * traversal names like `../../outside.txt` are rejected here, at the plugin
+ * boundary, regardless of what the host gateway would do (review round 2,
+ * blocker 5). Returns `[{ name, content }]` for every manifest that exists.
  */
 async function pickManifests(fsGateway, workspaceRoot, wanted) {
-  const candidates = (wanted && wanted.length ? wanted : KNOWN_MANIFESTS).filter(Boolean);
+  const requested = (wanted && wanted.length ? wanted : KNOWN_MANIFESTS).filter(Boolean);
+  const candidates = requested.filter((name) => KNOWN_MANIFESTS.includes(name));
   const picked = [];
   for (const name of candidates) {
+    const full = path.resolve(workspaceRoot, name);
+    if (!full.startsWith(path.resolve(workspaceRoot) + path.sep)) continue;
     try {
-      const content = await fsGateway.readText(path.join(workspaceRoot, name));
+      const content = await fsGateway.readText(full);
       if (typeof content === 'string' && content.length > 0) {
         picked.push({ name, content });
       }
@@ -213,9 +219,14 @@ async function audit(opts) {
   }
 
   const stageDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'deps-audit-'));
+  const stageRoot = path.resolve(stageDir);
   try {
     for (const entry of picked) {
-      await fs.promises.writeFile(path.join(stageDir, entry.name), entry.content, { encoding: 'utf8' });
+      // Canonical containment: staged copies can only ever land inside the
+      // stage dir, even if a name somehow smuggles separators (#20 round 2).
+      const target = path.resolve(stageDir, entry.name);
+      if (!target.startsWith(stageRoot + path.sep)) continue;
+      await fs.promises.writeFile(target, entry.content, { encoding: 'utf8' });
     }
     const result = await spawnScanner(bin, buildScanArgs(stageDir), timeoutMs);
     if (result.killed) {

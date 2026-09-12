@@ -87,6 +87,27 @@ test('pickManifests goes through the gateway and skips missing files', async () 
   }
 });
 
+test('pickManifests rejects traversal names that are not on the allowlist', async () => {
+  const ws = freshWorkspace();
+  try {
+    const g = gateway({
+      [join(ws, 'package.json')]: '{}',
+      [join(ws.parent || tmpdir(), 'outside.txt')]: 'secret',
+    });
+    // Review round 2, blocker 5: the plugin-side boundary must hold even if
+    // the host gateway would deny these anyway.
+    const got = await pickManifests(g, ws, ['../../outside.txt', 'package.json', 'sub/../Cargo.toml']);
+    assert.deepEqual(got.map((m) => m.name), ['package.json']);
+  } finally {
+    rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test('buildScanArgs contains the stage dir verbatim', () => {
+  const stage = join(tmpdir(), 'deps-audit-x', 'nested');
+  assert.equal(buildScanArgs(stage).at(-1), stage);
+});
+
 test('audit returns empty when no manifests are present behind the gateway', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'stub-'));
   const stub = join(dir, 'osv-scanner');
