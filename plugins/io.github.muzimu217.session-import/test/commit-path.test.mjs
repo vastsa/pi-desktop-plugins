@@ -93,6 +93,16 @@ assert.strictEqual(importBatchCalls[0].mode, "skip", "skip mode");
 
 // 3. contract conformance on the first session
 const s = importBatchCalls[0].sessions[0];
+
+// 3b. Default placement is "project": a source session that records a project
+// path is bound to that project. The host's import_session runs ensure_project
+// on the path, so carrying projectPath is enough to bind — the plugin sends no
+// projectId (the host resolves/creates the project). Sessions with no projectPath
+// fall back to the standalone SESSIONS list instead. Regresses the "checkbox is a
+// no-op" bug and the standalone-import-never-shows-up bug.
+assert.strictEqual(s.projectPath, "/tmp/proj", "project-bound: projectPath carried so host ensure_project binds it");
+assert.strictEqual(s.projectId, undefined, "project-bound: no host projectId sent (host resolves via path)");
+
 assert.strictEqual(s.createdAt, "2026-09-08T00:00:00.000Z", "createdAt = min");
 assert.strictEqual(s.updatedAt, "2026-09-08T00:00:00.000Z", "updatedAt clamped up >= createdAt");
 assert.strictEqual(s.messages.length, 6 - 1, "system message dropped");

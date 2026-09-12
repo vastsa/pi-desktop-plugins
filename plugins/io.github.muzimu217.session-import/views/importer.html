@@ -329,8 +329,6 @@
         overflow-wrap: anywhere;
       }
       footer.bar { display: flex; align-items: center; gap: 10px; }
-      .bind-opt { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; cursor: pointer; white-space: nowrap; }
-      .bind-opt input { accent-color: var(--accent, #4c8dff); cursor: pointer; }
       #status { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #status.ok { color: var(--ok); }
       #status.err { color: var(--err); }
@@ -387,10 +385,6 @@
 
       <footer class="bar" data-page-node-id="ApsTMyHNvjshRWqpbWubS4">
         <span class="count" id="count" data-page-node-id="booAhN6l1hmSgYohOWmZcb">已选 0 / 0</span>
-        <label class="bind-opt" id="bind-opt" title="勾选后按项目归组导入；不勾选则进入左侧会话列表，立即可见">
-          <input type="checkbox" id="bind-projects" checked />
-          <span id="bind-projects-label">归组到项目</span>
-        </label>
         <button id="import-btn" disabled data-page-node-id="mw8vcteK4JbYMjpEe9OUAd">导入为会话</button>
         <span id="status" data-page-node-id="tUbxRmOH70DWLBHl8T0pLD"></span>
       </footer>
@@ -437,10 +431,6 @@
         if (pe) pe.textContent = t("importer.previewEmpty");
         const imp = $("import-btn");
         if (imp) imp.textContent = t("importer.import");
-        const bindLabel = $("bind-projects-label");
-        if (bindLabel) bindLabel.textContent = t("importer.bindProjects");
-        const bindOpt = $("bind-opt");
-        if (bindOpt) bindOpt.title = t("importer.bindProjects.hint");
       }
       async function initLocale() {
         try {
@@ -832,7 +822,7 @@
           const r = await bridge.invoke("import.commit", {
             source: state.activeSource,
             items: summaries,
-            placement: $("bind-projects").checked ? "project" : "standalone",
+            placement: "project",
           });
           window.__lastTimings = r.timings || null;
           const parts = [t("importer.imported", { count: r.imported })];
@@ -853,23 +843,8 @@
               }),
             );
           }
-          parts.push(
-            $("bind-projects").checked
-              ? t("importer.importDone.project")
-              : t("importer.importDone.tail"),
-          );
+          parts.push(t("importer.importDone.done"));
           setStatus(parts.join(SEP()), r.failed?.length ? "err" : r.truncated ? "warn" : "ok");
-          // P0-F2: native notification telling the user to switch to the
-          // forge view. pluginBridge cannot reach pi.ui.* from the sandboxed
-          // view, so we route through the host via a dedicated channel.
-          if (r.imported > 0) {
-            try {
-              await bridge.invoke("import.notify", {
-                title: t("importer.notify.title"),
-                body: t("importer.notify.body", { source: state.activeSource, count: r.imported }),
-              });
-            } catch { /* host missing the channel — silent */ }
-          }
         } catch (error) {
           setStatus(t("importer.importFailed", { error }), "err");
         } finally {
@@ -879,21 +854,9 @@
 
       $("scan-btn").addEventListener("click", scanSources);
       $("import-btn").addEventListener("click", importSelected);
-      // Project grouping is the default: imported sessions belong under the
-      // project they came from, matching the left sidebar's PROJECTS list.
-      // Unchecked imports land in the standalone session list instead. The
-      // choice is remembered per panel.
-      const BIND_KEY = "pi-universal-import.bindProjects";
-      const bindBox = $("bind-projects");
-      try {
-        const stored = localStorage.getItem(BIND_KEY);
-        bindBox.checked = stored === null ? true : stored === "1";
-      } catch { /* best-effort */ }
-      bindBox.addEventListener("change", () => {
-        try {
-          localStorage.setItem(BIND_KEY, bindBox.checked ? "1" : "0");
-        } catch { /* best-effort */ }
-      });
+      // Imports bind to the source project by default (host ensure_project on
+      // projectPath); sessions with no project path fall back to the standalone
+      // SESSIONS list. No UI toggle is needed.
       $("filter").addEventListener("input", renderList);
       $("select-all").addEventListener("click", () => {
         const q = $("filter").value.trim().toLowerCase();
