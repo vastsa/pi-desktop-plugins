@@ -15,7 +15,7 @@ const themeCss = readFileSync(
 test("Parchment manifest declares the exact release identity and capabilities", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.parchment");
-  assert.equal(manifest.version, "1.0.3");
+  assert.equal(manifest.version, "1.0.4");
   assert.deepEqual(manifest.categories, ["theme", "community"]);
   assert.equal(manifest.main, "main.js");
   assert.equal(manifest.ui.panel, "renderer/index.html");
@@ -30,6 +30,24 @@ test("Parchment manifest declares the exact release identity and capabilities", 
   ]);
   assert.ok(manifest.i18n?.en?.safetyNotes);
   assert.ok(manifest.i18n?.["zh-CN"]?.safetyNotes);
+});
+
+test("Dark user bubble keeps paper-toned file chips, links and inline code", () => {
+  // Host pins .message-attachment to --ds-text-secondary and hover states to
+  // --ds-accent (both dark), so on the ink user bubble filenames and links
+  // render invisible. The theme must re-apply paper tones in-bubble only.
+  assert.match(
+    themeCss,
+    /\.message-row\.user\s+\.message-bubble\s+\.message-attachment,/,
+  );
+  assert.match(
+    themeCss,
+    /\.message-row\.user\s+\.message-bubble\s+\.chat-text-link,/,
+  );
+  assert.match(
+    themeCss,
+    /\.message-row\.user\s+\.message-bubble\s+\.prose-chat\s+code/,
+  );
 });
 
 test("Parchment code surfaces beat the host light-theme cascade", () => {
