@@ -255,7 +255,15 @@
         ${f.fixed.length ? `<dt>已修复版本</dt><dd>${escapeHtml(f.fixed.join(', '))}</dd>` : '<dt>已修复版本</dt><dd>(暂无)</dd>'}
         ${f.source ? `<dt>来源</dt><dd>${escapeHtml(f.source)}</dd>` : ''}
       </dl>
-      ${f.references.length ? `<div class="refs"><h3>参考</h3>${f.references.slice(0,5).map(r => `<a href="${escapeAttr(r.url)}" target="_blank" rel="noreferrer">${escapeHtml(r.type)} · ${escapeHtml(r.url)}</a>`).join('')}</div>` : ''}
+      ${f.references.length ? `<div class="refs"><h3>参考</h3>${f.references.slice(0,5).map(r => {
+        // Only http(s) may become an active link: scanner/parser output is
+        // untrusted data, and escapeAttr alone cannot stop javascript:/data:.
+        let href = '';
+        try { const u = new URL(r.url); if (u.protocol === 'https:' || u.protocol === 'http:') href = u.href; } catch { href = ''; }
+        return href
+          ? `<a href="${escapeAttr(href)}" target="_blank" rel="noreferrer">${escapeHtml(r.type)} · ${escapeHtml(r.url)}</a>`
+          : `<span class="ref-plain">${escapeHtml(r.type)} · ${escapeHtml(r.url)}</span>`;
+      }).join('')}</div>` : ''}
       <div class="actions">
         <button class="primary" id="fix-btn">复制给 Agent 询问修复建议</button>
       </div>
