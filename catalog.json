@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-11T18:47:58Z",
+  "updatedAt": "2026-09-12T05:51:37Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -864,20 +864,20 @@
         }
       ]
     },
-    {
+        {
       "id": "pi.workspace-file-guard",
-      "name": "Workspace File Guard",
-      "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Works on any machine: Windows, macOS, Linux, any drive letter, any username.",
+      "name": "防C盘拉屎",
+      "description": "防止模型把测试、日志、缓存、临时文件往 C 盘、桌面、下载里乱写。垃圾只能待在当前项目或 scratch。",
       "i18n": {
         "en": {
-          "name": "Workspace File Guard",
-          "description": "Keep test, temp, scratch, log and cache files inside the current workspace or PI scratch. Never spill onto the system volume, Desktop, Downloads, Documents or system temp.",
-          "safetyNotes": "Behavioral confinement only. The plugin reads the local XDG user-dirs configuration to classify paths, injects agent rules, and does not write files or access the network."
+          "name": "防C盘拉屎",
+          "description": "防止模型把测试、日志、缓存、临时文件往 C 盘、桌面、下载里乱写。垃圾只能待在当前项目或 scratch。",
+          "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。"
         },
         "zh-CN": {
-          "name": "\u5de5\u4f5c\u533a\u6587\u4ef6\u62a4\u680f",
-          "description": "\u628a\u6d4b\u8bd5\u3001\u4e34\u65f6\u3001\u8349\u7a3f\u3001\u65e5\u5fd7\u3001\u7f13\u5b58\u7b49\u5783\u573e\u6587\u4ef6\u5173\u5728\u5f53\u524d\u5de5\u4f5c\u533a\u6216 PI scratch \u91cc\u3002\u4efb\u610f\u673a\u5668\u3001\u4efb\u610f\u76d8\u7b26\u3001\u4efb\u610f\u7528\u6237\u540d\u90fd\u53ef\u7528\uff0c\u4e0d\u5199\u6b7b C: \u6216\u672c\u673a\u8def\u5f84\u3002",
-          "safetyNotes": "\u8fd9\u662f\u884c\u4e3a\u7ea6\u675f\uff0c\u4e0d\u662f\u78c1\u76d8\u9501\u3002\u63d2\u4ef6\u4f1a\u8bfb\u53d6\u672c\u673a XDG \u7528\u6237\u76ee\u5f55\u914d\u7f6e\u6765\u5206\u7c7b\u8def\u5f84\uff0c\u6ce8\u5165 Agent \u89c4\u5219\uff0c\u4e0d\u5199\u5165\u6587\u4ef6\u3001\u4e0d\u6539 ACL\u3001\u4e0d\u8054\u7f51\u3002"
+          "name": "防C盘拉屎",
+          "description": "防止模型把测试、日志、缓存、临时文件往 C 盘、桌面、下载里乱写。垃圾只能待在当前项目或 scratch。",
+          "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。"
         }
       },
       "author": "xingleiwu",
@@ -888,17 +888,17 @@
       "downloads": 0,
       "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.workspace-file-guard",
       "repository": "https://github.com/vastsa/pi-desktop-plugins",
-      "readmeMarkdown": "# \u5de5\u4f5c\u533a\u6587\u4ef6\u62a4\u680f\n\n\u628a\u6d4b\u8bd5\u3001\u4e34\u65f6\u3001\u8349\u7a3f\u3001\u65e5\u5fd7\u3001\u7f13\u5b58\u7b49\u5783\u573e\u6587\u4ef6\u5173\u5728\u5f53\u524d\u5de5\u4f5c\u533a\u6216 PI scratch \u91cc\u3002\u8fd9\u662f\u884c\u4e3a\u7ea6\u675f\uff0c\u4e0d\u662f\u78c1\u76d8\u9501\u3002\n\n\u4fbf\u643a\u7684 PI-Desktop skill \u5305\uff1a\u542f\u7528\u4e00\u6b21\u540e\uff0c\u6bcf\u4e2a\u4f1a\u8bdd\u90fd\u4f1a\u6ce8\u5165\u89c4\u5219\u5e76\u6ce8\u518c\u5206\u7c7b\u5de5\u5177\u3002\u8def\u5f84\u6309\u5f53\u524d\u64cd\u4f5c\u7cfb\u7edf\u3001\u7528\u6237\u4e3b\u76ee\u5f55\u3001\u5de5\u4f5c\u533a\u548c\u73af\u5883\u53d8\u91cf\u89e3\u6790\uff0c\u4e0d\u5199\u6b7b `C:`\u3001\u7528\u6237\u540d\u6216\u67d0\u53f0\u673a\u5668\u7684\u76ee\u5f55\u3002\n\n## \u63d0\u4f9b\u4ec0\u4e48\n\n- Skill\uff1a`skills/workspace-file-guard.md`\uff08\u63d2\u4ef6\u542f\u7528\u671f\u95f4\u6ce8\u5165 Agent\uff09\n- \u5de5\u5177\uff1a`project_root` / `check_path` / `temp_env` / `tmp_layout`\n- \u62d2\u7edd\u6e05\u5355\uff1a`references/denied-paths.md`\n- \u5206\u7c7b\u5668\uff1a`guard.js`\n\n## \u6587\u4ef6\u8be5\u5199\u5230\u54ea\n\n| \u7c7b\u578b | \u4f4d\u7f6e |\n| --- | --- |\n| \u7528\u6237\u8981\u6c42\u4fdd\u7559\u7684\u6e90\u7801 | \u5de5\u4f5c\u533a\uff08`src/`\u3001`tests/` \u7b49\uff09 |\n| \u4e00\u6b21\u6027\u8349\u7a3f\u3001\u8f6c\u50a8\u3001\u65e5\u5fd7 | `$PI_SCRATCH_DIR` |\n| \u9879\u76ee\u672c\u5730\u7f13\u5b58 | `$project/.tmp/cache` |\n\n\u7981\u6b62\uff1a\u684c\u9762\u3001\u4e0b\u8f7d\u3001\u6587\u6863\u3001\u7cfb\u7edf\u4e34\u65f6\u76ee\u5f55\uff1b\u9879\u76ee\u5728\u5176\u4ed6\u76d8\u65f6\u7981\u6b62\u5199\u5230\u7cfb\u7edf\u76d8\uff1bProgram Files\u3001`/usr`\u3001`/Applications`\u3002\n\n## \u6743\u9650\n\n| \u6743\u9650 | \u7528\u9014 |\n| --- | --- |\n| `agent.prompt.inject` | \u6ce8\u5165\u62a4\u680f\u89c4\u5219\uff0c\u8ba9 Agent \u9ed8\u8ba4\u628a\u5783\u573e\u6587\u4ef6\u5173\u5728\u5de5\u4f5c\u533a / scratch |\n| `agent.tool.register` | \u6ce8\u518c\u8def\u5f84\u5206\u7c7b\u5de5\u5177\uff0c\u4f9b Agent \u5728\u5199\u6587\u4ef6\u524d\u67e5\u8be2 |\n\n\u4e0d\u7533\u8bf7 `fs.*` \u5bbf\u4e3b\u6587\u4ef6\u7cfb\u7edf\u6743\u9650\u3001\u7f51\u7edc\u3001\u526a\u8d34\u677f\u6216\u540e\u53f0\u670d\u52a1\u6743\u9650\u3002\u4e3a\u8bc6\u522b Linux/XDG \u81ea\u5b9a\u4e49\u7528\u6237\u76ee\u5f55\uff0c\u5206\u7c7b\u5668\u4f1a\u53ea\u8bfb\u672c\u673a `~/.config/user-dirs.dirs`\uff08\u82e5\u5b58\u5728\uff09\uff0c\u4e0d\u4f1a\u4e0a\u4f20\u6216\u8fd4\u56de\u8be5\u6587\u4ef6\u539f\u6587\u3002\u63d2\u4ef6\u672c\u8eab\u4e0d\u5199\u76d8\u3001\u4e0d\u6539 ACL\u3001\u4e0d\u8054\u7f51\uff1b\u771f\u6b63\u843d\u76d8\u7684\u4ecd\u662f Agent \u81ea\u5df1\u7684 Write / Bash\u3002\n\n## \u5b89\u88c5\n\n1. PI-Desktop \u2192 \u6269\u5c55 \u2192 \u5b89\u88c5\u63d2\u4ef6\u5305\uff0c\u9009\u62e9 `packages/pi.workspace-file-guard-0.2.5.piplug`\u3002\n2. \u82e5\u51fa\u73b0\u6743\u9650\u786e\u8ba4\uff0c\u52fe\u9009 `agent.prompt.inject` \u4e0e `agent.tool.register`\uff08\u5f53\u524d\u5bbf\u4e3b\u5bf9\u672c\u5730 `.piplug` \u53ef\u80fd\u6309\u6e05\u5355\u9759\u9ed8\u5168\u6388\uff09\u3002\n3. \u65b0\u5f00\u4e00\u4e2a Agent \u4f1a\u8bdd\uff0cskill \u624d\u4f1a\u6ce8\u5165\u3002\n\n\u4e5f\u53ef\u628a\u672c\u76ee\u5f55\u5f53\u4f5c\u5f00\u53d1\u63d2\u4ef6\u52a0\u8f7d\uff08\u4fdd\u5b58\u540e\u70ed\u91cd\u8f7d\uff09\u3002\u5f00\u53d1\u63d2\u4ef6\u6269\u6743\u540e\u8bf7\u91cd\u65b0\u300c\u52a0\u8f7d\u5f00\u53d1\u63d2\u4ef6\u300d\uff0c\u4e0d\u8981\u53ea\u70b9\u300c\u91cd\u65b0\u52a0\u8f7d\u300d\u3002\n\n## \u5f00\u53d1\u9a8c\u8bc1\n\n```bash\nnode tests/workspace-file-guard-guard.test.js\nnode tests/workspace-file-guard-main.test.js\npython scripts/pack_plugin.py plugins/pi.workspace-file-guard\npython scripts/rebuild_catalog.py\npython scripts/security_audit.py --check-packages\n```\n\n## \u80fd\u529b\u8fb9\u754c\n\n- \u4e0d\u662f\u4e8b\u540e\u6e05\u7406\u78c1\u76d8\u3002\n- \u4e0d\u662f\u8de8\u9879\u76ee\u8bbf\u95ee\u9694\u79bb\u3002\n- \u4e0d\u662f\u64cd\u4f5c\u7cfb\u7edf\u6c99\u7bb1\u3001BitLocker\u3001SIP \u6216\u6587\u4ef6\u5939 ACL\u3002\n- `root` \u8986\u76d6\u53ea\u5728\u7528\u6237\u660e\u786e\u9009\u62e9\u9879\u76ee\u6839\u65f6\u4f7f\u7528\uff1b\u5de5\u5177\u65e0\u6cd5\u9a8c\u8bc1\u8be5\u9009\u62e9\uff0c\u4e0d\u80fd\u628a\u5b83\u5f53\u6210\u5b89\u5168\u8fb9\u754c\u3002\n- `explicit` \u53ea\u662f\u6a21\u578b\u5bf9\u7528\u6237\u610f\u56fe\u7684\u58f0\u660e\uff1b\u684c\u9762\u3001\u4e0b\u8f7d\u3001\u6587\u6863\u548c\u7cfb\u7edf\u4e34\u65f6\u76ee\u5f55\u5373\u4f7f\u6807\u8bb0\u4e5f\u7981\u6b62\u3002\n\n## \u80fd\u529b / \u6570\u636e\u6d41\n\n| \u80fd\u529b | \u6570\u636e | \u65b9\u5411 |\n| --- | --- | --- |\n| `agent.prompt.inject` | \u672c\u63d2\u4ef6 `skills/workspace-file-guard.md` \u89c4\u5219\u6587\u672c | \u6ce8\u5165\u5f53\u524d\u4f1a\u8bdd\u7684\u7cfb\u7edf\u63d0\u793a\uff0c\u4e0d\u8bfb\u804a\u5929\u8bb0\u5f55 |\n| `agent.tool.register` | \u8c03\u7528\u53c2\u6570\u91cc\u7684\u8def\u5f84\u5b57\u7b26\u4e32\uff1b`pi.workspace.get()` \u7684\u5de5\u4f5c\u533a\u8def\u5f84\uff1b`PI_SCRATCH_DIR` / \u4e3b\u76ee\u5f55 / \u5e38\u89c1\u7cfb\u7edf\u76ee\u5f55 | \u53ea\u8fd4\u56de\u5206\u7c7b\u7ed3\u679c\u4e0e\u73af\u5883\u53d8\u91cf\u5efa\u8bae\uff0c\u4e0d\u5199\u76d8 |\n| \u6587\u4ef6\u7cfb\u7edf | \u672c\u673a `~/.config/user-dirs.dirs`\uff08\u82e5\u5b58\u5728\uff09 | \u4ec5\u7528\u4e8e\u8bc6\u522b XDG \u7528\u6237\u76ee\u5f55\uff0c\u4e0d\u4e0a\u4f20\u3001\u4e0d\u8fd4\u56de\u539f\u6587 |\n| \u7f51\u7edc / \u526a\u8d34\u677f / \u540e\u53f0\u670d\u52a1 | \u65e0 | \u4e0d\u7533\u8bf7\u3001\u4e0d\u4f7f\u7528 |\n\n\u5931\u8d25\u8def\u5f84\uff1a\u6ca1\u6709\u6253\u5f00\u5de5\u4f5c\u533a\u4e14\u672a\u4f20 `root` \u65f6\u5de5\u5177\u8fd4\u56de `ok: false`\uff0c\u4e0d\u4f1a\u56de\u9000\u5230\u63d2\u4ef6\u5b89\u88c5\u76ee\u5f55\u6216 cwd\u3002\u684c\u9762\u3001\u4e0b\u8f7d\u3001\u6587\u6863\u3001\u7cfb\u7edf\u4e34\u65f6\u76ee\u5f55\u5373\u4f7f `explicit=true` \u4e5f\u62d2\u7edd\u3002\n",
-      "safetyNotes": "Behavioral confinement only. The plugin reads the local XDG user-dirs configuration to classify paths, injects agent rules, and does not write files or access the network.",
+      "readmeMarkdown": "# 防C盘拉屎\n\n防止模型往 C 盘拉屎：测试、日志、缓存、临时文件不许写到系统盘、桌面、下载。垃圾只能待在当前项目或 scratch。\n\n启用一次即可。路径按当前机器解析，不写死盘符或用户名。这是行为约束，不是磁盘锁。\n\n## 提供什么\n\n- Skill：`skills/workspace-file-guard.md`（插件启用期间注入 Agent）\n- 工具：`project_root` / `check_path` / `temp_env` / `tmp_layout`\n- 拒绝清单：`references/denied-paths.md`\n- 分类器：`guard.js`\n\n## 文件该写到哪\n\n| 类型 | 位置 |\n| --- | --- |\n| 用户要求保留的源码 | 工作区（`src/`、`tests/` 等） |\n| 一次性草稿、转储、日志 | `$PI_SCRATCH_DIR` |\n| 项目本地缓存 | `$project/.tmp/cache` |\n\n禁止：桌面、下载、文档、系统临时目录；项目在其他盘时禁止写到系统盘；Program Files、`/usr`、`/Applications`。\n\n## 权限\n\n| 权限 | 用途 |\n| --- | --- |\n| `agent.prompt.inject` | 注入护栏规则，让 Agent 默认把垃圾文件关在工作区 / scratch |\n| `agent.tool.register` | 注册路径分类工具，供 Agent 在写文件前查询 |\n\n不申请 `fs.*` 宿主文件系统权限、网络、剪贴板或后台服务权限。为识别 Linux/XDG 自定义用户目录，分类器会只读本机 `~/.config/user-dirs.dirs`（若存在），不会上传或返回该文件原文。插件本身不写盘、不改 ACL、不联网；真正落盘的仍是 Agent 自己的 Write / Bash。\n\n## 安装\n\n1. PI-Desktop → 扩展 → 安装插件包，选择 `packages/pi.workspace-file-guard-0.2.6.piplug`。\n2. 若出现权限确认，勾选 `agent.prompt.inject` 与 `agent.tool.register`（当前宿主对本地 `.piplug` 可能按清单静默全授）。\n3. 新开一个 Agent 会话，skill 才会注入。\n\n也可把本目录当作开发插件加载（保存后热重载）。开发插件扩权后请重新「加载开发插件」，不要只点「重新加载」。\n\n## 开发验证\n\n```bash\nnode tests/workspace-file-guard-guard.test.js\nnode tests/workspace-file-guard-main.test.js\npython scripts/pack_plugin.py plugins/pi.workspace-file-guard\npython scripts/rebuild_catalog.py\npython scripts/security_audit.py --check-packages\n```\n\n## 能力边界\n\n- 不是事后清理磁盘。\n- 不是跨项目访问隔离。\n- 不是操作系统沙箱、BitLocker、SIP 或文件夹 ACL。\n- `root` 覆盖只在用户明确选择项目根时使用；工具无法验证该选择，不能把它当成安全边界。\n- `explicit` 只是模型对用户意图的声明；桌面、下载、文档和系统临时目录即使标记也禁止。\n\n## 能力 / 数据流\n\n| 能力 | 数据 | 方向 |\n| --- | --- | --- |\n| `agent.prompt.inject` | 本插件 `skills/workspace-file-guard.md` 规则文本 | 注入当前会话的系统提示，不读聊天记录 |\n| `agent.tool.register` | 调用参数里的路径字符串；`pi.workspace.get()` 的工作区路径；`PI_SCRATCH_DIR` / 主目录 / 常见系统目录 | 只返回分类结果与环境变量建议，不写盘 |\n| 文件系统 | 本机 `~/.config/user-dirs.dirs`（若存在） | 仅用于识别 XDG 用户目录，不上传、不返回原文 |\n| 网络 / 剪贴板 / 后台服务 | 无 | 不申请、不使用 |\n\n失败路径：没有打开工作区且未传 `root` 时工具返回 `ok: false`，不会回退到插件安装目录或 cwd。桌面、下载、文档、系统临时目录即使 `explicit=true` 也拒绝。\n",
+      "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。",
       "versions": [
         {
-          "version": "0.2.5",
-          "publishedAt": "2026-09-11T18:47:58Z",
-          "changelog": "0.2.5: Quote generated bash and PowerShell assignments safely, reject unsafe cmd values, enforce canonical root/scratch and symlink boundaries, include negative-path tests in CI, and sync the package. 0.2.4\uff1a\u8bf4\u660e\u6539\u4e3a\u4e2d\u6587\u30020.2.3\uff1a\u53bb\u6389 git/cwd \u4f5c\u4e3a\u9879\u76ee\u6839\u56de\u9000\uff1bcmd \u73af\u5883\u53d8\u91cf\u62d2\u7edd\u5185\u5d4c\u5f15\u53f7\uff1b\u8986\u76d6\u5de5\u4f5c\u533a API \u5931\u8d25\u4e0e explicit \u4e34\u65f6\u76ee\u5f55\u62d2\u7edd\u30020.2.2\uff1a\u76f8\u5bf9\u8def\u5f84\u76f8\u5bf9\u5de5\u4f5c\u533a\u89e3\u6790\u30020.2.1\uff1aexplicit \u76ee\u6807\u4e0e XDG_DOWNLOAD_DIR\u30020.2.0\uff1a\u8de8\u673a\u5668\u4fbf\u643a\u3002",
+          "version": "0.2.6",
+          "publishedAt": "2026-09-12T05:51:37Z",
+          "changelog": "0.2.6：市场名称改为「防C盘拉屎」，介绍改成直白中文。 0.2.5: Quote generated bash and PowerShell assignments safely, reject unsafe cmd values, enforce canonical root/scratch and symlink boundaries, include negative-path tests in CI, and sync the package. 0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "3404330cda3d8fa51fb1bc8e8eefb97c0b3e589b58c2163901a9985ea0b040de",
-          "url": "packages/pi.workspace-file-guard-0.2.5.piplug",
-          "sizeBytes": 38271,
+          "shasum": "51d6269a3ef40c069da4b52fa8eae79907a3f8586c4f675452bbc94f033b324a",
+          "url": "packages/pi.workspace-file-guard-0.2.6.piplug",
+          "sizeBytes": 39364,
           "permissions": [
             "agent.prompt.inject",
             "agent.tool.register"

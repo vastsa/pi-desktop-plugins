@@ -28,7 +28,7 @@ async function run() {
   const manifest = JSON.parse(
     fs.readFileSync(path.join(__dirname, "..", "plugins", "pi.workspace-file-guard", "manifest.json"), "utf8")
   );
-  assert(manifest.version === "0.2.5", "manifest version must match the reviewed release");
+  assert(manifest.version === "0.2.6", "manifest version must match the reviewed release");
   assert(
     JSON.stringify(manifest.permissions) === JSON.stringify(["agent.prompt.inject", "agent.tool.register"]),
     "manifest permissions must remain minimal and exact"

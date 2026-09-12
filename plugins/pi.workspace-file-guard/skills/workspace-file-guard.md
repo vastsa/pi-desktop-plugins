@@ -3,9 +3,9 @@ name: workspace-file-guard
 description: 把测试文件、临时文件、草稿脚本、日志、转储、缓存和垃圾文件关在当前工作区或 PI scratch。创建文件、跑测试、生成产物、写辅助脚本、使用 TEMP/TMP/TMPDIR、下载缓存，或在 Windows / macOS / Linux 上工作时使用。不要把这些文件写到其他卷、工作区外的系统盘、桌面、下载、文档或系统临时目录。只读检查、用户明确要求的插件/skill 安装、以及用户本轮点名的外部目标不要套用本 skill。
 ---
 
-# 工作区文件护栏
+# 防C盘拉屎
 
-把 Agent 产生的垃圾文件关在当前项目或 PI scratch 里。这是行为约束，不是操作系统锁。
+拦住 Agent 往 C 盘、桌面、下载乱写测试/日志/缓存。垃圾只许待在当前项目或 PI scratch。这是行为约束，不是操作系统锁。
 
 插件工具（宿主前缀 `plugin_pi_workspace_file_guard_`）：
 
