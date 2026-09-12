@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.muzimu217.deps-audit",
+  "name": "Deps Audit",
+  "version": "0.2.0",
+  "description": "依赖漏洞扫描：唤起 osv-scanner 扫描工作区，列出 OSV 数据库中的依赖漏洞，让 Agent 给出升级或修复 patch。",
+  "i18n": {
+    "en": {
+      "name": "Deps Audit",
+      "description": "Dependency vulnerability audit: invoke osv-scanner over the workspace, list known OSV matches, and let the Agent propose a fix or upgrade.",
+      "safetyNotes": "Reads only the workspace-root dependency manifests listed in the declared fs.read scope (package.json, lockfiles, requirements.txt, Cargo.toml/lock, go.mod/sum, pom.xml, composer.json/lock, Gemfile/lock, pyproject.toml) through the host fs gateway, stages sanitized copies in a throwaway temp directory, and spawns the local osv-scanner binary against that directory — the spawned binary never reads the workspace directly and contacts the OSV database over the network (declared High-risk capability). Staging copies are deleted after each scan. Nothing in the workspace is ever written."
+    },
+    "zh-CN": {
+      "name": "依赖审计",
+      "description": "依赖漏洞扫描：唤起 osv-scanner 扫描工作区，列出 OSV 数据库中的依赖漏洞，让 Agent 给出升级或修复 patch。",
+      "safetyNotes": "Reads only the workspace-root dependency manifests listed in the declared fs.read scope (package.json, lockfiles, requirements.txt, Cargo.toml/lock, go.mod/sum, pom.xml, composer.json/lock, Gemfile/lock, pyproject.toml) through the host fs gateway, stages sanitized copies in a throwaway temp directory, and spawns the local osv-scanner binary against that directory — the spawned binary never reads the workspace directly and contacts the OSV database over the network (declared High-risk capability). Staging copies are deleted after each scan. Nothing in the workspace is ever written."
+    }
+  },
+  "categories": [
+    "security",
+    "developer-tools",
+    "audit"
+  ],
+  "changelog": "0.2.0：按维护者评审重做（#20）。修复插件生命周期（onLoad 改用宿主注入的 globalThis.pi，原实现因缺参而从不注册）；扫描面板改经宿主 API 解析当前工作区与设置（不再误扫插件进程目录）；清单文件改经 fs.read 权限网关读取，净化副本暂存一次性临时目录后再交给 osv-scanner（原生二进制与网络能力按 SECURITY.md 声明为 High 风险，附负面路径测试）；osv-scanner 命令改为 v2 正确用法（scan source --format json --recursive）；剪贴板复制改走宿主 clipboard.write 桥；PATH 查找兼容 Windows（where.exe）；面板符合 v3 chrome 契约。0.1.0：首个公开版本。",
+  "safetyNotes": "只经宿主 fs 网关读取声明作用域内的工作区根目录依赖清单（package.json、各语言锁文件等），把净化副本放入一次性临时目录，再对临时目录运行本机 osv-scanner 二进制——被拉起的二进制绝不直接读取工作区，且会联网访问 OSV 数据库（已声明 High 风险能力）。临时副本在每次扫描后删除；工作区永不被写入。",
+  "author": "muzimu217",
+  "main": "main.js",
+  "ui": {
+    "panel": "views/audit.html",
+    "width": 1040,
+    "height": 680,
+    "title": {
+      "en": "Deps Audit",
+      "zh-CN": "依赖审计"
+    }
+  },
+  "contributes": {
+    "views": [
+      {
+        "id": "deps-audit",
+        "title": {
+          "en": "Deps Audit",
+          "zh-CN": "依赖审计"
+        },
+        "icon": "shield",
+        "entry": "views/audit.html",
+        "order": 48
+      }
+    ],
+    "commands": [
+      {
+        "id": "deps-audit.open",
+        "title": "Deps Audit: Open Work-Panel View",
+        "keywords": [
+          "deps",
+          "audit",
+          "vuln",
+          "osv",
+          "依赖",
+          "漏洞",
+          "扫描"
+        ],
+        "category": "Security"
+      },
+      {
+        "id": "deps-audit.run",
+        "title": "Deps Audit: Scan Workspace Now",
+        "keywords": [
+          "scan",
+          "audit",
+          "vuln",
+          "扫描",
+          "依赖"
+        ],
+        "category": "Security"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "deps_audit_run",
+        "description": "Run an OSV-Scanner audit on the workspace's dependency manifests. Returns a structured vulnerability list (ecosystem, package, installed version, fix versions, advisory links). The Agent must not auto-apply any fix — only summarize and propose; the user applies. Spawns the local osv-scanner binary, which contacts the OSV database over the network (High-risk capability).",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manifests": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "package.json",
+                  "requirements.txt",
+                  "Cargo.toml",
+                  "go.mod",
+                  "pom.xml",
+                  "*.gemspec",
+                  "pyproject.toml",
+                  "composer.json"
+                ]
+              },
+              "description": "Restrict to these manifest types; empty = all detected."
+            },
+            "severity_min": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "description": "Filter: only show findings at or above this severity."
+            }
+          }
+        }
+      }
+    ],
+    "settings": [
+      {
+        "key": "scannerPath",
+        "title": "osv-scanner binary path",
+        "description": "绝对路径或 PATH 中的可执行名。留空则按 PATH 查找 osv-scanner。",
+        "type": "string",
+        "default": "osv-scanner",
+        "scope": "plugin"
+      },
+      {
+        "key": "severityMin",
+        "title": "Severity filter",
+        "description": "仅显示达到该等级及以上的漏洞。",
+        "type": "select",
+        "default": "low",
+        "enum": [
+          {
+            "label": "Low (show all)",
+            "value": "low"
+          },
+          {
+            "label": "Medium",
+            "value": "medium"
+          },
+          {
+            "label": "High",
+            "value": "high"
+          },
+          {
+            "label": "Critical",
+            "value": "critical"
+          }
+        ],
+        "scope": "plugin"
+      }
+    ]
+  },
+  "permissions": [
+    "ui.panel",
+    "ui.view",
+    "fs.read",
+    "clipboard.write",
+    "agent.tool.register"
+  ],
+  "engines": {
+    "piDesktop": ">=0.14.3"
+  },
+  "activationEvents": [
+    "onCommand:deps-audit.open",
+    "onCommand:deps-audit.run",
+    "onStartup"
+  ],
+  "fs": {
+    "read": {
+      "root": "workspace",
+      "scope": [
+        "package.json",
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "requirements.txt",
+        "pyproject.toml",
+        "Pipfile",
+        "Cargo.toml",
+        "Cargo.lock",
+        "go.mod",
+        "go.sum",
+        "pom.xml",
+        "composer.json",
+        "composer.lock",
+        "Gemfile",
+        "Gemfile.lock"
+      ]
+    }
+  }
+}
