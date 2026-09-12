@@ -39,6 +39,23 @@ def sha256(path: Path) -> str:
 
 
 def main() -> int:
+    out = ROOT / "catalog.json"
+    existing_catalog = json.loads(out.read_text(encoding="utf-8")) if out.exists() else {}
+    existing_published_at = {}
+    for plugin in existing_catalog.get("plugins", []):
+        if not isinstance(plugin, dict):
+            continue
+        versions = plugin.get("versions", [])
+        if not isinstance(versions, list):
+            continue
+        for version_entry in versions:
+            if not isinstance(version_entry, dict):
+                continue
+            published_at = version_entry.get("publishedAt")
+            if published_at:
+                key = (plugin.get("id"), version_entry.get("version"))
+                existing_published_at[key] = published_at
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     plugins = []
     for manifest_path in sorted(PLUGINS.glob("*/manifest.json")):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -68,7 +85,7 @@ def main() -> int:
                 "versions": [
                     {
                         "version": version,
-                        "publishedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "publishedAt": existing_published_at.get((plugin_id, version)) or now,
                         "changelog": manifest.get("changelog") or f"Release {version}",
                         "minPiDesktop": (manifest.get("engines") or {}).get("piDesktop", ">=0.2.0"),
                         "shasum": sha256(package),
@@ -85,11 +102,10 @@ def main() -> int:
         "schemaVersion": 1,
         "providerId": "official",
         "name": "PI-Desktop Official Plugins",
-        "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updatedAt": now,
         "homepage": "https://github.com/vastsa/pi-desktop-plugins",
         "plugins": plugins,
     }
-    out = ROOT / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out} ({len(plugins)} plugins)")
     return 0
