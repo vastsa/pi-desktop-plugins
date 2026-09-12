@@ -75,7 +75,6 @@ docs/session-import-sources.json
 | 权限 | 用途 |
 | --- | --- |
 | `ui.panel` / `ui.view` | 导入面板与「会话熔炉」工作面板视图 |
-| `notify` | 扫描 / 导入完成或失败时发一条通知 |
 | `session.read` / `session.read.own` | 读回本插件导入过的会话，供熔炉蒸馏 |
 | `session.import` | 把选中的会话写入 PI-Desktop 会话库 |
 | `project.create` | 按会话的 `projectPath` 幂等解析 / 绑定 projectId（无此能力的宿主退回未绑定导入） |

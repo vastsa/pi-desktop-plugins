@@ -42,10 +42,10 @@ describe("lib/i18n getMessage", () => {
     );
   });
 
-  test("interpolates multiple placeholders in order", () => {
+  test("resolves the importDone.done key in zh-CN", () => {
     assert.strictEqual(
-      getMessage("zh-CN", "importer.notify.body", { source: "zcode", count: 3 }),
-      "已通过「zcode」导入 3 个会话。点击右侧「会话熔炉」开始蒸馏。",
+      getMessage("zh-CN", "importer.importDone.done"),
+      "——已按项目归组；打开对应项目或在「项目」页查看",
     );
   });
 
