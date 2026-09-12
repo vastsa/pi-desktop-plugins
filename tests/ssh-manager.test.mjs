@@ -79,7 +79,7 @@ function readAskpassBroker(endpoint, token) {
 test("manifest declares a high-risk SSH agent surface with the smallest plugin permissions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.ssh-manager");
-  assert.equal(manifest.version, "0.1.3");
+  assert.equal(manifest.version, "0.1.4");
   assert.equal(manifest.ui.panel, "renderer/index.html");
   assert.deepEqual(manifest.permissions, [
     "ui.panel",
@@ -362,6 +362,26 @@ test("unload cleanup cancels an askpass broker before its listen callback", asyn
   ssh.killActiveProcesses();
   await assert.rejects(pending, /askpass broker was cancelled/i);
   assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
+});
+
+test("unload cleanup after listen prevents a new ssh child from starting", async () => {
+  const fake = makeExecFile();
+  ssh.__test.setExecFile(fake.execFile);
+  ssh.__test.setAskpassReadyHook(() => ssh.killActiveProcesses());
+  try {
+    await assert.rejects(
+      ssh.runSsh(
+        ssh.normalizeProfile({ name: "late-cancelled", host: "late-cancelled.example.com", username: "deploy" }),
+        { password: "test-only-password", remoteCommand: "true" },
+      ),
+      /askpass broker was cancelled/i,
+    );
+    assert.equal(fake.calls.length, 0);
+    assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
+  } finally {
+    ssh.__test.setAskpassReadyHook(null);
+    ssh.__test.resetExecFile();
+  }
 });
 
 test("dangerous and ambiguous remote commands are blocked conservatively", () => {
