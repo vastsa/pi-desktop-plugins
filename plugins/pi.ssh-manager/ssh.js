@@ -681,6 +681,15 @@ function buildTarget(profile) {
   return profile.configAlias ? profile.host : `${profile.username}@${profile.host}`;
 }
 
+function isDefaultSshConfig(value) {
+  if (!value) return false;
+  const comparable = (candidate) => {
+    const resolved = path.resolve(expandUserPath(candidate));
+    return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+  };
+  return comparable(value) === comparable(path.join(os.homedir(), ".ssh", "config"));
+}
+
 function buildSshArgs(profile, options = {}) {
   const timeoutSeconds = normalizeTimeout(options.timeoutSeconds);
   const hasPassword = Boolean(options.password);
@@ -688,6 +697,10 @@ function buildSshArgs(profile, options = {}) {
     ? "accept-new"
     : profile.strictHostKeyChecking;
   const args = [
+    // One-shot commands must never inherit the plugin process's stdin. An
+    // attached stdin can leave OpenSSH waiting for input after the panel has
+    // already timed out, especially when the remote side requests a banner.
+    "-n",
     "-o",
     `BatchMode=${hasPassword ? "no" : "yes"}`,
     "-o",
@@ -699,7 +712,10 @@ function buildSshArgs(profile, options = {}) {
     "-o",
     "RequestTTY=no",
     "-o",
-    "LogLevel=ERROR",
+    // Windows OpenSSH reports some transport failures (for example
+    // "banner exchange: ... Connection refused") below ERROR. Suppressing
+    // those lines turns a useful failure into an opaque exit 255.
+    "LogLevel=INFO",
     "-o",
     `StrictHostKeyChecking=${hostKeyPolicy}`,
   ];
@@ -720,6 +736,13 @@ function buildSshArgs(profile, options = {}) {
     // Imported aliases keep OpenSSH config semantics (ProxyJump, extra
     // IdentityFile entries). IdentitiesOnly would flatten those away.
     if (!profile.configAlias) args.push("-o", "IdentitiesOnly=yes");
+  }
+  // A profile imported from a non-default config must keep using that file.
+  // Do not pass -F for ~/.ssh/config: OpenSSH would then skip its system-wide
+  // configuration, changing behavior compared with a normal ssh invocation.
+  if (profile.configAlias && profile.source && !isDefaultSshConfig(profile.source)) {
+    const configFile = expandUserPath(profile.source);
+    if (path.isAbsolute(configFile)) args.push("-F", configFile);
   }
   if (!profile.configAlias && profile.port !== 22) args.push("-p", String(profile.port));
   args.push(buildTarget(profile));
@@ -845,6 +868,12 @@ function buildEnvironment(profile, options = {}) {
     env.SSH_ASKPASS_REQUIRE = "force";
     env.DISPLAY = "pi-ssh-manager";
     env.PI_SSH_ASKPASS_PASSWORD = options.password;
+    if (platform === "win32") {
+      // The launcher reads the password inside Node. It must never expand the
+      // password in cmd.exe, where characters such as %, &, and > are syntax.
+      env.PI_SSH_ASKPASS_NODE = process.execPath;
+      env.ELECTRON_RUN_AS_NODE = "1";
+    }
   }
   return env;
 }
@@ -863,8 +892,10 @@ function redactLocalPaths(value, profile) {
   for (const candidate of [
     profile?.identityFile,
     profile?.agentSocket,
+    profile?.source,
     profile?.identityFile ? expandUserPath(profile.identityFile) : null,
     profile?.agentSocket ? expandUserPath(profile.agentSocket) : null,
+    profile?.source ? expandUserPath(profile.source) : null,
   ]) {
     if (candidate) output = output.split(candidate).join("[local credential path]");
   }
@@ -900,34 +931,61 @@ function formatSshFailure(result, profile) {
     parts.push("Install OpenSSH Client (Windows optional feature) or add ssh.exe to PATH.");
   } else if (diagnostic) {
     parts.push(diagnostic);
-  } else if (Number.isInteger(result?.exitCode)) {
-    parts.push(`ssh exited with code ${result.exitCode}.`);
+  } else if (numericExitCode(result?.exitCode) !== null) {
+    parts.push(`ssh exited with code ${numericExitCode(result.exitCode)}.`);
   } else if (result?.error) {
     parts.push(String(result.error.message || result.error));
   } else {
     parts.push("SSH connection failed.");
   }
-  if (!diagnostic && !result?.timedOut && (result?.exitCode === 255 || spawnCode === "ENOENT")) {
+  if (!diagnostic && !result?.timedOut && (numericExitCode(result?.exitCode) === 255 || spawnCode === "ENOENT")) {
     parts.push("Typical causes: unknown host key (use Accept new), missing identity/password, unreachable host/port, or a missing system ssh client.");
   }
   const text = redactLocalPaths(parts.join(" "), profile || {});
   return text.length > 1200 ? `${text.slice(0, 1168).trimEnd()}…` : text;
 }
 
-function createAskpassHelper(password) {
+function numericExitCode(value) {
+  if (Number.isInteger(value)) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+function createAskpassHelper() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ssh-"));
-  const file = path.join(directory, process.platform === "win32" ? "askpass.cmd" : "askpass.sh");
-  const source = process.platform === "win32"
-    ? "@echo off\r\necho %PI_SSH_ASKPASS_PASSWORD%\r\n"
-    : "#!/bin/sh\nprintf '%s\\n' \"$PI_SSH_ASKPASS_PASSWORD\"\n";
-  fs.writeFileSync(file, source, { encoding: "utf8", mode: 0o700 });
+  const windows = process.platform === "win32";
+  const file = path.join(directory, windows ? "askpass.cmd" : "askpass.sh");
+  const files = [file];
+  if (windows) {
+    const script = path.join(directory, "askpass.js");
+    const launcher = [
+      "@echo off",
+      "setlocal DisableDelayedExpansion",
+      "\"%PI_SSH_ASKPASS_NODE%\" \"%~dp0askpass.js\"",
+      "",
+    ].join("\r\n");
+    const source = [
+      "\"use strict\";",
+      "process.stdout.write(String(process.env.PI_SSH_ASKPASS_PASSWORD || \"\"));",
+      "process.stdout.write(\"\\n\");",
+      "",
+    ].join("\n");
+    fs.writeFileSync(script, source, { encoding: "utf8", mode: 0o700 });
+    files.push(script);
+    fs.writeFileSync(file, launcher, { encoding: "utf8", mode: 0o700 });
+  } else {
+    const source = "#!/bin/sh\nprintf '%s\\n' \"$PI_SSH_ASKPASS_PASSWORD\"\n";
+    fs.writeFileSync(file, source, { encoding: "utf8", mode: 0o700 });
+  }
   return {
     file,
     cleanup() {
-      try {
-        fs.unlinkSync(file);
-      } catch {
-        // Best effort: the directory is private and contains no user data.
+      for (const helperFile of files) {
+        try {
+          fs.unlinkSync(helperFile);
+        } catch {
+          // Best effort: helper files contain no credential value.
+        }
       }
       try {
         fs.rmdirSync(directory);
@@ -999,7 +1057,7 @@ async function runSsh(profile, options = {}) {
   const password = normalizePassword(options.password);
   const timeoutSeconds = normalizeTimeout(options.timeoutSeconds);
   const maxOutputChars = normalizeMaxOutput(options.maxOutputChars);
-  const askpass = password ? createAskpassHelper(password) : null;
+  const askpass = password ? createAskpassHelper() : null;
   try {
     const args = buildSshArgs(normalized, {
       remoteCommand: options.remoteCommand,
@@ -1016,11 +1074,8 @@ async function runSsh(profile, options = {}) {
     });
     const stdout = clip(result.stdout, maxOutputChars);
     const stderr = clip(redactLocalPaths(result.stderr, normalized), maxOutputChars);
-    const exitCode = result.error && Number.isInteger(result.error.code)
-      ? result.error.code
-      : result.error
-        ? null
-        : 0;
+    const numericCode = result.error ? numericExitCode(result.error.code) : null;
+    const exitCode = numericCode !== null ? numericCode : result.error ? null : 0;
     const error = result.timedOut
       ? "SSH command timed out"
       : result.error
