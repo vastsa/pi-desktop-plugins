@@ -1,8 +1,8 @@
-# 工作区文件护栏
+# 防C盘拉屎
 
-把测试、临时、草稿、日志、缓存等垃圾文件关在当前工作区或 PI scratch 里。这是行为约束，不是磁盘锁。
+防止模型往 C 盘拉屎：测试、日志、缓存、临时文件不许写到系统盘、桌面、下载。垃圾只能待在当前项目或 scratch。
 
-便携的 PI-Desktop skill 包：启用一次后，每个会话都会注入规则并注册分类工具。路径按当前操作系统、用户主目录、工作区和环境变量解析，不写死 `C:`、用户名或某台机器的目录。
+启用一次即可。路径按当前机器解析，不写死盘符或用户名。这是行为约束，不是磁盘锁。
 
 ## 提供什么
 
@@ -32,7 +32,7 @@
 
 ## 安装
 
-1. PI-Desktop → 扩展 → 安装插件包，选择 `packages/pi.workspace-file-guard-0.2.5.piplug`。
+1. PI-Desktop → 扩展 → 安装插件包，选择 `packages/pi.workspace-file-guard-0.2.6.piplug`。
 2. 若出现权限确认，勾选 `agent.prompt.inject` 与 `agent.tool.register`（当前宿主对本地 `.piplug` 可能按清单静默全授）。
 3. 新开一个 Agent 会话，skill 才会注入。
 
