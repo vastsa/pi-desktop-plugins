@@ -3,6 +3,20 @@
 All notable changes to this plugin are documented here. Versions follow
 semver; the plugin id is `io.github.muzimu217.session-import`.
 
+## 0.4.8 — 2026-09-11（导入行为修正）
+
+- **移除「归组到项目」勾选项**。该开关是空操作：宿主侧 `import_session` 只要
+  `project_path` 非空就执行 `ensure_project(path)` 绑定项目，**完全不看
+  `projectId`**；因此即便取消勾选、插件不传 projectPath，会话也照常被归到源项目，
+  勾选毫无意义。现在改为**默认按项目归组**——有 `projectPath` 一律绑项目，无
+  `projectPath` 的会话回落到独立的「会话」列表（经 `project_id IS NULL` 索引），
+  **永不丢数据**。
+- **删除导入完成后的「会话熔炉」原生通知**。该提示用户看不懂（"点击右侧会话熔炉
+  开始蒸馏"），已移除；**会话熔炉功能本身保留**，仅去掉这条通知。`manifest`
+  不再需要 `notify` 权限。
+- 导入完成提示简化为统一文案：已按项目归组，打开对应项目或在「项目」页查看。
+- 基于 0.4.7 之上发布；0.4.7 的声明式驱动层、自定义来源与安全加固全部保留不变。
+
 ## 0.4.7 — 2026-09-11（可扩展来源）
 
 - **新增声明式格式驱动层**：`jsonl-transcript` / `sqlite-session` / `json-tree`

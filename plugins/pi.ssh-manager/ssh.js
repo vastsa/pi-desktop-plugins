@@ -4,13 +4,14 @@
  * SSH transport primitives for pi.ssh-manager.
  *
  * The plugin deliberately delegates authentication to the user's OpenSSH
- * config, agent, or an identity file path. It never reads or stores private
- * key contents, passwords, command output, or a remote transcript.
+ * config, agent, or an identity file path. It never reads private-key contents
+ * or persists passwords, command output, or a remote transcript.
  */
 
 const { execFile } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
+const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 
@@ -26,6 +27,7 @@ const MAX_CONFIG_FILES = 32;
 const MAX_CONFIG_TOTAL_BYTES = 1024 * 1024;
 const MAX_CONFIG_INCLUDE_DEPTH = 8;
 const MAX_CONFIG_INCLUDE_MATCHES = 256;
+const ASKPASS_BROKER_TIMEOUT_MS = 5000;
 const WINDOWS_ENV_KEEP = [
   "ALLUSERSPROFILE", "APPDATA", "LOCALAPPDATA", "ProgramData",
   "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432",
@@ -41,6 +43,8 @@ const SSH_DIAGNOSTIC_PATTERN = /permission denied|could not resolve|connection r
 let execFileImpl = execFile;
 const activeProcesses = new Set();
 const activeTimers = new Set();
+const activeAskpassBrokers = new Set();
+let askpassReadyHook = null;
 
 function fail(message) {
   const error = new Error(message);
@@ -659,10 +663,15 @@ function normalizeConfigCandidate(candidate, options = {}) {
 }
 
 /** Discover normalized host profiles from the local user's OpenSSH config. */
-function discoverSshProfiles(options = {}) {
-  const configPath = options.configPath
-    ? expandUserPath(String(options.configPath))
+function resolveConfigPath(value) {
+  const requested = value
+    ? expandUserPath(String(value).trim())
     : path.join(os.homedir(), ".ssh", "config");
+  return path.resolve(requested);
+}
+
+function discoverSshProfiles(options = {}) {
+  const configPath = resolveConfigPath(options.configPath);
   const state = { visited: new Set(), files: 0, totalBytes: 0 };
   const expanded = expandConfigFile(configPath, state);
   if (expanded === null) return [];
@@ -681,6 +690,15 @@ function buildTarget(profile) {
   return profile.configAlias ? profile.host : `${profile.username}@${profile.host}`;
 }
 
+function isDefaultSshConfig(value) {
+  if (!value) return false;
+  const comparable = (candidate) => {
+    const resolved = path.resolve(expandUserPath(candidate));
+    return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+  };
+  return comparable(value) === comparable(path.join(os.homedir(), ".ssh", "config"));
+}
+
 function buildSshArgs(profile, options = {}) {
   const timeoutSeconds = normalizeTimeout(options.timeoutSeconds);
   const hasPassword = Boolean(options.password);
@@ -688,6 +706,10 @@ function buildSshArgs(profile, options = {}) {
     ? "accept-new"
     : profile.strictHostKeyChecking;
   const args = [
+    // One-shot commands must never inherit the plugin process's stdin. An
+    // attached stdin can leave OpenSSH waiting for input after the panel has
+    // already timed out, especially when the remote side requests a banner.
+    "-n",
     "-o",
     `BatchMode=${hasPassword ? "no" : "yes"}`,
     "-o",
@@ -699,7 +721,10 @@ function buildSshArgs(profile, options = {}) {
     "-o",
     "RequestTTY=no",
     "-o",
-    "LogLevel=ERROR",
+    // Windows OpenSSH reports some transport failures (for example
+    // "banner exchange: ... Connection refused") below ERROR. Suppressing
+    // those lines turns a useful failure into an opaque exit 255.
+    "LogLevel=INFO",
     "-o",
     `StrictHostKeyChecking=${hostKeyPolicy}`,
   ];
@@ -720,6 +745,12 @@ function buildSshArgs(profile, options = {}) {
     // Imported aliases keep OpenSSH config semantics (ProxyJump, extra
     // IdentityFile entries). IdentitiesOnly would flatten those away.
     if (!profile.configAlias) args.push("-o", "IdentitiesOnly=yes");
+  }
+  // A profile imported from a non-default config must keep using that file.
+  // Do not pass -F for ~/.ssh/config: OpenSSH would then skip its system-wide
+  // configuration, changing behavior compared with a normal ssh invocation.
+  if (profile.configAlias && profile.source && !isDefaultSshConfig(profile.source)) {
+    args.push("-F", resolveConfigPath(profile.source));
   }
   if (!profile.configAlias && profile.port !== 22) args.push("-p", String(profile.port));
   args.push(buildTarget(profile));
@@ -821,6 +852,7 @@ function killActiveProcesses() {
     activeProcesses.delete(child);
     killChild(child);
   }
+  for (const broker of [...activeAskpassBrokers]) broker.cleanup();
 }
 
 function buildEnvironment(profile, options = {}) {
@@ -844,7 +876,11 @@ function buildEnvironment(profile, options = {}) {
     env.SSH_ASKPASS = options.askpassPath;
     env.SSH_ASKPASS_REQUIRE = "force";
     env.DISPLAY = "pi-ssh-manager";
-    env.PI_SSH_ASKPASS_PASSWORD = options.password;
+    env.PI_SSH_ASKPASS_NODE = process.execPath;
+    env.PI_SSH_ASKPASS_SCRIPT = path.join(__dirname, "askpass-client.js");
+    // PI-Desktop uses its Electron executable as the plugin's Node runtime.
+    // This flag is harmless under stock Node and required under Electron.
+    env.ELECTRON_RUN_AS_NODE = "1";
   }
   return env;
 }
@@ -863,8 +899,10 @@ function redactLocalPaths(value, profile) {
   for (const candidate of [
     profile?.identityFile,
     profile?.agentSocket,
+    profile?.source,
     profile?.identityFile ? expandUserPath(profile.identityFile) : null,
     profile?.agentSocket ? expandUserPath(profile.agentSocket) : null,
+    profile?.source ? expandUserPath(profile.source) : null,
   ]) {
     if (candidate) output = output.split(candidate).join("[local credential path]");
   }
@@ -900,34 +938,63 @@ function formatSshFailure(result, profile) {
     parts.push("Install OpenSSH Client (Windows optional feature) or add ssh.exe to PATH.");
   } else if (diagnostic) {
     parts.push(diagnostic);
-  } else if (Number.isInteger(result?.exitCode)) {
-    parts.push(`ssh exited with code ${result.exitCode}.`);
+  } else if (numericExitCode(result?.exitCode) !== null) {
+    parts.push(`ssh exited with code ${numericExitCode(result.exitCode)}.`);
   } else if (result?.error) {
     parts.push(String(result.error.message || result.error));
   } else {
     parts.push("SSH connection failed.");
   }
-  if (!diagnostic && !result?.timedOut && (result?.exitCode === 255 || spawnCode === "ENOENT")) {
+  if (!diagnostic && !result?.timedOut && (numericExitCode(result?.exitCode) === 255 || spawnCode === "ENOENT")) {
     parts.push("Typical causes: unknown host key (use Accept new), missing identity/password, unreachable host/port, or a missing system ssh client.");
   }
   const text = redactLocalPaths(parts.join(" "), profile || {});
   return text.length > 1200 ? `${text.slice(0, 1168).trimEnd()}…` : text;
 }
 
-function createAskpassHelper(password) {
+function numericExitCode(value) {
+  if (Number.isInteger(value)) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+function createAskpassHelper() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ssh-"));
-  const file = path.join(directory, process.platform === "win32" ? "askpass.cmd" : "askpass.sh");
-  const source = process.platform === "win32"
-    ? "@echo off\r\necho %PI_SSH_ASKPASS_PASSWORD%\r\n"
-    : "#!/bin/sh\nprintf '%s\\n' \"$PI_SSH_ASKPASS_PASSWORD\"\n";
-  fs.writeFileSync(file, source, { encoding: "utf8", mode: 0o700 });
+  const windows = process.platform === "win32";
+  const file = path.join(directory, windows ? "askpass.cmd" : "askpass.sh");
+  const endpoint = windows
+    ? `\\\\.\\pipe\\pi-ssh-${crypto.randomUUID()}`
+    : path.join(directory, "askpass.sock");
+  const token = crypto.randomBytes(32).toString("hex");
+  const shellQuote = (value) => `'${String(value).replace(/'/g, `'"'"'`)}'`;
+  const launcher = windows
+    ? [
+      "@echo off",
+      "setlocal DisableDelayedExpansion",
+      `set "PI_SSH_ASKPASS_ENDPOINT=${endpoint}"`,
+      `set "PI_SSH_ASKPASS_TOKEN=${token}"`,
+      "\"%PI_SSH_ASKPASS_NODE%\" \"%PI_SSH_ASKPASS_SCRIPT%\"",
+      "",
+    ].join("\r\n")
+    : [
+      "#!/bin/sh",
+      `PI_SSH_ASKPASS_ENDPOINT=${shellQuote(endpoint)}`,
+      `PI_SSH_ASKPASS_TOKEN=${shellQuote(token)}`,
+      "export PI_SSH_ASKPASS_ENDPOINT PI_SSH_ASKPASS_TOKEN",
+      "exec \"$PI_SSH_ASKPASS_NODE\" \"$PI_SSH_ASKPASS_SCRIPT\"",
+      "",
+    ].join("\n");
+  fs.writeFileSync(file, launcher, { encoding: "utf8", mode: 0o700 });
   return {
+    directory,
+    endpoint,
     file,
+    token,
     cleanup() {
       try {
         fs.unlinkSync(file);
       } catch {
-        // Best effort: the directory is private and contains no user data.
+        // Best effort: the launcher contains no password or user credential.
       }
       try {
         fs.rmdirSync(directory);
@@ -936,6 +1003,120 @@ function createAskpassHelper(password) {
       }
     },
   };
+}
+
+function askpassTokensEqual(value, expected) {
+  const left = Buffer.from(String(value || ""));
+  const right = Buffer.from(expected);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function askpassCancelledError() {
+  const error = new Error("SSH askpass broker was cancelled");
+  error.code = "ASKPASS_CANCELLED";
+  return error;
+}
+
+async function createAskpassBroker(password) {
+  const helper = createAskpassHelper();
+  const { endpoint, token } = helper;
+  const sockets = new Set();
+  let served = false;
+  let cleaned = false;
+  let cancelListen = null;
+  let broker = null;
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.setEncoding("utf8");
+    let request = "";
+    const timer = setTimeout(() => socket.destroy(), ASKPASS_BROKER_TIMEOUT_MS);
+    socket.on("data", (chunk) => {
+      if (served) {
+        socket.destroy();
+        return;
+      }
+      request += chunk;
+      if (request.length > token.length + 2) {
+        socket.destroy();
+        return;
+      }
+      const newline = request.indexOf("\n");
+      if (newline < 0) return;
+      const supplied = request.slice(0, newline).replace(/\r$/, "");
+      if (!askpassTokensEqual(supplied, token)) {
+        socket.destroy();
+        return;
+      }
+      served = true;
+      socket.end(`${password}\n`);
+      try {
+        server.close();
+      } catch {
+        // The first authenticated request may already have closed the server.
+      }
+    });
+    socket.on("error", () => {});
+    socket.on("close", () => {
+      clearTimeout(timer);
+      sockets.delete(socket);
+    });
+  });
+  // Prevent a late server error from escaping the plugin process. Listen-time
+  // failures are still forwarded through the one-shot listener below.
+  server.on("error", () => {});
+
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    if (broker) activeAskpassBrokers.delete(broker);
+    if (cancelListen) cancelListen();
+    for (const socket of [...sockets]) socket.destroy();
+    try {
+      server.close();
+    } catch {
+      // The one-shot broker may not be listening yet or may already be closed.
+    }
+    if (process.platform !== "win32") {
+      try {
+        fs.unlinkSync(endpoint);
+      } catch {
+        // Node normally removes the socket path when the server closes.
+      }
+    }
+    helper.cleanup();
+  };
+  broker = { endpoint, token, cleanup };
+  activeAskpassBrokers.add(broker);
+
+  try {
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (handler, value) => {
+        if (settled) return;
+        settled = true;
+        cancelListen = null;
+        server.off("error", onError);
+        handler(value);
+      };
+      const onError = (error) => settle(reject, error);
+      cancelListen = () => {
+        settle(reject, askpassCancelledError());
+      };
+      server.once("error", onError);
+      server.listen(endpoint, () => {
+        settle(resolve);
+        askpassReadyHook?.();
+      });
+    });
+    // Unload may close the broker after listen resolves but before this
+    // async continuation starts the ssh child. Do not cross that lifecycle
+    // boundary with a broker that has already been cleaned up.
+    if (cleaned) throw askpassCancelledError();
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
+  return { file: helper.file, endpoint, token, cleanup };
 }
 
 function runProcess(file, args, options) {
@@ -999,7 +1180,7 @@ async function runSsh(profile, options = {}) {
   const password = normalizePassword(options.password);
   const timeoutSeconds = normalizeTimeout(options.timeoutSeconds);
   const maxOutputChars = normalizeMaxOutput(options.maxOutputChars);
-  const askpass = password ? createAskpassHelper(password) : null;
+  const askpass = password ? await createAskpassBroker(password) : null;
   try {
     const args = buildSshArgs(normalized, {
       remoteCommand: options.remoteCommand,
@@ -1011,16 +1192,12 @@ async function runSsh(profile, options = {}) {
       timeoutSeconds: timeoutSeconds + 5,
       env: buildEnvironment(normalized, {
         askpassPath: askpass?.file,
-        password,
       }),
     });
     const stdout = clip(result.stdout, maxOutputChars);
     const stderr = clip(redactLocalPaths(result.stderr, normalized), maxOutputChars);
-    const exitCode = result.error && Number.isInteger(result.error.code)
-      ? result.error.code
-      : result.error
-        ? null
-        : 0;
+    const numericCode = result.error ? numericExitCode(result.error.code) : null;
+    const exitCode = numericCode !== null ? numericCode : result.error ? null : 0;
     const error = result.timedOut
       ? "SSH command timed out"
       : result.error
@@ -1127,6 +1304,9 @@ module.exports = {
       execFileImpl = execFile;
       killActiveProcesses();
     },
+    setAskpassReadyHook(value) {
+      askpassReadyHook = typeof value === "function" ? value : null;
+    },
     clip,
     buildEnvironment,
     inheritWindowsEnv,
@@ -1137,8 +1317,16 @@ module.exports = {
     configPathParts,
     expandConfigPattern,
     expandConfigFile,
+    resolveConfigPath,
     activeProcessCount() {
       return activeProcesses.size;
+    },
+    activeAskpassBrokerCount() {
+      return activeAskpassBrokers.size;
+    },
+    activeAskpassBrokerSnapshot() {
+      const broker = activeAskpassBrokers.values().next().value;
+      return broker ? { endpoint: broker.endpoint, token: broker.token } : null;
     },
   },
 };
