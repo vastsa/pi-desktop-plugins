@@ -662,10 +662,15 @@ function normalizeConfigCandidate(candidate, options = {}) {
 }
 
 /** Discover normalized host profiles from the local user's OpenSSH config. */
-function discoverSshProfiles(options = {}) {
-  const configPath = options.configPath
-    ? expandUserPath(String(options.configPath))
+function resolveConfigPath(value) {
+  const requested = value
+    ? expandUserPath(String(value).trim())
     : path.join(os.homedir(), ".ssh", "config");
+  return path.resolve(requested);
+}
+
+function discoverSshProfiles(options = {}) {
+  const configPath = resolveConfigPath(options.configPath);
   const state = { visited: new Set(), files: 0, totalBytes: 0 };
   const expanded = expandConfigFile(configPath, state);
   if (expanded === null) return [];
@@ -744,8 +749,7 @@ function buildSshArgs(profile, options = {}) {
   // Do not pass -F for ~/.ssh/config: OpenSSH would then skip its system-wide
   // configuration, changing behavior compared with a normal ssh invocation.
   if (profile.configAlias && profile.source && !isDefaultSshConfig(profile.source)) {
-    const configFile = expandUserPath(profile.source);
-    if (path.isAbsolute(configFile)) args.push("-F", configFile);
+    args.push("-F", resolveConfigPath(profile.source));
   }
   if (!profile.configAlias && profile.port !== 22) args.push("-p", String(profile.port));
   args.push(buildTarget(profile));
@@ -847,7 +851,7 @@ function killActiveProcesses() {
     activeProcesses.delete(child);
     killChild(child);
   }
-  for (const cleanup of [...activeAskpassBrokers]) cleanup();
+  for (const broker of [...activeAskpassBrokers]) broker.cleanup();
 }
 
 function buildEnvironment(profile, options = {}) {
@@ -871,8 +875,6 @@ function buildEnvironment(profile, options = {}) {
     env.SSH_ASKPASS = options.askpassPath;
     env.SSH_ASKPASS_REQUIRE = "force";
     env.DISPLAY = "pi-ssh-manager";
-    env.PI_SSH_ASKPASS_ENDPOINT = options.askpassEndpoint;
-    env.PI_SSH_ASKPASS_TOKEN = options.askpassToken;
     env.PI_SSH_ASKPASS_NODE = process.execPath;
     env.PI_SSH_ASKPASS_SCRIPT = path.join(__dirname, "askpass-client.js");
     // PI-Desktop uses its Electron executable as the plugin's Node runtime.
@@ -959,23 +961,39 @@ function createAskpassHelper() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ssh-"));
   const windows = process.platform === "win32";
   const file = path.join(directory, windows ? "askpass.cmd" : "askpass.sh");
+  const endpoint = windows
+    ? `\\\\.\\pipe\\pi-ssh-${crypto.randomUUID()}`
+    : path.join(directory, "askpass.sock");
+  const token = crypto.randomBytes(32).toString("hex");
+  const shellQuote = (value) => `'${String(value).replace(/'/g, `'"'"'`)}'`;
   const launcher = windows
     ? [
       "@echo off",
       "setlocal DisableDelayedExpansion",
+      `set "PI_SSH_ASKPASS_ENDPOINT=${endpoint}"`,
+      `set "PI_SSH_ASKPASS_TOKEN=${token}"`,
       "\"%PI_SSH_ASKPASS_NODE%\" \"%PI_SSH_ASKPASS_SCRIPT%\"",
       "",
     ].join("\r\n")
-    : "#!/bin/sh\nexec \"$PI_SSH_ASKPASS_NODE\" \"$PI_SSH_ASKPASS_SCRIPT\"\n";
+    : [
+      "#!/bin/sh",
+      `PI_SSH_ASKPASS_ENDPOINT=${shellQuote(endpoint)}`,
+      `PI_SSH_ASKPASS_TOKEN=${shellQuote(token)}`,
+      "export PI_SSH_ASKPASS_ENDPOINT PI_SSH_ASKPASS_TOKEN",
+      "exec \"$PI_SSH_ASKPASS_NODE\" \"$PI_SSH_ASKPASS_SCRIPT\"",
+      "",
+    ].join("\n");
   fs.writeFileSync(file, launcher, { encoding: "utf8", mode: 0o700 });
   return {
     directory,
+    endpoint,
     file,
+    token,
     cleanup() {
       try {
         fs.unlinkSync(file);
       } catch {
-        // Best effort: the launcher contains no credential value.
+        // Best effort: the launcher contains no password or user credential.
       }
       try {
         fs.rmdirSync(directory);
@@ -994,13 +1012,12 @@ function askpassTokensEqual(value, expected) {
 
 async function createAskpassBroker(password) {
   const helper = createAskpassHelper();
-  const endpoint = process.platform === "win32"
-    ? `\\\\.\\pipe\\pi-ssh-${crypto.randomUUID()}`
-    : path.join(helper.directory, "askpass.sock");
-  const token = crypto.randomBytes(32).toString("hex");
+  const { endpoint, token } = helper;
   const sockets = new Set();
   let served = false;
   let cleaned = false;
+  let cancelListen = null;
+  let broker = null;
   const server = net.createServer((socket) => {
     sockets.add(socket);
     socket.setEncoding("utf8");
@@ -1037,31 +1054,20 @@ async function createAskpassBroker(password) {
       sockets.delete(socket);
     });
   });
-
-  try {
-    await new Promise((resolve, reject) => {
-      const onError = (error) => reject(error);
-      server.once("error", onError);
-      server.listen(endpoint, () => {
-        server.off("error", onError);
-        server.on("error", () => {});
-        resolve();
-      });
-    });
-  } catch (error) {
-    helper.cleanup();
-    throw error;
-  }
+  // Prevent a late server error from escaping the plugin process. Listen-time
+  // failures are still forwarded through the one-shot listener below.
+  server.on("error", () => {});
 
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
-    activeAskpassBrokers.delete(cleanup);
+    if (broker) activeAskpassBrokers.delete(broker);
+    if (cancelListen) cancelListen();
     for (const socket of [...sockets]) socket.destroy();
     try {
       server.close();
     } catch {
-      // The one-shot broker may already be closed.
+      // The one-shot broker may not be listening yet or may already be closed.
     }
     if (process.platform !== "win32") {
       try {
@@ -1072,7 +1078,32 @@ async function createAskpassBroker(password) {
     }
     helper.cleanup();
   };
-  activeAskpassBrokers.add(cleanup);
+  broker = { endpoint, token, cleanup };
+  activeAskpassBrokers.add(broker);
+
+  try {
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (handler, value) => {
+        if (settled) return;
+        settled = true;
+        cancelListen = null;
+        server.off("error", onError);
+        handler(value);
+      };
+      const onError = (error) => settle(reject, error);
+      cancelListen = () => {
+        const error = new Error("SSH askpass broker was cancelled");
+        error.code = "ASKPASS_CANCELLED";
+        settle(reject, error);
+      };
+      server.once("error", onError);
+      server.listen(endpoint, () => settle(resolve));
+    });
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
   return { file: helper.file, endpoint, token, cleanup };
 }
 
@@ -1149,8 +1180,6 @@ async function runSsh(profile, options = {}) {
       timeoutSeconds: timeoutSeconds + 5,
       env: buildEnvironment(normalized, {
         askpassPath: askpass?.file,
-        askpassEndpoint: askpass?.endpoint,
-        askpassToken: askpass?.token,
       }),
     });
     const stdout = clip(result.stdout, maxOutputChars);
@@ -1273,11 +1302,16 @@ module.exports = {
     configPathParts,
     expandConfigPattern,
     expandConfigFile,
+    resolveConfigPath,
     activeProcessCount() {
       return activeProcesses.size;
     },
     activeAskpassBrokerCount() {
       return activeAskpassBrokers.size;
+    },
+    activeAskpassBrokerSnapshot() {
+      const broker = activeAskpassBrokers.values().next().value;
+      return broker ? { endpoint: broker.endpoint, token: broker.token } : null;
     },
   },
 };

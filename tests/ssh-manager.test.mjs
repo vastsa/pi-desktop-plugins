@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -143,6 +143,10 @@ test("profile validation rejects injection-shaped host fields and never stores s
 });
 
 test("OpenSSH config scanning imports concrete aliases without reading key contents", () => {
+  assert.equal(
+    ssh.__test.resolveConfigPath(join("relative", "ssh-config")),
+    resolve("relative", "ssh-config"),
+  );
   const config = [
     "# Defaults must not become a host by themselves",
     "Host *",
@@ -220,6 +224,19 @@ test("OpenSSH config scanning imports concrete aliases without reading key conte
     });
     const defaultConfigArgs = ssh.buildSshArgs(defaultConfigProfile, { remoteCommand: "true" });
     assert.equal(defaultConfigArgs.includes("-F"), false);
+
+    const legacyRelativeProfile = ssh.normalizeProfile({
+      name: "Legacy relative config",
+      host: "legacy-alias",
+      username: "local",
+      configAlias: "legacy-alias",
+      source: join("relative", "config"),
+    });
+    const legacyRelativeArgs = ssh.buildSshArgs(legacyRelativeProfile, { remoteCommand: "true" });
+    assert.equal(
+      legacyRelativeArgs[legacyRelativeArgs.indexOf("-F") + 1],
+      resolve("relative", "config"),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -271,10 +288,12 @@ test("password authentication uses a transient askpass helper without returning 
       const helperSource = readFileSync(helperPath, "utf8");
       assert.equal(helperSource.includes(password), false);
       assert.equal(JSON.stringify(call.options.env).includes(password), false);
-      const brokerToken = call.options.env.PI_SSH_ASKPASS_TOKEN;
+      const broker = ssh.__test.activeAskpassBrokerSnapshot();
+      assert.ok(broker);
+      const brokerToken = broker.token;
       const invalidToken = `${brokerToken[0] === "0" ? "1" : "0"}${brokerToken.slice(1)}`;
       const rejectedOutput = await readAskpassBroker(
-        call.options.env.PI_SSH_ASKPASS_ENDPOINT,
+        broker.endpoint,
         invalidToken,
       );
       assert.equal(rejectedOutput, "");
@@ -323,8 +342,8 @@ test("password authentication uses a transient askpass helper without returning 
     assert.equal(existsSync(helperScriptPath), true);
     assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
     assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, undefined);
-    assert.ok(fake.calls[0].options.env.PI_SSH_ASKPASS_ENDPOINT);
-    assert.ok(fake.calls[0].options.env.PI_SSH_ASKPASS_TOKEN);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_ENDPOINT, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_TOKEN, undefined);
     assert.equal(helperOutput, `${password}\n`);
     assert.ok(fake.calls[0].args.includes("BatchMode=no"));
     assert.ok(fake.calls[0].args.includes("NumberOfPasswordPrompts=1"));
@@ -332,6 +351,17 @@ test("password authentication uses a transient askpass helper without returning 
   } finally {
     ssh.__test.resetExecFile();
   }
+});
+
+test("unload cleanup cancels an askpass broker before its listen callback", async () => {
+  const pending = ssh.runSsh(
+    ssh.normalizeProfile({ name: "cancelled", host: "cancelled.example.com", username: "deploy" }),
+    { password: "test-only-password", remoteCommand: "true" },
+  );
+  assert.equal(ssh.__test.activeAskpassBrokerCount(), 1);
+  ssh.killActiveProcesses();
+  await assert.rejects(pending, /askpass broker was cancelled/i);
+  assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
 });
 
 test("dangerous and ambiguous remote commands are blocked conservatively", () => {
@@ -437,8 +467,29 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
       assert.equal(editedImported.ok, true);
       assert.equal("configAlias" in editedImported.profile, false);
       assert.equal("source" in editedImported.profile, false);
+      assert.equal(editedImported.profile.host, "panel.example.com");
       const editedArgs = ssh.buildSshArgs(editedImported.profile, { remoteCommand: "true" });
       assert.equal(editedArgs[editedArgs.indexOf("-p") + 1], "2203");
+      assert.equal(editedArgs.at(-2), "panel-user@panel.example.com");
+
+      const tokenImported = await main.onPanelInvoke("ssh.profile.save", {
+        profile: {
+          id: "config-token-test",
+          name: "Token identity",
+          host: "token-alias",
+          hostName: "token.example.com",
+          username: "deploy",
+          identityFile: "%d/.ssh/id_ed25519",
+          configAlias: "token-alias",
+          source: configPath,
+        },
+      });
+      await assert.rejects(
+        main.onPanelInvoke("ssh.profile.save", {
+          profile: { ...tokenImported.profile, port: 2204 },
+        }),
+        /identityFile must be an absolute path/i,
+      );
     } finally {
       rmSync(configRoot, { recursive: true, force: true });
     }
@@ -457,6 +508,8 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
     assert.match(connected.session_id, /^ssh-/);
     assert.equal(connected.host, "prod.example.com");
     assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_ENDPOINT, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_TOKEN, undefined);
     assert.equal(JSON.stringify(fake.calls[0].options.env).includes("test-only-password"), false);
 
     const executeTool = registered.find((item) => item.value.name === "ssh_execute").value;

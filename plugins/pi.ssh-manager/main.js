@@ -174,17 +174,24 @@ function connectionMetadataChanged(input, existing) {
 
 function normalizePanelProfile(input, existing) {
   const detachedFromConfig = connectionMetadataChanged(input, existing);
-  const profile = ssh.normalizeProfile(input, existing || {});
-  if (detachedFromConfig) {
-    // The form edits explicit connection fields. Keep an imported Host alias
-    // only while those fields are unchanged; otherwise OpenSSH would silently
-    // ignore the user's new host, port, or identity values.
-    delete profile.configAlias;
-    delete profile.hostName;
-    delete profile.hostname;
-    delete profile.source;
+  if (!detachedFromConfig) return ssh.normalizeProfile(input, existing || {});
+
+  // The form edits explicit connection fields. Materialize HostName when the
+  // user did not replace the alias itself, then normalize again without config
+  // context. This also rejects config-only path tokens such as %d/... instead
+  // of persisting a profile that normalizeStore would discard on next load.
+  const hostChanged = Object.prototype.hasOwnProperty.call(input || {}, "host") &&
+    comparableConnectionValue(input.host) !== comparableConnectionValue(existing.host);
+  const detachedInput = {
+    ...input,
+    host: hostChanged ? input.host : existing.hostName || existing.host,
+  };
+  const detachedExisting = { ...existing };
+  for (const field of ["configAlias", "hostName", "hostname", "source"]) {
+    delete detachedInput[field];
+    delete detachedExisting[field];
   }
-  return profile;
+  return ssh.normalizeProfile(detachedInput, detachedExisting);
 }
 
 async function connectProfile(profile, options = {}) {
