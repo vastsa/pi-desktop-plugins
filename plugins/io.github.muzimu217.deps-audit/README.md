@@ -68,14 +68,15 @@ go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest
 | 权限 | 用途 |
 | --- | --- |
 | `ui.panel` / `ui.view` | 工作面板视图 |
-| `agent.complete` | 让 Agent 在对话里给修复建议 |
-| `agent.tool.register` | 注册 `deps_audit_run` 工具（high-risk，需用户授权） |
-| `models.list` | 供 Agent 端选择模型时枚举 |
+| `fs.read` | 经宿主网关读取工作区根目录的依赖清单（逐文件列在 manifest 的 `fs.read` 作用域里），用于生成净化副本 |
+| `clipboard.write` | 「复制给 Agent」经宿主剪贴板桥写入 |
+| `agent.tool.register` | 注册 `deps_audit_run` 工具（risk: high —— 原生执行 + 联网） |
 
-**不**需要的：
-- `fs.read` / `fs.write` —— 插件**不**直接读 manifest。osv-scanner 自己读文件。
-  读取范围 = osv-scanner 内置策略，由它决定。
-- `net.fetch` —— 插件本身不联网。OSV 数据库由 osv-scanner 自己拉取。
+**不**声明、也**不**使用的：
+- `agent.complete` / `models.list` —— 修复建议由你在对话里向 Agent 发起，插件不调用模型。
+- `fs.write` / `fs.delete` —— 工作区永不被写入或删除。
+- `net.fetch` —— 插件进程自身零网络请求；OSV 数据库由 osv-scanner 二进制自行拉取
+  （该联网行为属于 SECURITY.md High 档的原生执行能力，已在安全模型小节声明）。
 
 ## 支持的 manifest
 
@@ -100,18 +101,22 @@ Agent 工具 `deps_audit_run` 可通过 `manifests` 参数收窄范围。
 1. **未安装 osv-scanner** → 按上面"安装"小节装一个，或在设置里改 `scannerPath` 指向
    你自己装的二进制。
 2. **超时**（>120 秒）→ 仓库很大、依赖很多、或 OSV 数据库下载慢。可手动先跑
-   `osv-scanner scan source -L package.json --format json` 看耗时。
+   `osv-scanner scan source --format json .` 看耗时。
 3. **JSON 解析失败** → 极少见，说明 osv-scanner 输出了不兼容的版本。请把 stderr 贴到
    issue 里。
 
 ## 设计选择
 
-- **为什么不让插件直接 `fs.read` 读 manifest**？因为 osv-scanner 才是领域专家；它内置的
-  解析器支持锁文件、传递依赖等插件不必再实现的逻辑。让它读，插件只做"展示 + 拉 Agent"。
+- **为什么清单要先复制到临时目录再扫**？osv-scanner 是原生二进制，按 SECURITY.md 属于
+  High 风险能力。让它只读取插件经宿主网关读到的清单副本（一次性临时目录、扫描后即删），
+  被拉起的二进制就永远不会直接触碰工作区——边界先在插件侧守住，宿主网关是第二道锁。
+- **为什么过滤列表只按证据逐个加**？真实用户会粘贴以 `#` 开头的 markdown（比如
+  `# Role: 资深工程师`），一刀切会误伤真实内容。合成前缀只从真实归档里逐个取证，
+  新注入出现时按同样方式扩展。
 - **为什么是"复制给 Agent"而不是一键 fix**？升级依赖是高风险操作（破坏性变更、lock 重生、
   影响下游）。让 Agent 先解释、再给方案、最后由你点头，是最不容易出事的人机协作。
-- **为什么 `agent.tool.register` 是 high-risk**？注册到 Agent 的工具会被自动调用，而工具
-  结果会进入 Agent 的下一步推理。我们宁可让用户在安装时多看一眼。
+- **为什么 `deps_audit_run` 是 high-risk**？它会拉起本机 osv-scanner 二进制（原生执行），
+  且 osv-scanner 会联网访问 OSV 数据库。宁可让用户在授权时多看一眼。
 
 ## 开发
 
@@ -121,9 +126,8 @@ cd ~/dev/pi-desktop
 env -u NODE_OPTIONS -u PYTHONPATH ./node_modules/.bin/pi-plugin check \
   ~/dev/pi-desktop-plugin-lab/deps-audit
 
-# 跑测试（17 项）
-node --test ~/dev/pi-desktop-plugin-lab/deps-audit/test/parser.test.mjs
-node --test ~/dev/pi-desktop-plugin-lab/deps-audit/test/scanner.test.mjs
+# 跑测试
+node --test test/*.test.mjs
 ```
 
 ## License
