@@ -44,6 +44,7 @@ let execFileImpl = execFile;
 const activeProcesses = new Set();
 const activeTimers = new Set();
 const activeAskpassBrokers = new Set();
+let askpassReadyHook = null;
 
 function fail(message) {
   const error = new Error(message);
@@ -1010,6 +1011,12 @@ function askpassTokensEqual(value, expected) {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
+function askpassCancelledError() {
+  const error = new Error("SSH askpass broker was cancelled");
+  error.code = "ASKPASS_CANCELLED";
+  return error;
+}
+
 async function createAskpassBroker(password) {
   const helper = createAskpassHelper();
   const { endpoint, token } = helper;
@@ -1093,13 +1100,18 @@ async function createAskpassBroker(password) {
       };
       const onError = (error) => settle(reject, error);
       cancelListen = () => {
-        const error = new Error("SSH askpass broker was cancelled");
-        error.code = "ASKPASS_CANCELLED";
-        settle(reject, error);
+        settle(reject, askpassCancelledError());
       };
       server.once("error", onError);
-      server.listen(endpoint, () => settle(resolve));
+      server.listen(endpoint, () => {
+        settle(resolve);
+        askpassReadyHook?.();
+      });
     });
+    // Unload may close the broker after listen resolves but before this
+    // async continuation starts the ssh child. Do not cross that lifecycle
+    // boundary with a broker that has already been cleaned up.
+    if (cleaned) throw askpassCancelledError();
   } catch (error) {
     cleanup();
     throw error;
@@ -1291,6 +1303,9 @@ module.exports = {
     resetExecFile() {
       execFileImpl = execFile;
       killActiveProcesses();
+    },
+    setAskpassReadyHook(value) {
+      askpassReadyHook = typeof value === "function" ? value : null;
     },
     clip,
     buildEnvironment,
