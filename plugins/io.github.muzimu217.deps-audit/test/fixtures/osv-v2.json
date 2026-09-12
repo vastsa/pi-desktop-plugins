@@ -1,0 +1,103 @@
+{
+  "results": [
+    {
+      "source": {
+        "path": "package.json",
+        "type": "lockfile"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "lodash",
+            "version": "4.17.20",
+            "ecosystem": "npm"
+          },
+          "vulnerabilities": [
+            {
+              "id": "GHSA-p6mc-m468-83gw",
+              "summary": "Prototype Pollution in lodash",
+              "details": "Lodash versions prior to 4.17.21 are vulnerable to Prototype Pollution.",
+              "aliases": ["CVE-2020-8203"],
+              "modified": "2021-06-21T18:32:00Z",
+              "published": "2020-05-07T20:27:00Z",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "7.4"
+                }
+              ],
+              "affected": [
+                {
+                  "package": {"name": "lodash", "ecosystem": "npm"},
+                  "ranges": [
+                    {
+                      "type": "ECOSYSTEM",
+                      "events": [
+                        {"introduced": "0"},
+                        {"fixed": "4.17.21"}
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "references": [
+                {"type": "ADVISORY", "url": "https://github.com/advisories/GHSA-p6mc-m468-83gw"},
+                {"type": "WEB", "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-8203"}
+              ],
+              "database_specific": {
+                "severity": "HIGH"
+              }
+            }
+          ]
+        },
+        {
+          "package": {
+            "name": "minimist",
+            "version": "1.2.0",
+            "ecosystem": "npm"
+          },
+          "vulnerabilities": [
+            {
+              "id": "GHSA-7fhm-mpm4-pcg6",
+              "summary": "Prototype Pollution in minimist",
+              "details": "minimist before 1.2.6 is vulnerable.",
+              "aliases": ["CVE-2021-44906"],
+              "severity": [{"type": "CVSS_V3", "score": "9.8"}],
+              "affected": [
+                {
+                  "ranges": [
+                    {"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1.2.6"}]}
+                  ]
+                }
+              ],
+              "references": [{"type": "ADVISORY", "url": "https://github.com/advisories/GHSA-7fhm-mpm4-pcg6"}],
+              "database_specific": {"severity": "CRITICAL"}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": {"path": "requirements.txt", "type": "lockfile"},
+      "packages": [
+        {
+          "package": {
+            "name": "django",
+            "version": "2.0.0",
+            "ecosystem": "PyPI"
+          },
+          "vulnerabilities": [
+            {
+              "id": "PYSEC-2020-43",
+              "summary": "Django 2.0.x EOL security issues",
+              "severity": [],
+              "affected": [],
+              "references": [{"type": "WEB", "url": "https://docs.djangoproject.com/en/2.0/releases/2.0/"}],
+              "database_specific": {"severity": "MEDIUM"}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
