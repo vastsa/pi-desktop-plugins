@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "id": "pi.session-orchestrator",
+  "name": "Session Orchestrator",
+  "version": "0.1.0",
+  "description": "Create and coordinate real PI-Desktop worker sessions from an Agent.",
+  "i18n": {
+    "en": {
+      "name": "Session Orchestrator",
+      "description": "Create and coordinate real durable PI-Desktop worker sessions from an Agent, with bounded polling and final-report aggregation.",
+      "safetyNotes": "This high-risk tool can create and prompt durable PI-Desktop sessions through the reviewed desktop.control gateway. Workers inherit the parent project, model, thinking level and permission mode; the plugin refuses to prompt a worker when the host cannot prove that permission inheritance was preserved. It never calls localhost MCP, reads an MCP token, copies the parent transcript, deletes sessions, or loads remote code. Native host permission confirmations remain in force."
+    },
+    "zh-CN": {
+      "name": "Session Orchestrator 会话编排器",
+      "description": "让 Agent 创建并协调真正持久化的 PI-Desktop Worker Session，低频轮询并只汇总最终报告。",
+      "safetyNotes": "这是一个高风险 Agent 工具，会通过经过审查的 desktop.control 创建并提示持久化 PI-Desktop Session。Worker 继承 Parent 的项目、模型、思考级别和权限模式；如果宿主无法证明权限继承成功，插件会拒绝提示 Worker。插件不会调用 localhost MCP、读取 MCP token、复制 Parent transcript、删除 Session 或加载远程代码；宿主原有的权限确认继续生效。"
+    }
+  },
+  "author": "PI-Desktop",
+  "categories": ["developer-tools", "official"],
+  "changelog": "Release 0.1.0: durable parent-scoped workers, bounded parallel spawn/wait/cancel flows, restart-safe relationship state, final-report-only results, and an Agents panel.",
+  "safetyNotes": "Creates and prompts durable PI-Desktop sessions through desktop.control. Parent/worker relationships are private plugin state; worker transcripts remain in the normal host session store. The plugin uses no network or MCP token and never deletes worker sessions.",
+  "main": "main.js",
+  "ui": {
+    "panel": "renderer/index.html",
+    "title": {
+      "en": "Agents",
+      "zh-CN": "Agents"
+    },
+    "width": 560,
+    "height": 640,
+    "resizable": true
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "pi.session-orchestrator.open",
+        "title": "Session Orchestrator: Open Agents",
+        "keywords": ["agent", "worker", "session", "orchestrator", "agents", "编排", "Worker"],
+        "category": "Agent"
+      }
+    ],
+    "agentTools": [
+      {
+        "name": "SessionTask",
+        "description": "Create and coordinate bounded real PI-Desktop worker sessions. Use spawn for independent tasks, then status/wait/result; use send to continue the same worker and cancel to abort it without deleting its durable session. Workers are parent-scoped, capped, one level deep, and return only final reports.",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": ["spawn", "send", "status", "wait", "result", "cancel", "list"]
+            },
+            "task": { "type": "string", "maxLength": 65536, "description": "Task for spawn." },
+            "title": { "type": "string", "maxLength": 80, "description": "Short worker session title for spawn." },
+            "model": { "type": "string", "maxLength": 512, "description": "Optional configured provider/model key." },
+            "workerId": { "type": "string", "maxLength": 256, "description": "Worker session id." },
+            "workerIds": {
+              "type": "array",
+              "maxItems": 16,
+              "items": { "type": "string", "maxLength": 256 },
+              "description": "Worker ids for status or wait."
+            },
+            "message": { "type": "string", "maxLength": 65536, "description": "Follow-up message for send." }
+          },
+          "required": ["action"]
+        }
+      }
+    ]
+  },
+  "permissions": ["ui.panel", "agent.tool.register", "desktop.control", "models.list"],
+  "engines": {
+    "piDesktop": ">=0.14.7"
+  },
+  "activationEvents": [
+    "onCommand:pi.session-orchestrator.open",
+    "onStartup"
+  ]
+}

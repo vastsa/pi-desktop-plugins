@@ -45,7 +45,7 @@ test("every panel plugin documents the host-owned 46px chrome contract", () => {
     );
   }
 
-  assert.equal(panelPlugins.length, 17, "the official marketplace should cover all panel plugins");
+  assert.equal(panelPlugins.length, 18, "the official marketplace should cover all panel plugins");
 });
 
 test("super domain keeps its v3 surface full-bleed and interactive", () => {

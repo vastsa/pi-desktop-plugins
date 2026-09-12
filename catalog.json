@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-12T17:24:19Z",
+  "updatedAt": "2026-09-12T23:29:21Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -696,6 +696,52 @@
           "sizeBytes": 443633,
           "permissions": [
             "ui.panel"
+          ],
+          "fs": {}
+        }
+      ]
+    },
+    {
+      "id": "pi.session-orchestrator",
+      "name": "Session Orchestrator",
+      "description": "Create and coordinate real PI-Desktop worker sessions from an Agent.",
+      "i18n": {
+        "en": {
+          "name": "Session Orchestrator",
+          "description": "Create and coordinate real durable PI-Desktop worker sessions from an Agent, with bounded polling and final-report aggregation.",
+          "safetyNotes": "This high-risk tool can create and prompt durable PI-Desktop sessions through the reviewed desktop.control gateway. Workers inherit the parent project, model, thinking level and permission mode; the plugin refuses to prompt a worker when the host cannot prove that permission inheritance was preserved. It never calls localhost MCP, reads an MCP token, copies the parent transcript, deletes sessions, or loads remote code. Native host permission confirmations remain in force."
+        },
+        "zh-CN": {
+          "name": "Session Orchestrator \u4f1a\u8bdd\u7f16\u6392\u5668",
+          "description": "\u8ba9 Agent \u521b\u5efa\u5e76\u534f\u8c03\u771f\u6b63\u6301\u4e45\u5316\u7684 PI-Desktop Worker Session\uff0c\u4f4e\u9891\u8f6e\u8be2\u5e76\u53ea\u6c47\u603b\u6700\u7ec8\u62a5\u544a\u3002",
+          "safetyNotes": "\u8fd9\u662f\u4e00\u4e2a\u9ad8\u98ce\u9669 Agent \u5de5\u5177\uff0c\u4f1a\u901a\u8fc7\u7ecf\u8fc7\u5ba1\u67e5\u7684 desktop.control \u521b\u5efa\u5e76\u63d0\u793a\u6301\u4e45\u5316 PI-Desktop Session\u3002Worker \u7ee7\u627f Parent \u7684\u9879\u76ee\u3001\u6a21\u578b\u3001\u601d\u8003\u7ea7\u522b\u548c\u6743\u9650\u6a21\u5f0f\uff1b\u5982\u679c\u5bbf\u4e3b\u65e0\u6cd5\u8bc1\u660e\u6743\u9650\u7ee7\u627f\u6210\u529f\uff0c\u63d2\u4ef6\u4f1a\u62d2\u7edd\u63d0\u793a Worker\u3002\u63d2\u4ef6\u4e0d\u4f1a\u8c03\u7528 localhost MCP\u3001\u8bfb\u53d6 MCP token\u3001\u590d\u5236 Parent transcript\u3001\u5220\u9664 Session \u6216\u52a0\u8f7d\u8fdc\u7a0b\u4ee3\u7801\uff1b\u5bbf\u4e3b\u539f\u6709\u7684\u6743\u9650\u786e\u8ba4\u7ee7\u7eed\u751f\u6548\u3002"
+        }
+      },
+      "author": "PI-Desktop",
+      "categories": [
+        "developer-tools",
+        "official"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/pi.session-orchestrator",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Session Orchestrator\n\nSession Orchestrator is the official PI-Desktop plugin for coordinating real\ndurable worker sessions from the current Agent.\n\n## Agent Tool\n\nThe plugin registers one high-risk tool, `SessionTask`, with these actions:\n\n- `spawn(task, title?, model?)` creates a new durable session and immediately\n  starts its Agent.\n- `send(workerId, message)` continues the same durable worker session.\n- `status(workerIds?)` reads bounded live status.\n- `wait(workerIds)` polls at low frequency with a 100-second timeout and\n  returns bounded terminal records.\n- `result(workerId)` returns only the worker's final report when available.\n- `cancel(workerId)` aborts the active Agent and retains the session.\n- `list()` lists workers created by the current Parent Session.\n\nThe intended flow is to call `spawn` several times without awaiting each\nresult, then call `wait` once with all worker ids and summarize the returned\nreports in the Parent. The plugin does not copy a worker transcript into the\nParent context.\n\n## Safety and boundaries\n\n- Every worker is created with reviewed `desktop.control` operations:\n  `session/get`, `session/create`, `agent/prompt`,\n  `agent/getStatus`, and `agent/abort`.\n- The create request carries `inheritPermissionFromSessionId`. The host binds\n  that id to the current Agent tool session and returns the inherited\n  permission mode before the worker is prompted. If an older host ignores that\n  field for a Parent with an explicit permission mode, the plugin fails closed\n  and records the unprompted worker as failed.\n- Workers inherit the Parent project, provider/model, and thinking level. An\n  explicitly requested model must be present in the host's public\n  `models.list` result.\n- Parent/worker relationships are stored in the plugin's private settings as\n  bounded `workers` records. They are restored after plugin or app restart;\n  the durable worker transcript remains in PI-Desktop's normal session store.\n- A Parent can control only worker ids recorded under that Parent. A worker\n  cannot create or control another worker. The limits are four active workers\n  per Parent, sixteen active workers across the plugin, and sixteen workers\n  per wait call.\n- `cancel` uses `agent/abort` and never deletes a durable session.\n- No localhost MCP HTTP calls, MCP bearer tokens, network access, transcript\n  copying, session forks, session deletion, message bus, or second session\n  database are used.\n- The tool is high-risk and remains subject to PI-Desktop's normal tool policy.\n  The plugin does not set `confirm` or bypass native permission confirmation.\n\n## Capability matrix\n\n| Surface | Data read or written | Boundary and user confirmation |\n| --- | --- | --- |\n| `desktop.control` | Parent/session metadata, worker creation, Agent status, prompts and aborts | Only reviewed catalog operations are reachable; the install grant and the host's normal Agent policy remain in force. The plugin never invokes dangerous `session/delete` or `session/configure`. |\n| `models.list` | Public provider/model identifiers only | No credentials or transcript content are returned. An explicit `model` must match this list. |\n| `ui.panel` | Plugin-owned worker summaries | The panel uses `pluginBridge`, escapes untrusted labels/tasks, and only exposes Stop/Open actions for persisted worker ids. |\n| Plugin settings | `parentSessionId`, `workerSessionId`, task, status, timestamps and bounded final report | Stored in the plugin-private settings namespace; worker transcript content is never copied into it. |\n\nThe high-risk desktop surface is intentionally narrow: `spawn`, `send`,\n`status`, `wait`, `result`, `cancel` and `list` are the only operations exposed\nby `SessionTask`.\n\n## Agents panel\n\nThe isolated Agents panel restores the persisted worker list, refreshes status,\nand offers Open Session and Stop actions. Open Session uses the optional\nreviewed `session/open` host operation; on an older host the panel reports a\nclear unsupported error and leaves the worker available in the normal session\nlist.\n\n## Host compatibility\n\nVersion 0.1.0 targets PI-Desktop hosts that expose the reviewed\n`desktop.control` catalog and the additive\n`inheritPermissionFromSessionId` / `session/open` host capabilities. The\nplugin still uses only the stable SDK gateway, so no MCP token or private\nElectron channel is required.\n\nThe corresponding PI-Desktop host change is additive: it adds the reviewed\n`session/open` navigation operation, carries a `source: \"plugin\"` marker so\nbackground worker prompts do not steal the Parent view, and lets\n`session/create` resolve the parent's persisted permission mode atomically.\nIt does not add a Session database schema, change the existing Task/Subagent\nruntime, or introduce a second session system.\n",
+      "safetyNotes": "Creates and prompts durable PI-Desktop sessions through desktop.control. Parent/worker relationships are private plugin state; worker transcripts remain in the normal host session store. The plugin uses no network or MCP token and never deletes worker sessions.",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishedAt": "2026-09-12T23:01:23Z",
+          "changelog": "Release 0.1.0: durable parent-scoped workers, bounded parallel spawn/wait/cancel flows, restart-safe relationship state, final-report-only results, and an Agents panel.",
+          "minPiDesktop": ">=0.14.7",
+          "shasum": "38d63ba5f66c1662ece22247843c881d0f8fcc3bc5730a4303827db7ad88ca92",
+          "url": "packages/pi.session-orchestrator-0.1.0.piplug",
+          "sizeBytes": 70294,
+          "permissions": [
+            "ui.panel",
+            "agent.tool.register",
+            "desktop.control",
+            "models.list"
           ],
           "fs": {}
         }

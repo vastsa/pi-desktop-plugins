@@ -27,6 +27,7 @@ Contains plugin sources, installable `.piplug` packages, and the generated marke
 | **pi.gitlens** | GitLens-style local Git management docked in the work panel (human UI only, no agent tools) | PI-Desktop |
 | **pi.ssh-manager** | Local-first SSH host management with AI remote command tool, transient panel passwords and no persisted credentials | PI-Desktop |
 | **pi.terminal** | Interactive terminal docked in the work panel; multi-tab, cross-platform shell | PI-Desktop |
+| **pi.session-orchestrator** | Coordinate real durable worker sessions from an Agent with bounded parallel execution and final-report aggregation | PI-Desktop |
 
 ### Community
 

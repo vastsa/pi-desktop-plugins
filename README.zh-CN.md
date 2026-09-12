@@ -26,6 +26,7 @@
 | **pi.gitlens** | GitLens 风格的本地 Git 管理，停靠在右侧工作面板（仅人机 UI，无 Agent 工具） | PI-Desktop |
 | **pi.ssh-manager** | 本地优先的 SSH 主机管理与 AI 远程命令工具，支持面板临时密码且不持久化凭据 | PI-Desktop |
 | **pi.terminal** | 受 Otty 启发的交互式终端，只停靠在右侧工作面板；多标签、跨平台 shell | PI-Desktop |
+| **pi.session-orchestrator** | 会话编排器：让 Agent 并行创建真实持久化 Worker Session，并汇总最终报告 | PI-Desktop |
 
 ### 社区插件
 
