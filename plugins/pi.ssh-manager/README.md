@@ -9,7 +9,9 @@
 ## 能做什么
 
 - 管理多台 SSH 主机：名称、主机、端口、用户名、私钥路径和 agent socket。
-- 一键扫描并导入本机 `~/.ssh/config`（含有界的 `Include`），保留 Host 别名以继续使用完整 OpenSSH 配置（包括 ProxyJump）。重复扫描会更新已有导入项，不会重复创建。连接失败会展示 OpenSSH 诊断而不是笼统的 exit 255；Windows 会继承 SYSTEMROOT 等系统环境并查找 `ssh.exe`。
+- 一键扫描并导入本机 `~/.ssh/config`（含有界的 `Include`），保留 Host 别名以继续使用完整 OpenSSH 配置（包括 ProxyJump）。重复扫描会更新已有导入项，不会重复创建。连接失败会保留 OpenSSH 的传输诊断（包括 Windows 的 banner exchange / connection refused），而不是只显示笼统的 exit 255；Windows 会继承 SYSTEMROOT 等系统环境并查找 `ssh.exe`。
+- 导入自定义配置文件时会在连接中继续使用该配置文件；编辑导入主机的地址、端口、用户名或密钥路径后，插件会自动解除别名绑定并按表单中的显式值连接。
+- 默认 `~/.ssh/config` 仍按普通 OpenSSH 方式加载，因此不会因显式 `-F` 而跳过系统级 SSH 配置；Windows 密码 helper 不经过批处理变量展开，密码中的命令符号会原样交给 OpenSSH。
 - 默认严格校验 `known_hosts`；只有用户显式选择时才使用 `accept-new`。
 - 在面板中测试连接、执行一次性命令、查看 stdout/stderr，并忘记逻辑会话。
 - 向 AI 暴露四个工具：
@@ -24,7 +26,7 @@
 
 插件不会持久化密码、passphrase、私钥内容、命令输出或远程 transcript。需要密码
 认证时，可以在面板的「密码（不保存）」输入框中录入；密码只在当前插件进程内保存
-最多 30 分钟，通过一次性 `SSH_ASKPASS` helper 交给 OpenSSH，插件重启、卸载或
+最多 30 分钟，通过一次性本地 IPC broker 和 `SSH_ASKPASS` helper 交给 OpenSSH；密码不会进入 `ssh` 进程环境，避免被宽泛的 `SendEnv` 配置发送到远端。插件重启、卸载或
 超时后会自动清除。AI 工具永远不会接收密码参数，但可以复用当前内存中的密码状态。
 请优先在本机配置 OpenSSH：
 
@@ -40,7 +42,7 @@ ssh-agent 时，优先让 PI-Desktop 继承正确的 `SSH_AUTH_SOCK`，也可以
 填写 agent socket 路径。带 passphrase 的密钥应由 ssh-agent 或系统 OpenSSH 配置
 负责解锁；插件不会把它们写入设置。
 
-“连接”创建的是插件内的逻辑会话。每次命令仍启动一个有超时和输出上限的本机
+“连接”创建的是插件内的逻辑会话。每次命令仍启动一个有超时和输出上限、不会继承插件标准输入的本机
 `ssh` 进程，不会在插件进程里保留一个可被后台复用的远程 shell。
 
 ## AI 使用建议

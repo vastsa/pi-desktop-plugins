@@ -151,7 +151,47 @@ function getSession(id) {
 }
 
 function sshFailure(result, profile) {
+  // runSsh already returns a bounded, redacted diagnostic string. Reusing it
+  // avoids formatting twice and preserves spawn-specific messages such as
+  // ENOENT (missing OpenSSH), which no longer has a structured Error object at
+  // this layer.
+  if (typeof result?.error === "string" && result.error.trim()) return result.error.trim();
   return ssh.formatSshFailure(result, profile);
+}
+
+function comparableConnectionValue(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  return String(value).trim();
+}
+
+function connectionMetadataChanged(input, existing) {
+  if (!existing?.configAlias) return false;
+  return ["host", "port", "username", "identityFile", "agentSocket"].some((field) =>
+    Object.prototype.hasOwnProperty.call(input || {}, field) &&
+    comparableConnectionValue(input[field]) !== comparableConnectionValue(existing[field]),
+  );
+}
+
+function normalizePanelProfile(input, existing) {
+  const detachedFromConfig = connectionMetadataChanged(input, existing);
+  if (!detachedFromConfig) return ssh.normalizeProfile(input, existing || {});
+
+  // The form edits explicit connection fields. Materialize HostName when the
+  // user did not replace the alias itself, then normalize again without config
+  // context. This also rejects config-only path tokens such as %d/... instead
+  // of persisting a profile that normalizeStore would discard on next load.
+  const hostChanged = Object.prototype.hasOwnProperty.call(input || {}, "host") &&
+    comparableConnectionValue(input.host) !== comparableConnectionValue(existing.host);
+  const detachedInput = {
+    ...input,
+    host: hostChanged ? input.host : existing.hostName || existing.host,
+  };
+  const detachedExisting = { ...existing };
+  for (const field of ["configAlias", "hostName", "hostname", "source"]) {
+    delete detachedInput[field];
+    delete detachedExisting[field];
+  }
+  return ssh.normalizeProfile(detachedInput, detachedExisting);
 }
 
 async function connectProfile(profile, options = {}) {
@@ -429,7 +469,7 @@ async function onPanelInvoke(channel, payload = {}) {
     case "ssh.profile.save": {
       const input = args.profile && typeof args.profile === "object" ? args.profile : args;
       const existing = input.id ? store.profiles.find((profile) => profile.id === input.id) : null;
-      const profile = ssh.normalizeProfile(input, existing || {});
+      const profile = normalizePanelProfile(input, existing);
       if (input.clearPassword === true) clearProfilePassword(profile.id);
       if (Object.prototype.hasOwnProperty.call(input, "password") && input.password !== "") {
         setProfilePassword(profile.id, input.password);

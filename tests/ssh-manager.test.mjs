@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { execFile as nodeExecFile } from "node:child_process";
+import { createConnection } from "node:net";
 import {
   existsSync,
   mkdtempSync,
@@ -6,16 +8,18 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
-import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
+import { homedir, tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import test from "node:test";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const ssh = require("../plugins/pi.ssh-manager/ssh.js");
 const main = require("../plugins/pi.ssh-manager/main.js");
+const execFileAsync = promisify(nodeExecFile);
 const manifest = JSON.parse(
   readFileSync(join(here, "../plugins/pi.ssh-manager/manifest.json"), "utf8"),
 );
@@ -36,26 +40,46 @@ const panelCss = readFileSync(
   "utf8",
 );
 
-function makeExecFile({ stdout = "", stderr = "", error = null } = {}) {
+function makeExecFile({ stdout = "", stderr = "", error = null, onCall = null } = {}) {
   const calls = [];
   const execFile = (file, args, options, callback) => {
-    calls.push({ file, args: [...args], options: { ...options } });
+    const call = { file, args: [...args], options: { ...options } };
+    calls.push(call);
     const child = {
       killed: false,
       kill() {
         this.killed = true;
       },
     };
-    queueMicrotask(() => callback(error, stdout, stderr));
+    queueMicrotask(async () => {
+      try {
+        if (onCall) await onCall(call);
+        callback(error, stdout, stderr);
+      } catch (callError) {
+        callback(callError, "", String(callError?.message || callError));
+      }
+    });
     return child;
   };
   return { calls, execFile };
 }
 
+function readAskpassBroker(endpoint, token) {
+  return new Promise((resolve) => {
+    const socket = createConnection(endpoint);
+    let output = "";
+    socket.setEncoding("utf8");
+    socket.on("connect", () => socket.write(`${token}\n`));
+    socket.on("data", (chunk) => { output += chunk; });
+    socket.on("error", () => resolve(output));
+    socket.on("close", () => resolve(output));
+  });
+}
+
 test("manifest declares a high-risk SSH agent surface with the smallest plugin permissions", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.ssh-manager");
-  assert.equal(manifest.version, "0.1.2");
+  assert.equal(manifest.version, "0.1.3");
   assert.equal(manifest.ui.panel, "renderer/index.html");
   assert.deepEqual(manifest.permissions, [
     "ui.panel",
@@ -119,6 +143,10 @@ test("profile validation rejects injection-shaped host fields and never stores s
 });
 
 test("OpenSSH config scanning imports concrete aliases without reading key contents", () => {
+  assert.equal(
+    ssh.__test.resolveConfigPath(join("relative", "ssh-config")),
+    resolve("relative", "ssh-config"),
+  );
   const config = [
     "# Defaults must not become a host by themselves",
     "Host *",
@@ -175,8 +203,40 @@ test("OpenSSH config scanning imports concrete aliases without reading key conte
     });
     assert.equal(importedArgs.at(-2), "included");
     assert.equal(importedArgs.at(-1), "true");
+    const configFlag = importedArgs.indexOf("-F");
+    assert.ok(configFlag >= 0);
+    assert.equal(importedArgs[configFlag + 1], configPath);
+    const importedProfile = discovered.find((profile) => profile.configAlias === "included");
+    const redactedFailure = ssh.formatSshFailure(
+      { stderr: `Can't open user config file ${configPath}`, exitCode: 255 },
+      importedProfile,
+    );
+    assert.doesNotMatch(redactedFailure, new RegExp(configPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.equal(importedArgs.includes("-p"), false);
     assert.equal(importedArgs.includes("-i"), false);
+
+    const defaultConfigProfile = ssh.normalizeProfile({
+      name: "Default config alias",
+      host: "default-alias",
+      username: "local",
+      configAlias: "default-alias",
+      source: join(homedir(), ".ssh", "config"),
+    });
+    const defaultConfigArgs = ssh.buildSshArgs(defaultConfigProfile, { remoteCommand: "true" });
+    assert.equal(defaultConfigArgs.includes("-F"), false);
+
+    const legacyRelativeProfile = ssh.normalizeProfile({
+      name: "Legacy relative config",
+      host: "legacy-alias",
+      username: "local",
+      configAlias: "legacy-alias",
+      source: join("relative", "config"),
+    });
+    const legacyRelativeArgs = ssh.buildSshArgs(legacyRelativeProfile, { remoteCommand: "true" });
+    assert.equal(
+      legacyRelativeArgs[legacyRelativeArgs.indexOf("-F") + 1],
+      resolve("relative", "config"),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -202,10 +262,15 @@ test("SSH commands use execFile argument boundaries and cap output", async () =>
     assert.equal(result.ok, true);
     assert.equal(result.stdout, "remote output\n");
     assert.equal(fake.calls.length, 1);
-    assert.equal(fake.calls[0].file, "ssh");
+    const sshExecutable = process.platform === "win32"
+      ? basename(fake.calls[0].file).toLowerCase()
+      : fake.calls[0].file;
+    assert.ok(["ssh", "ssh.exe"].includes(sshExecutable));
     assert.equal(fake.calls[0].args.at(-1), "printf 'ok'; uname -a");
+    assert.ok(fake.calls[0].args.includes("-n"));
     assert.ok(fake.calls[0].args.includes("BatchMode=yes"));
     assert.ok(fake.calls[0].args.includes("ConnectTimeout=7"));
+    assert.ok(fake.calls[0].args.includes("LogLevel=INFO"));
     assert.equal(fake.calls[0].options.shell, false);
   } finally {
     ssh.__test.resetExecFile();
@@ -213,7 +278,50 @@ test("SSH commands use execFile argument boundaries and cap output", async () =>
 });
 
 test("password authentication uses a transient askpass helper without returning the password", async () => {
-  const fake = makeExecFile({ stdout: "password auth ok\n" });
+  const password = "p%PATH%!bang^caret&pipe|redirect><()\"'$";
+  let helperOutput = null;
+  let helperScriptPath = null;
+  const fake = makeExecFile({
+    stdout: "password auth ok\n",
+    async onCall(call) {
+      const helperPath = call.options.env.SSH_ASKPASS;
+      const helperSource = readFileSync(helperPath, "utf8");
+      assert.equal(helperSource.includes(password), false);
+      assert.equal(JSON.stringify(call.options.env).includes(password), false);
+      const broker = ssh.__test.activeAskpassBrokerSnapshot();
+      assert.ok(broker);
+      const brokerToken = broker.token;
+      const invalidToken = `${brokerToken[0] === "0" ? "1" : "0"}${brokerToken.slice(1)}`;
+      const rejectedOutput = await readAskpassBroker(
+        broker.endpoint,
+        invalidToken,
+      );
+      assert.equal(rejectedOutput, "");
+      if (process.platform === "win32") {
+        assert.match(helperSource, /DisableDelayedExpansion/);
+        assert.doesNotMatch(helperSource, /echo\s+%PI_SSH_ASKPASS_PASSWORD%/i);
+        helperScriptPath = call.options.env.PI_SSH_ASKPASS_SCRIPT;
+        assert.equal(existsSync(helperScriptPath), true);
+        assert.equal(readFileSync(helperScriptPath, "utf8").includes(password), false);
+        const commandShell = call.options.env.ComSpec || call.options.env.COMSPEC || "cmd.exe";
+        const result = await execFileAsync(
+          commandShell,
+          ["/d", "/s", "/c", "call", helperPath, "Password:"],
+          { encoding: "utf8", env: call.options.env, windowsHide: true },
+        );
+        helperOutput = result.stdout;
+      } else {
+        helperScriptPath = call.options.env.PI_SSH_ASKPASS_SCRIPT;
+        assert.equal(existsSync(helperScriptPath), true);
+        assert.equal(readFileSync(helperScriptPath, "utf8").includes(password), false);
+        const result = await execFileAsync(helperPath, ["Password:"], {
+          encoding: "utf8",
+          env: call.options.env,
+        });
+        helperOutput = result.stdout;
+      }
+    },
+  });
   ssh.__test.setExecFile(fake.execFile);
   try {
     const profile = ssh.normalizeProfile({
@@ -223,7 +331,7 @@ test("password authentication uses a transient askpass helper without returning 
       username: "ops",
     });
     const result = await ssh.runSsh(profile, {
-      password: "s3cret!",
+      password,
       remoteCommand: "whoami",
       timeoutSeconds: 5,
     });
@@ -231,13 +339,29 @@ test("password authentication uses a transient askpass helper without returning 
     assert.equal(result.ok, true);
     assert.ok(fake.calls[0].options.env.SSH_ASKPASS);
     assert.equal(existsSync(fake.calls[0].options.env.SSH_ASKPASS), false);
-    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, "s3cret!");
+    assert.equal(existsSync(helperScriptPath), true);
+    assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_ENDPOINT, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_TOKEN, undefined);
+    assert.equal(helperOutput, `${password}\n`);
     assert.ok(fake.calls[0].args.includes("BatchMode=no"));
     assert.ok(fake.calls[0].args.includes("NumberOfPasswordPrompts=1"));
-    assert.doesNotMatch(JSON.stringify(result), /s3cret!/);
+    assert.equal(JSON.stringify(result).includes(password), false);
   } finally {
     ssh.__test.resetExecFile();
   }
+});
+
+test("unload cleanup cancels an askpass broker before its listen callback", async () => {
+  const pending = ssh.runSsh(
+    ssh.normalizeProfile({ name: "cancelled", host: "cancelled.example.com", username: "deploy" }),
+    { password: "test-only-password", remoteCommand: "true" },
+  );
+  assert.equal(ssh.__test.activeAskpassBrokerCount(), 1);
+  ssh.killActiveProcesses();
+  await assert.rejects(pending, /askpass broker was cancelled/i);
+  assert.equal(ssh.__test.activeAskpassBrokerCount(), 0);
 });
 
 test("dangerous and ambiguous remote commands are blocked conservatively", () => {
@@ -327,6 +451,45 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
       assert.equal(repeated.imported, 0);
       assert.equal(repeated.updated, 1);
       assert.equal(settings.profiles.length, 2);
+
+      const importedProfile = repeated.profiles[0];
+      const renamedImported = await main.onPanelInvoke("ssh.profile.save", {
+        profile: { id: importedProfile.id, name: "Renamed imported host" },
+      });
+      assert.equal(renamedImported.ok, true);
+      assert.equal(renamedImported.profile.configAlias, importedProfile.configAlias);
+      const editedImported = await main.onPanelInvoke("ssh.profile.save", {
+        profile: {
+          ...renamedImported.profile,
+          port: 2203,
+        },
+      });
+      assert.equal(editedImported.ok, true);
+      assert.equal("configAlias" in editedImported.profile, false);
+      assert.equal("source" in editedImported.profile, false);
+      assert.equal(editedImported.profile.host, "panel.example.com");
+      const editedArgs = ssh.buildSshArgs(editedImported.profile, { remoteCommand: "true" });
+      assert.equal(editedArgs[editedArgs.indexOf("-p") + 1], "2203");
+      assert.equal(editedArgs.at(-2), "panel-user@panel.example.com");
+
+      const tokenImported = await main.onPanelInvoke("ssh.profile.save", {
+        profile: {
+          id: "config-token-test",
+          name: "Token identity",
+          host: "token-alias",
+          hostName: "token.example.com",
+          username: "deploy",
+          identityFile: "%d/.ssh/id_ed25519",
+          configAlias: "token-alias",
+          source: configPath,
+        },
+      });
+      await assert.rejects(
+        main.onPanelInvoke("ssh.profile.save", {
+          profile: { ...tokenImported.profile, port: 2204 },
+        }),
+        /identityFile must be an absolute path/i,
+      );
     } finally {
       rmSync(configRoot, { recursive: true, force: true });
     }
@@ -344,7 +507,10 @@ test("panel and AI flows share profiles, but AI host listings redact local paths
     assert.equal(connected.ok, true);
     assert.match(connected.session_id, /^ssh-/);
     assert.equal(connected.host, "prod.example.com");
-    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, "test-only-password");
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_PASSWORD, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_ENDPOINT, undefined);
+    assert.equal(fake.calls[0].options.env.PI_SSH_ASKPASS_TOKEN, undefined);
+    assert.equal(JSON.stringify(fake.calls[0].options.env).includes("test-only-password"), false);
 
     const executeTool = registered.find((item) => item.value.name === "ssh_execute").value;
     assert.equal("allow_destructive" in executeTool.schema.properties, false);
@@ -418,6 +584,59 @@ test("connection failures surface OpenSSH diagnostics instead of a bare exit cod
     error: Object.assign(new Error("spawn ssh ENOENT"), { code: "ENOENT" }),
   }, profile);
   assert.match(missing, /not found/i);
+});
+
+test("runSsh keeps Windows transport diagnostics that OpenSSH reports below ERROR", async () => {
+  const fake = makeExecFile({
+    stderr: "banner exchange: Connection to UNKNOWN port -1: Connection refused\r\n",
+    error: Object.assign(new Error("ssh exited with code 255"), { code: "255" }),
+  });
+  ssh.__test.setExecFile(fake.execFile);
+  try {
+    const result = await ssh.runSsh(
+      ssh.normalizeProfile({ name: "refused", host: "refused.example.com", username: "deploy" }),
+      { remoteCommand: "true", timeoutSeconds: 3 },
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.exitCode, 255);
+    assert.match(result.stderr, /banner exchange/i);
+    assert.match(result.error, /Connection refused/i);
+  } finally {
+    ssh.__test.resetExecFile();
+  }
+});
+
+test("main preserves the already formatted missing-client diagnostic", async () => {
+  const settings = { profiles: [] };
+  const spawnError = Object.assign(new Error("spawn ssh.exe ENOENT"), { code: "ENOENT" });
+  const fake = makeExecFile({ error: spawnError });
+  ssh.__test.setExecFile(fake.execFile);
+  const previousPi = globalThis.pi;
+  globalThis.pi = {
+    plugin: {
+      getSettings: async () => settings,
+      setSettings: async (patch) => Object.assign(settings, patch),
+    },
+    commands: { register: async () => {}, unregister: async () => {} },
+    agent: { registerTool: async () => {}, unregisterTool: async () => {} },
+    ui: { openPanel: async () => {} },
+  };
+  try {
+    await main.__test.resetState();
+    await main.onLoad();
+    const saved = await main.onPanelInvoke("ssh.profile.save", {
+      profile: { name: "Missing SSH", host: "missing.example.com", username: "deploy" },
+    });
+    const failed = await main.onPanelInvoke("ssh.connect", { profile_id: saved.profile.id });
+    assert.equal(failed.ok, false);
+    assert.match(failed.error, /OpenSSH client was not found/i);
+    assert.doesNotMatch(failed.error, /^spawn ssh\.exe ENOENT$/i);
+  } finally {
+    await main.onUnload();
+    ssh.__test.resetExecFile();
+    globalThis.pi = previousPi;
+    await main.__test.resetState();
+  }
 });
 
 test("Windows SSH environment keeps SYSTEMROOT and locates OpenSSH", () => {
@@ -521,4 +740,3 @@ test("panel connect failures return diagnostics and unload kills leftover ssh pr
     await main.__test.resetState();
   }
 });
-
