@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-12T05:51:37Z",
+  "updatedAt": "2026-09-13T19:08:18Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -893,12 +893,12 @@
       "versions": [
         {
           "version": "0.2.6",
-          "publishedAt": "2026-09-12T05:51:37Z",
+          "publishedAt": "2026-09-13T19:08:18Z",
           "changelog": "0.2.6：市场名称改为「防C盘拉屎」，介绍改成直白中文。 0.2.5: Quote generated bash and PowerShell assignments safely, reject unsafe cmd values, enforce canonical root/scratch and symlink boundaries, include negative-path tests in CI, and sync the package. 0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
           "minPiDesktop": ">=0.2.0",
-          "shasum": "51d6269a3ef40c069da4b52fa8eae79907a3f8586c4f675452bbc94f033b324a",
+          "shasum": "f9cc6b451805b6edb692358a609ce5a7341ead3ddf2054270643b54c24e8210b",
           "url": "packages/pi.workspace-file-guard-0.2.6.piplug",
-          "sizeBytes": 39364,
+          "sizeBytes": 38306,
           "permissions": [
             "agent.prompt.inject",
             "agent.tool.register"
