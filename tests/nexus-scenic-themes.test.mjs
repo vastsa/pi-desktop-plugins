@@ -59,7 +59,7 @@ test("settings page exposes accessible cards and a 0-20 blur control", () => {
   assert.match(js, /setTheme/);
   assert.match(js, /setVariables/);
   assert.match(js, /plugin\.getSettings/);
-  assert.match(js, /plugin\.setSettings/);
+  assert.doesNotMatch(js, /plugin\.setSettings/);
   assert.match(js, /--nexus-backdrop-blur/);
   assert.match(js, /180/);
   assert.doesNotMatch(js, /innerHTML\s*=/);
@@ -71,7 +71,8 @@ test("theme CSS uses the dynamic blur only on the scenic backdrop", () => {
     const css = read(theme.path);
     const uses = css.match(/var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/g) ?? [];
     assert.equal(uses.length, 1);
-    assert.match(css, /\.app-shell::before[^{]*\{[^}]*filter:[^;}]*blur\(var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/s);
+    assert.match(css, /\.app-shell::before[^{]*\{[^}]*z-index:\s*0[^}]*filter:[^;}]*blur\(var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/s);
+    assert.match(css, /\.app-shell\s*>\s*\*\s*\{\s*position:\s*relative;\s*z-index:\s*1;/);
     assert.doesNotMatch(css, /(?:transcript|tool-row|code|dialog|menu)[^{]*\{[^}]*--nexus-backdrop-blur/);
   }
 });
