@@ -1,11 +1,10 @@
 "use strict";
 
 /**
- * Workspace File Guard — PI-Desktop plugin entry.
+ * C盘防垃圾 — PI-Desktop 插件入口。
  *
- * Skills in this pack are injected into the agent prompt while the plugin
- * is enabled. Tools let the agent resolve the project root and reject writes
- * that would leak test/temp/junk files onto the system volume, Desktop, Downloads, or temp dirs.
+ * 插件启用期间会把 skill 注入 Agent。工具用来解析项目根，
+ * 并拒绝把测试/临时/垃圾文件写到系统盘、桌面、下载或系统临时目录。
  */
 
 const {
@@ -100,7 +99,7 @@ async function toolTmpLayout(args) {
     scratch,
     layout: tmpLayout(projectRoot),
     hint:
-      "Create these folders only when needed. Put throwaway files in Temp or scratch; keep durable source in the project tree.",
+      "只在需要时创建这些文件夹。一次性文件放 Temp 或 scratch；正式源码放项目树。",
   });
 }
 
@@ -110,15 +109,14 @@ async function onLoad() {
     await pi.agent.registerTool({
       name: "project_root",
       description:
-        "Resolve the active PI-Desktop workspace, PI scratch directory, and recommended Temp layout. Fails if no workspace is open and root is omitted. Use before creating test/temp/scratch files.",
+        "解析当前打开的 PI-Desktop 工作区、PI scratch，以及推荐的 Temp 布局。未打开工作区且未传 root 时失败。写测试/临时/草稿文件前先调用。",
       risk: "low",
       schema: {
         type: "object",
         properties: {
           root: {
             type: "string",
-            description:
-              "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection.",
+            description: "可选的绝对项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。",
           },
         },
       },
@@ -129,21 +127,20 @@ async function onLoad() {
     await pi.agent.registerTool({
       name: "check_path",
       description:
-        "Classify whether a write path is allowed. Read allowed, not ok: ok=true only means classification succeeded. Relative paths are resolved against the workspace, not the plugin process cwd. allowed=false must be redirected into the workspace or PI scratch.",
+        "判断写入路径是否允许。看 allowed，不要看 ok：ok=true 只表示分类成功。相对路径相对工作区解析，不是插件进程 cwd。allowed=false 必须改写到工作区或 PI scratch。",
       risk: "low",
       schema: {
         type: "object",
         properties: {
-          path: { type: "string", description: "Path that would be written" },
+          path: { type: "string", description: "准备写入的路径" },
           root: {
             type: "string",
-            description:
-              "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection.",
+            description: "可选的绝对项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。",
           },
           explicit: {
             type: "boolean",
             description:
-              "Set true only when this turn's user message named this absolute destination. The tool cannot verify that; Desktop/Downloads/temp stay forbidden anyway.",
+              "仅当本轮用户消息点名了这个绝对路径时设为 true。工具无法核实；桌面、下载、系统临时目录仍然禁止。",
           },
         },
         required: ["path"],
@@ -155,20 +152,19 @@ async function onLoad() {
     await pi.agent.registerTool({
       name: "temp_env",
       description:
-        "Return TMP/TEMP/cache environment assignments that keep tool junk inside the project Temp and PI scratch. Fails if no workspace is open and root is omitted.",
+        "返回 TMP/TEMP/缓存环境变量赋值，把工具垃圾关在项目 Temp 和 PI scratch。未打开工作区且未传 root 时失败。",
       risk: "low",
       schema: {
         type: "object",
         properties: {
           root: {
             type: "string",
-            description:
-              "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection.",
+            description: "可选的绝对项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。",
           },
           shell: {
             type: "string",
             enum: ["powershell", "cmd", "bash", "json"],
-            description: "Script dialect for the env assignments",
+            description: "环境变量脚本方言",
           },
         },
       },
@@ -179,15 +175,14 @@ async function onLoad() {
     await pi.agent.registerTool({
       name: "tmp_layout",
       description:
-        "Return the recommended $project/Temp/{tests,scripts,cache,out} layout without creating files. Fails if no workspace is open and root is omitted.",
+        "返回推荐的 $project/Temp/{tests,scripts,cache,out} 布局，不创建文件。未打开工作区且未传 root 时失败。",
       risk: "low",
       schema: {
         type: "object",
         properties: {
           root: {
             type: "string",
-            description:
-              "Optional absolute project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection.",
+            description: "可选的绝对项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。",
           },
         },
       },

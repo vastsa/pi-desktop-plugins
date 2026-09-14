@@ -32,7 +32,7 @@
 
 ## 安装
 
-1. PI-Desktop → 扩展 → 安装插件包，选择 `packages/pi.workspace-file-guard-0.2.7.piplug`。
+1. PI-Desktop → 扩展 → 安装插件包，选择 `packages/pi.workspace-file-guard-0.2.8.piplug`。
 2. 若出现权限确认，勾选 `agent.prompt.inject` 与 `agent.tool.register`（当前宿主对本地 `.piplug` 可能按清单静默全授）。
 3. 新开一个 Agent 会话，skill 才会注入。
 

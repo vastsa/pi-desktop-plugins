@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "id": "pi.workspace-file-guard",
   "name": "C盘防垃圾",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "防止模型把测试、日志、缓存、临时文件写到系统盘、桌面、下载。垃圾只待在当前项目的 Temp 或 scratch。",
   "i18n": {
     "en": {
-      "name": "Keep junk off C:",
-      "description": "Keep test, log, cache, and temp files out of the system drive, Desktop, and Downloads. Junk stays in the current project's Temp or scratch.",
-      "safetyNotes": "Behavioral confinement, not a disk lock. The plugin only classifies paths and injects agent rules. It does not change ACLs or use the network."
+      "name": "C盘防垃圾",
+      "description": "防止模型把测试、日志、缓存、临时文件写到系统盘、桌面、下载。垃圾只待在当前项目的 Temp 或 scratch。",
+      "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。"
     },
     "zh-CN": {
       "name": "C盘防垃圾",
@@ -25,36 +25,36 @@
     "agentTools": [
       {
         "name": "project_root",
-        "description": "Resolve the open PI-Desktop workspace, PI scratch directory, and recommended Temp layout. Fails if no workspace is open and root is omitted.",
+        "description": "解析当前打开的 PI-Desktop 工作区、PI scratch，以及推荐的 Temp 布局。未打开工作区且未传 root 时失败。",
         "risk": "low",
         "schema": {
           "type": "object",
           "properties": {
             "root": {
               "type": "string",
-              "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection."
+              "description": "可选的项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。"
             }
           }
         }
       },
       {
         "name": "check_path",
-        "description": "Classify whether a write path is allowed. Read allowed, not ok. Relative paths are resolved against the workspace, not the plugin process cwd. allowed=false must be redirected into the workspace or PI scratch.",
+        "description": "判断写入路径是否允许。看 allowed，不要看 ok。相对路径相对工作区解析，不是插件进程 cwd。allowed=false 必须改写到工作区或 PI scratch。",
         "risk": "low",
         "schema": {
           "type": "object",
           "properties": {
             "path": {
               "type": "string",
-              "description": "Path that would be written"
+              "description": "准备写入的路径"
             },
             "root": {
               "type": "string",
-              "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection."
+              "description": "可选的项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。"
             },
             "explicit": {
               "type": "boolean",
-              "description": "Set true only when the user clearly named this destination"
+              "description": "仅当用户明确点名这个目标时设为 true"
             }
           },
           "required": [
@@ -64,14 +64,14 @@
       },
       {
         "name": "temp_env",
-        "description": "Return TMP/TEMP/cache environment assignments that keep tool junk inside the project Temp and PI scratch.",
+        "description": "返回 TMP/TEMP/缓存环境变量赋值，把工具垃圾关在项目 Temp 和 PI scratch。",
         "risk": "low",
         "schema": {
           "type": "object",
           "properties": {
             "root": {
               "type": "string",
-              "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection."
+              "description": "可选的项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。"
             },
             "shell": {
               "type": "string",
@@ -81,21 +81,21 @@
                 "bash",
                 "json"
               ],
-              "description": "Script dialect for the env assignments. Defaults to PowerShell on Windows and bash elsewhere."
+              "description": "环境变量脚本方言。Windows 默认 PowerShell，其他系统默认 bash。"
             }
           }
         }
       },
       {
         "name": "tmp_layout",
-        "description": "Return the recommended $project/Temp/{tests,scripts,cache,out} layout without creating files.",
+        "description": "返回推荐的 $project/Temp/{tests,scripts,cache,out} 布局，不创建文件。",
         "risk": "low",
         "schema": {
           "type": "object",
           "properties": {
             "root": {
               "type": "string",
-              "description": "Optional project root override; use only for a root explicitly selected by the user. The tool cannot verify that selection."
+              "description": "可选的项目根覆盖；仅在用户明确指定时使用。工具无法核实该选择。"
             }
           }
         }
@@ -112,7 +112,7 @@
   "categories": [
     "productivity"
   ],
-  "changelog": "0.2.7：市场名称改为「C盘防垃圾」；项目垃圾改放到 $project/Temp/；拒绝把 Temp 倾倒目录当项目根。 0.2.6：市场名称改为直白中文。 0.2.5: Quote generated bash and PowerShell assignments safely, reject unsafe cmd values, enforce canonical root/scratch and symlink boundaries, include negative-path tests in CI, and sync the package. 0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
+  "changelog": "0.2.8：介绍、工具说明和 changelog 全部改为中文。0.2.7：市场名称改为「C盘防垃圾」；项目垃圾改放到 $project/Temp/；拒绝把 Temp 倾倒目录当项目根。0.2.6：市场名称改为直白中文。0.2.5：安全引用 bash/PowerShell 赋值，拒绝不安全的 cmd 值，强制规范 root/scratch 与符号链接边界，CI 加入负向路径测试并同步包装。0.2.4：说明改为中文。0.2.3：去掉 git/cwd 作为项目根回退；cmd 环境变量拒绝内嵌引号；覆盖工作区 API 失败与 explicit 临时目录拒绝。0.2.2：相对路径相对工作区解析。0.2.1：explicit 目标与 XDG_DOWNLOAD_DIR。0.2.0：跨机器便携。",
   "safetyNotes": "这是行为约束，不是磁盘锁。插件只分类路径并注入 Agent 规则，不改 ACL、不联网。",
   "activationEvents": [
     "onStartup"
