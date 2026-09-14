@@ -15,6 +15,7 @@ test("manifest declares the four isolated scenic themes and Extensions page", ()
   const manifest = readJson(manifestPath);
   assert.equal(manifest.id, "io.github.akshayxkill.nexus-scenic-themes");
   assert.equal(manifest.version, "0.1.0");
+  assert.equal(manifest.author, "Akshayxkill");
   assert.deepEqual(manifest.permissions, ["ui.theme", "ui.settings", "ui.window.appearance"]);
   assert.deepEqual(manifest.contributes.themes.map((theme) => theme.id), [
     "twilight-mountains", "alpine-light", "obsidian-horizon", "emerald-afterglow",

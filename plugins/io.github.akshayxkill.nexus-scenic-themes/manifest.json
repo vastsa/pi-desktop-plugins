@@ -4,7 +4,7 @@
   "name": "Nexus Scenic Themes",
   "version": "0.1.0",
   "description": "Four local scenic glass themes from Nexus for PI-Desktop.",
-  "author": { "name": "Akshayxkill", "url": "https://github.com/Akshayxkill" },
+  "author": "Akshayxkill",
   "repository": "https://github.com/Akshayxkill/PI-Desktop-Nexus",
   "main": "main.js",
   "categories": ["themes", "appearance"],
