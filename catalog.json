@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-14T04:38:39Z",
+  "updatedAt": "2026-09-14T21:45:38Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -145,6 +145,51 @@
             "clipboard.write",
             "notify",
             "agent.tool.register"
+          ],
+          "fs": {}
+        }
+      ]
+    },
+    {
+      "id": "io.github.akshayxkill.nexus-scenic-themes",
+      "name": "Nexus Scenic Themes",
+      "description": "Four local scenic glass themes from Nexus for PI-Desktop.",
+      "i18n": {
+        "en": {
+          "name": "Nexus Scenic Themes",
+          "description": "Four local scenic glass themes from Nexus for PI-Desktop.",
+          "safetyNotes": "Uses only bundled images and appearance permissions. It does not access files, network, clipboard, or shell."
+        },
+        "zh-CN": {
+          "name": "Nexus \u98ce\u666f\u4e3b\u9898",
+          "description": "\u4e3a PI-Desktop \u63d0\u4f9b\u56db\u6b3e\u6765\u81ea Nexus \u7684\u672c\u5730\u98ce\u666f\u73bb\u7483\u4e3b\u9898\u3002",
+          "safetyNotes": "\u4ec5\u4f7f\u7528\u968f\u63d2\u4ef6\u6253\u5305\u7684\u56fe\u7247\u548c\u5916\u89c2\u6743\u9650\uff1b\u4e0d\u8bbf\u95ee\u6587\u4ef6\u3001\u7f51\u7edc\u3001\u526a\u8d34\u677f\u6216 shell\u3002"
+        }
+      },
+      "author": "Akshayxkill",
+      "categories": [
+        "themes",
+        "appearance"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/io.github.akshayxkill.nexus-scenic-themes",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Nexus Scenic Themes\n\nFour locally packaged scenic themes for PI-Desktop: Twilight Mountains, Alpine Light, Obsidian Horizon, and Emerald Afterglow.\n\nOpen **Settings \u2192 Extensions \u2192 Nexus Scenic Themes** to choose a theme and set its backdrop-only blur from 0 to 20 pixels. Each theme remembers its own blur value.\n\n## Permissions\n\n- `ui.theme` applies the four declared themes and their validated backdrop-blur variable.\n- `ui.settings` contributes the sandboxed Settings destination.\n- `ui.window.appearance` supplies safe native fallback colors while a declared theme is selected.\n\nNo files, network, clipboard, shell, agent tools, or remote assets are used. Backdrops are bundled locally. Visual direction and assets are attributed to the Nexus project: https://github.com/Akshayxkill/PI-Desktop-Nexus.\n\n## Compatibility\n\nThis preview requires PI-Desktop builds containing the plugin appearance extensions API from `feat/plugin-appearance-extensions`. It will receive a released version floor once that API merges upstream.\n",
+      "safetyNotes": null,
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishedAt": "2026-09-14T21:39:51Z",
+          "changelog": "Initial preview release with four scenic themes and per-theme backdrop blur.",
+          "minPiDesktop": ">=0.14.8",
+          "shasum": "2555292b4e7f786b82274f17dca4491300179f3ed918dffa5166c9da20993c7e",
+          "url": "packages/io.github.akshayxkill.nexus-scenic-themes-0.1.0.piplug",
+          "sizeBytes": 9131448,
+          "permissions": [
+            "ui.theme",
+            "ui.settings",
+            "ui.window.appearance"
           ],
           "fs": {}
         }
