@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.akshayxkill.nexus-scenic-themes",
+  "name": "Nexus Scenic Themes",
+  "version": "0.1.0",
+  "description": "Four local scenic glass themes from Nexus for PI-Desktop.",
+  "author": { "name": "Akshayxkill", "url": "https://github.com/Akshayxkill" },
+  "repository": "https://github.com/Akshayxkill/PI-Desktop-Nexus",
+  "main": "main.js",
+  "categories": ["themes", "appearance"],
+  "changelog": "Initial preview release with four scenic themes and per-theme backdrop blur.",
+  "i18n": {
+    "en": { "name": "Nexus Scenic Themes", "description": "Four local scenic glass themes from Nexus for PI-Desktop.", "safetyNotes": "Uses only bundled images and appearance permissions. It does not access files, network, clipboard, or shell." },
+    "zh-CN": { "name": "Nexus 风景主题", "description": "为 PI-Desktop 提供四款来自 Nexus 的本地风景玻璃主题。", "safetyNotes": "仅使用随插件打包的图片和外观权限；不访问文件、网络、剪贴板或 shell。" }
+  },
+  "contributes": {
+    "themes": [
+      { "id": "twilight-mountains", "label": "Twilight Mountains", "path": "themes/twilight-mountains.css", "base": "dark", "assets": ["assets/twilight-mountains.png"], "variables": [{ "name": "--nexus-backdrop-blur", "type": "length", "unit": "px", "min": 0, "max": 20, "default": 6 }] },
+      { "id": "alpine-light", "label": "Alpine Light", "path": "themes/alpine-light.css", "base": "light", "assets": ["assets/alpine-light.png"], "variables": [{ "name": "--nexus-backdrop-blur", "type": "length", "unit": "px", "min": 0, "max": 20, "default": 6 }] },
+      { "id": "obsidian-horizon", "label": "Obsidian Horizon", "path": "themes/obsidian-horizon.css", "base": "dark", "assets": ["assets/obsidian-horizon.png"], "variables": [{ "name": "--nexus-backdrop-blur", "type": "length", "unit": "px", "min": 0, "max": 20, "default": 6 }] },
+      { "id": "emerald-afterglow", "label": "Emerald Afterglow", "path": "themes/emerald-afterglow.css", "base": "dark", "assets": ["assets/emerald-afterglow.png"], "variables": [{ "name": "--nexus-backdrop-blur", "type": "length", "unit": "px", "min": 0, "max": 20, "default": 6 }] }
+    ],
+    "settingsDestinations": [{ "id": "nexus-scenic-themes", "label": { "en": "Nexus Scenic Themes", "zh-CN": "Nexus 风景主题" }, "icon": "palette", "keywords": [{ "en": "scenic themes backdrop blur twilight alpine obsidian emerald", "zh-CN": "风景 主题 背景 模糊 暮光 高山 黑曜石 翡翠" }], "entry": "settings/index.html" }],
+    "windowAppearance": { "backgroundColor": { "light": "#dceef7", "dark": "#071326" } }
+  },
+  "permissions": ["ui.theme", "ui.settings", "ui.window.appearance"],
+  "engines": { "piDesktop": ">=0.14.8" },
+  "activationEvents": ["onStartup"]
+}

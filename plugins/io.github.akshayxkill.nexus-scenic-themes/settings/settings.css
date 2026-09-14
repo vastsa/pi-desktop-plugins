@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; font-family: "Segoe UI", system-ui, sans-serif; color: #eaf3ff; background: #0b1527; }
+body { margin: 0; background: transparent; }
+main { box-sizing: border-box; max-width: 1080px; margin: 0 auto; padding: 28px; }
+h1, h2, p { margin: 0; } h1 { font-size: 24px; } header p, #blur-help { margin-top: 6px; color: #b7c6dc; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 24px 0; }
+.theme-card { position: relative; min-height: 168px; overflow: hidden; border: 1px solid rgba(228,242,255,.25); border-radius: 16px; padding: 16px; background-color: #17243b; background-position: center; background-size: cover; color: #fff; cursor: pointer; text-align: left; }
+.theme-card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,8,20,.08), rgba(2,8,20,.76)); }
+.theme-card > span { position: relative; display: block; } .theme-card strong { font-size: 16px; } .theme-card small { display: block; margin-top: 5px; color: #e2ecfa; }
+.theme-card[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px rgba(177,218,255,.65); }
+.theme-card:focus-visible, input:focus-visible { outline: 3px solid #a8d5ff; outline-offset: 3px; }
+.blur-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; border: 1px solid rgba(228,242,255,.2); border-radius: 16px; padding: 18px; background: rgba(16,31,55,.8); }
+.range { display: flex; min-width: min(370px, 52vw); align-items: center; gap: 12px; } input { flex: 1; accent-color: #a8d5ff; } output { min-width: 38px; font-variant-numeric: tabular-nums; }
+#status { min-height: 20px; margin-top: 14px; color: #ffd5d5; } @media (max-width: 620px) { main { padding: 18px; } .blur-card { align-items: stretch; flex-direction: column; } .range { min-width: 0; } }
