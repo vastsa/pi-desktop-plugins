@@ -73,6 +73,7 @@ test("theme CSS uses the dynamic blur only on the scenic backdrop", () => {
     assert.equal(uses.length, 1);
     assert.match(css, /\.app-shell::before[^{]*\{[^}]*z-index:\s*0[^}]*filter:[^;}]*blur\(var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/s);
     assert.match(css, /\.app-shell\s*>\s*\*\s*\{\s*position:\s*relative;\s*z-index:\s*1;/);
+    assert.match(css, /:is\(\.main-pane,\.chat-surface,\.route-page\)\s*\{\s*background:\s*transparent;/);
     assert.doesNotMatch(css, /(?:transcript|tool-row|code|dialog|menu)[^{]*\{[^}]*--nexus-backdrop-blur/);
   }
 });
