@@ -77,3 +77,24 @@ test("theme CSS uses the dynamic blur only on the scenic backdrop", () => {
     assert.doesNotMatch(css, /(?:transcript|tool-row|code|dialog|menu)[^{]*\{[^}]*--nexus-backdrop-blur/);
   }
 });
+
+test("scenic settings keeps the host canvas open and gives surfaces to named tiles", () => {
+  const manifest = readJson(manifestPath);
+  for (const theme of manifest.contributes.themes) {
+    const css = read(theme.path);
+    assert.match(css, /\.settings-shell-full\s+\.settings-nav/);
+    assert.match(css, /:is\(\.settings-shell,\.settings-shell-full,\.settings-content,\.settings-content-inner\)\s*\{\s*background:\s*transparent;/);
+    assert.match(css, /\.settings-panel:has\(> \.settings-row\).*?background:\s*transparent;.*?overflow:\s*visible;/s);
+    assert.match(css, /:is\(\.settings-row,\.shortcut-row,\.provider-row,\.model-provider-row,\.agent-capability-row/);
+    assert.match(css, /:is\(\.settings-search,\.field-input,\.field-select,\.field-textarea/);
+    assert.doesNotMatch(css, /(^|[,{])\s*(?:html|body|button|input|div|section)\b/);
+  }
+
+  const settingsCss = read("settings/settings.css");
+  assert.match(settingsCss, /body::before\s*\{[^}]*pointer-events:\s*none;/s);
+  assert.match(settingsCss, /data-nexus-theme="twilight-mountains"\] body::before[^}]*twilight-mountains\.png/s);
+  assert.match(settingsCss, /data-nexus-theme="alpine-light"\] body::before[^}]*alpine-light\.png/s);
+  assert.match(settingsCss, /data-nexus-theme="obsidian-horizon"\] body::before[^}]*obsidian-horizon\.png/s);
+  assert.match(settingsCss, /data-nexus-theme="emerald-afterglow"\] body::before[^}]*emerald-afterglow\.png/s);
+  assert.doesNotMatch(settingsCss, /^:root\s*\{[^}]*background:\s*transparent;/m);
+});
