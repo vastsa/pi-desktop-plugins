@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-14T22:19:14Z",
+  "updatedAt": "2026-09-15T09:18:34Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -183,9 +183,9 @@
           "publishedAt": "2026-09-14T21:39:51Z",
           "changelog": "Initial preview release with four scenic themes and per-theme backdrop blur.",
           "minPiDesktop": ">=0.14.8",
-          "shasum": "bb7b145ee9862ad6cd5597ad53b9a117a3362684d1a61abab57abaac90bc332f",
+          "shasum": "6793b24f9eb92f764fa760a139d84fd0ea315cf399b635829ff8a4b322bf57ae",
           "url": "packages/io.github.akshayxkill.nexus-scenic-themes-0.1.0.piplug",
-          "sizeBytes": 9145518,
+          "sizeBytes": 9146812,
           "permissions": [
             "ui.theme",
             "ui.settings",
