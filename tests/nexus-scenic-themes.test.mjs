@@ -103,7 +103,6 @@ test("scenic settings does not repaint the full app shell over its backdrop", ()
   const manifest = readJson(manifestPath);
   for (const theme of manifest.contributes.themes) {
     const css = read(theme.path);
-    assert.match(css, /\.app-shell\.settings-mode\s*\{\s*background:\s*transparent;/);
     assert.match(css, /\.app-shell\.settings-mode\s*\{\s*background:\s*transparent\s*!important;/);
     assert.match(css, /:is\([^)]*\.settings-content[^)]*\)\s*\{\s*background:\s*transparent\s*!important;/s);
     assert.doesNotMatch(css, /:is\(\.app-shell,\.chat-surface,\.route-page\)\s*\{\s*background:/);
@@ -116,7 +115,7 @@ test("scenic themes own the full host canvas instead of an interior shell", () =
     const css = read(theme.path);
     assert.match(css, /:is\(body,#root,\.app-shell,\.app-shell\.settings-mode\)\s*\{\s*background:\s*transparent\s*!important;/);
     assert.match(css, /\.app-shell::before\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*-18px;/s);
-    assert.match(css, /:is\(\.settings-shell,\.settings-shell-full,\.settings-content,\.settings-content-inner,\.settings-titlebar\)\s*\{\s*background:\s*transparent;/);
+    assert.match(css, /:is\(\.settings-shell,\.settings-shell-full,\.settings-content,\.settings-content-inner,\.settings-titlebar\)\s*\{\s*background:\s*transparent\s*!important;/);
     assert.match(css, /\.settings-shell-full\s+\.settings-nav[^}]*background:/s);
   }
 });
