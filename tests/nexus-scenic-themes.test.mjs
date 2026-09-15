@@ -71,8 +71,7 @@ test("theme CSS uses the dynamic blur only on the scenic backdrop", () => {
     const css = read(theme.path);
     const uses = css.match(/var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/g) ?? [];
     assert.equal(uses.length, 1);
-    assert.match(css, /\.app-shell::before[^{]*\{[^}]*z-index:\s*0[^}]*filter:[^;}]*blur\(var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/s);
-    assert.match(css, /\.app-shell\s*>\s*\*\s*\{\s*position:\s*relative;\s*z-index:\s*1;/);
+    assert.match(css, /\.app-scenic-backdrop\s*\{[^}]*filter:[^;}]*blur\(var\(--nexus-backdrop-blur(?:\s*,[^)]*)?\)/s);
     assert.match(css, /:is\(\.main-pane,\.chat-surface,\.route-page\)\s*\{\s*background:\s*transparent;/);
     assert.doesNotMatch(css, /(?:transcript|tool-row|code|dialog|menu)[^{]*\{[^}]*--nexus-backdrop-blur/);
   }
@@ -114,7 +113,7 @@ test("scenic themes own the full host canvas instead of an interior shell", () =
   for (const theme of manifest.contributes.themes) {
     const css = read(theme.path);
     assert.match(css, /:is\(body,#root,\.app-shell,\.app-shell\.settings-mode\)\s*\{\s*background:\s*transparent\s*!important;/);
-    assert.match(css, /\.app-shell::before\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*-18px;/s);
+    assert.match(css, /\.app-scenic-backdrop\s*\{[^}]*background:\s*url\(/s);
     assert.match(css, /:is\(\.settings-shell,\.settings-shell-full,\.settings-content,\.settings-content-inner,\.settings-titlebar\)\s*\{\s*background:\s*transparent\s*!important;/);
     assert.match(css, /\.settings-shell-full\s+\.settings-nav[^}]*background:/s);
   }
