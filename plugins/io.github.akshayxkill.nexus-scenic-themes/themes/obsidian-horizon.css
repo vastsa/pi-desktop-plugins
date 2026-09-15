@@ -17,3 +17,4 @@
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:obsidian-horizon"] :is(.btn-primary,.btn-secondary,.btn-ghost,.icon-btn,.settings-text-action,.settings-icon-button) { border-color: var(--nexus-border); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:obsidian-horizon"] .window-controls { background: rgba(12,28,48,.72); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:obsidian-horizon"] :is(.settings-panel:has(.projects-list),.projects-list) { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+:root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:obsidian-horizon"] .projects-row-block { background: rgba(20,36,57,.9); border: 1px solid var(--nexus-border); box-shadow: 0 10px 24px rgba(2,7,14,.3); }

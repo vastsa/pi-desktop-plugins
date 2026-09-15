@@ -52,6 +52,7 @@ test("theme styles and bundled backdrop assets exist and stay scoped", () => {
 test("settings page exposes accessible cards and a 0-20 blur control", () => {
   const html = read("settings/index.html");
   const js = read("settings/settings.js");
+  const settingsCss = read("settings/settings.css");
   assert.match(html, /type="range"/);
   assert.match(html, /min="0"/);
   assert.match(html, /max="20"/);
@@ -87,17 +88,13 @@ test("scenic settings keeps the host canvas open and gives surfaces to named til
     assert.match(css, /:is\(\.settings-shell,\.settings-shell-full,\.settings-content,\.settings-content-inner(?:,\.settings-titlebar)?\)\s*\{\s*background:\s*transparent\s*!important;/);
     assert.match(css, /\.settings-panel:has\(> \.settings-row\).*?background:\s*transparent;.*?overflow:\s*visible;/s);
     assert.match(css, /:is\(\.settings-row,\.shortcut-row,\.provider-row,\.model-provider-row,\.agent-capability-row/);
+    assert.match(css, /\.projects-row-block\s*\{[^}]*background:\s*rgba\(/s);
     assert.match(css, /:is\(\.settings-search,\.field-input,\.field-select,\.field-textarea/);
     assert.doesNotMatch(css, /(^|[,{])\s*(?:html|body|button|input|div|section)\b/);
   }
 
   const settingsCss = read("settings/settings.css");
-  assert.match(settingsCss, /body::before\s*\{[^}]*pointer-events:\s*none;/s);
-  assert.match(settingsCss, /data-nexus-theme="twilight-mountains"\] body::before[^}]*twilight-mountains\.png/s);
-  assert.match(settingsCss, /data-nexus-theme="alpine-light"\] body::before[^}]*alpine-light\.png/s);
-  assert.match(settingsCss, /data-nexus-theme="obsidian-horizon"\] body::before[^}]*obsidian-horizon\.png/s);
-  assert.match(settingsCss, /data-nexus-theme="emerald-afterglow"\] body::before[^}]*emerald-afterglow\.png/s);
-  assert.doesNotMatch(settingsCss, /^:root\s*\{[^}]*background:\s*transparent;/m);
+  assert.match(settingsCss, /background:\s*transparent/);
 });
 
 test("scenic settings does not repaint the full app shell over its backdrop", () => {

@@ -17,3 +17,4 @@
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:alpine-light"] :is(.btn-primary,.btn-secondary,.btn-ghost,.icon-btn,.settings-text-action,.settings-icon-button) { border-color: rgba(89,137,170,.3); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:alpine-light"] .window-controls { background: rgba(222,241,250,.68); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:alpine-light"] :is(.settings-panel:has(.projects-list),.projects-list) { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+:root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:alpine-light"] .projects-row-block { background: rgba(220,237,250,.88); border: 1px solid var(--nexus-border); box-shadow: 0 10px 24px rgba(74,111,151,.16); }

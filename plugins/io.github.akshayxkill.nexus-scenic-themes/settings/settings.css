@@ -2,21 +2,10 @@
   color-scheme: dark;
   font-family: "Segoe UI", system-ui, sans-serif;
   color: #eaf3ff;
-  background: #101b2c;
+  background: transparent;
 }
 
-body { margin: 0; min-height: 100vh; background: #101b2c; }
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-}
+body { margin: 0; min-height: 100vh; background: transparent; }
 
 main { position: relative; z-index: 1; box-sizing: border-box; max-width: 1080px; min-height: 100vh; margin: 0 auto; padding: 28px; }
 h1, h2, p { margin: 0; }
@@ -38,23 +27,19 @@ output { min-width: 38px; font-variant-numeric: tabular-nums; }
 #apply-blur:hover { background: rgba(130,170,215,.34); }
 #status { min-height: 20px; margin-top: 14px; color: #ffd5d5; }
 
-:root[data-nexus-theme="twilight-mountains"] { background: #101b2c; }
-:root[data-nexus-theme="twilight-mountains"] body::before { background-image: linear-gradient(145deg, rgba(15,25,56,.48), rgba(32,20,63,.58)), url("../assets/twilight-mountains.png"); }
+:root[data-nexus-theme="twilight-mountains"] { background: transparent; }
 
-:root[data-nexus-theme="alpine-light"] { color-scheme: light; color: #17324a; background: #c8deec; }
-:root[data-nexus-theme="alpine-light"] body { background: #c8deec; }
-:root[data-nexus-theme="alpine-light"] body::before { background-image: linear-gradient(145deg, rgba(232,246,255,.28), rgba(179,211,229,.34)), url("../assets/alpine-light.png"); }
+:root[data-nexus-theme="alpine-light"] { color-scheme: light; color: #17324a; background: transparent; }
+:root[data-nexus-theme="alpine-light"] body { background: transparent; }
 :root[data-nexus-theme="alpine-light"] header p, :root[data-nexus-theme="alpine-light"] #blur-help { color: #38566c; }
 :root[data-nexus-theme="alpine-light"] .blur-card { border-color: rgba(78,119,148,.28); background: rgba(250,253,255,.84); color: #17324a; }
 :root[data-nexus-theme="alpine-light"] .theme-card[aria-pressed="true"] { border-color: #537f9e; box-shadow: 0 0 0 2px rgba(83,127,158,.42); }
 
-:root[data-nexus-theme="obsidian-horizon"] { background: #0b1523; }
-:root[data-nexus-theme="obsidian-horizon"] body { background: #0b1523; }
-:root[data-nexus-theme="obsidian-horizon"] body::before { background-image: linear-gradient(145deg, rgba(4,12,24,.42), rgba(8,18,30,.58)), url("../assets/obsidian-horizon.png"); }
+:root[data-nexus-theme="obsidian-horizon"] { background: transparent; }
+:root[data-nexus-theme="obsidian-horizon"] body { background: transparent; }
 
-:root[data-nexus-theme="emerald-afterglow"] { background: #0b211c; }
-:root[data-nexus-theme="emerald-afterglow"] body { background: #0b211c; }
-:root[data-nexus-theme="emerald-afterglow"] body::before { background-image: linear-gradient(145deg, rgba(4,27,22,.42), rgba(7,24,20,.56)), url("../assets/emerald-afterglow.png"); }
+:root[data-nexus-theme="emerald-afterglow"] { background: transparent; }
+:root[data-nexus-theme="emerald-afterglow"] body { background: transparent; }
 
 @media (prefers-reduced-transparency: reduce) {
   .blur-card { background: #17243b; }

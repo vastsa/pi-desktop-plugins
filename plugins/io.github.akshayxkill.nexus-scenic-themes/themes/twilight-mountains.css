@@ -17,3 +17,4 @@
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:twilight-mountains"] :is(.btn-primary,.btn-secondary,.btn-ghost,.icon-btn,.settings-text-action,.settings-icon-button) { border-color: var(--nexus-border); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:twilight-mountains"] .window-controls { background: rgba(7,31,78,.58); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:twilight-mountains"] :is(.settings-panel:has(.projects-list),.projects-list) { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+:root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:twilight-mountains"] .projects-row-block { background: rgba(11,35,81,.82); border: 1px solid var(--nexus-border); box-shadow: 0 10px 24px rgba(3,12,39,.22); }

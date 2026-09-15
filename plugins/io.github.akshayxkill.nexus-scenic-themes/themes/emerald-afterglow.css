@@ -17,3 +17,4 @@
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:emerald-afterglow"] :is(.btn-primary,.btn-secondary,.btn-ghost,.icon-btn,.settings-text-action,.settings-icon-button) { border-color: var(--nexus-border); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:emerald-afterglow"] .window-controls { background: rgba(8,43,25,.68); }
 :root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:emerald-afterglow"] :is(.settings-panel:has(.projects-list),.projects-list) { background: transparent; border: 0; box-shadow: none; overflow: visible; }
+:root[data-plugin-theme="plugin:io.github.akshayxkill.nexus-scenic-themes:emerald-afterglow"] .projects-row-block { background: rgba(19,65,38,.88); border: 1px solid var(--nexus-border); box-shadow: 0 10px 24px rgba(2,16,8,.28); }
