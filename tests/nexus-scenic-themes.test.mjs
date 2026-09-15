@@ -53,6 +53,7 @@ test("settings page exposes accessible cards and a 0-20 blur control", () => {
   const html = read("settings/index.html");
   const js = read("settings/settings.js");
   const settingsCss = read("settings/settings.css");
+  assert.match(settingsCss, /html, body, main\s*\{[^}]*background:\s*transparent\s*!important/s);
   assert.match(html, /type="range"/);
   assert.match(html, /min="0"/);
   assert.match(html, /max="20"/);
