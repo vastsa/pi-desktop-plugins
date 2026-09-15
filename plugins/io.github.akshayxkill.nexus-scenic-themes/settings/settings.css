@@ -34,6 +34,8 @@ header p, #blur-help { margin-top: 6px; color: #b7c6dc; }
 .range { display: flex; min-width: min(370px, 52vw); align-items: center; gap: 12px; }
 input { flex: 1; accent-color: #a8d5ff; }
 output { min-width: 38px; font-variant-numeric: tabular-nums; }
+#apply-blur { border: 1px solid rgba(228,242,255,.35); border-radius: 8px; padding: 7px 11px; background: rgba(130,170,215,.2); color: inherit; cursor: pointer; }
+#apply-blur:hover { background: rgba(130,170,215,.34); }
 #status { min-height: 20px; margin-top: 14px; color: #ffd5d5; }
 
 :root[data-nexus-theme="twilight-mountains"] { background: #101b2c; }

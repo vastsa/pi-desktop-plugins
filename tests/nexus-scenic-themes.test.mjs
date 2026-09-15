@@ -56,6 +56,8 @@ test("settings page exposes accessible cards and a 0-20 blur control", () => {
   assert.match(html, /min="0"/);
   assert.match(html, /max="20"/);
   assert.match(html, /aria-live/);
+  assert.match(html, /id="apply-blur"/);
+  assert.match(html, />Apply<\/button>/);
   assert.match(js, /setTheme/);
   assert.match(js, /setVariables/);
   assert.match(js, /plugin\.getSettings/);

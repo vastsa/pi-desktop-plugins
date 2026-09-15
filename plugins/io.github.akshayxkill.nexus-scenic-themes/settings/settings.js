@@ -7,7 +7,7 @@
     ["emerald-afterglow", "Emerald Afterglow", "Sunlit emerald forest glass", "assets/emerald-afterglow.png"],
   ];
   const bridge = window.pluginBridge;
-  const cards = document.getElementById("theme-cards"); const range = document.getElementById("blur"); const output = document.getElementById("blur-value"); const status = document.getElementById("status");
+  const cards = document.getElementById("theme-cards"); const range = document.getElementById("blur"); const output = document.getElementById("blur-value"); const applyButton = document.getElementById("apply-blur"); const status = document.getElementById("status");
   const values = new Map(themes.map(([id]) => [id, 6])); let active = themes[0][0]; let confirmed = 6; let timer = 0; let generation = 0;
   const fullId = (id) => `plugin:${pluginId}:${id}`;
   const clamp = (value) => Number.isInteger(value) && value >= 0 && value <= 20 ? value : 6;
@@ -18,8 +18,9 @@
   const schedule = (flush = false) => { window.clearTimeout(timer); const id = active; const value = values.get(id); const token = ++generation; const run = () => void save(id, value, token); timer = flush ? 0 : window.setTimeout(run, 180); if (flush) run(); };
   const select = async (id) => { active = id; confirmed = values.get(id); sync(); try { await invoke("app.setTheme", { themeId: fullId(id) }); schedule(true); } catch { setStatus("Could not apply this theme. Check that the plugin is enabled."); } };
   for (const [id, label, description, asset] of themes) { const button = document.createElement("button"); button.type = "button"; button.className = "theme-card"; button.dataset.theme = id; button.setAttribute("aria-pressed", "false"); button.style.backgroundImage = `url("../${asset}")`; const name = document.createElement("span"); const strong = document.createElement("strong"); strong.textContent = label; const small = document.createElement("small"); small.textContent = description; name.append(strong, small); button.append(name); button.addEventListener("click", () => void select(id)); cards.append(button); }
-  range.addEventListener("input", () => { values.set(active, clamp(Number(range.value))); sync(); schedule(); });
-  range.addEventListener("change", () => schedule(true)); window.addEventListener("pagehide", () => schedule(true));
+  range.addEventListener("input", () => { values.set(active, clamp(Number(range.value))); sync(); });
+  applyButton.addEventListener("click", () => schedule(true));
+  window.addEventListener("pagehide", () => schedule(true));
   const initialize = async () => {
     try {
       const [appearance] = await Promise.all([invoke("app.getAppearance"), invoke("plugin.getSettings")]);
