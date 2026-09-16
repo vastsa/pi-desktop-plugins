@@ -76,7 +76,7 @@ function waitFor(fn, timeoutMs = 1500) {
 test("manifest declares terminal identity, views, permissions and no agent tools", () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.equal(manifest.id, "pi.terminal");
-  assert.equal(manifest.version, "0.1.6");
+  assert.equal(manifest.version, "0.1.7");
   assert.equal(manifest.ui, undefined);
   assert.deepEqual(manifest.permissions, [
     "ui.view",
@@ -160,7 +160,16 @@ test("Windows ConPTY helper attaches the shell instead of opening a console wind
   const ptyJs = readFileSync(join(pluginRoot, "pty.js"), "utf8");
   assert.match(winPty, /windows\.CreatePseudoConsole/);
   assert.match(winPty, /PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE/);
-  assert.match(winPty, /CREATE_NO_WINDOW/);
+  // Comments may name the flag to explain why it must stay out; only code matters.
+  const winPtyCode = winPty
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+  assert.doesNotMatch(
+    winPtyCode,
+    /CREATE_NO_WINDOW/,
+    "CREATE_NO_WINDOW detaches the child from the pseudoconsole and leaves the work-panel xterm blank",
+  );
   assert.match(winPty, /STARTF_USESTDHANDLES/);
   assert.match(winPty, /STARTF_USESHOWWINDOW/);
   assert.match(winPty, /SW_HIDE/);

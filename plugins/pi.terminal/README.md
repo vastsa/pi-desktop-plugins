@@ -32,7 +32,7 @@ No `fs.*` permission. The plugin process reads the current workspace path and pa
 
 A bundled helper binary (`vendor/pi-pty-<os>-<arch>`) owns the real PTY (forkpty / ConPTY). The plugin process speaks a JSON-line protocol with the helper. The sandboxed view has no Node and no push channel, so output is pulled with `pty.drain` long-polls.
 
-On Windows the helper is a GUI-subsystem binary and attaches PowerShell (or cmd / Git Bash) to ConPTY with `CREATE_NO_WINDOW`, so the shell runs inside the work-panel xterm instead of popping a separate console.
+On Windows the helper is a GUI-subsystem binary and attaches PowerShell (or cmd / Git Bash) to ConPTY by passing the HPCON through `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE`, so the shell runs inside the work-panel xterm instead of popping a separate console. Do not add `CREATE_NO_WINDOW` to the `CreateProcess` flags: it detaches the child from the pseudoconsole, which then silently keeps its own hidden console and leaves the xterm blank.
 
 The zip packer does not preserve unix `+x`. On first spawn the plugin `chmod`s the helper.
 

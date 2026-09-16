@@ -152,7 +152,10 @@ func startPty(req request) (*ptySession, error) {
 		nil,
 		nil,
 		false,
-		windows.CREATE_UNICODE_ENVIRONMENT|windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_NO_WINDOW,
+		// CREATE_NO_WINDOW would detach the child from the pseudoconsole: Windows
+		// then gives it its own hidden console (120x9001 by default) and the ConPTY
+		// pipes stay silent, so the work-panel xterm never sees a prompt.
+		windows.CREATE_UNICODE_ENVIRONMENT | windows.EXTENDED_STARTUPINFO_PRESENT,
 		&envUTF16[0],
 		cwdPtr,
 		&si.StartupInfo,
