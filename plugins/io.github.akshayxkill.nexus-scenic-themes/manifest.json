@@ -20,7 +20,19 @@
       { "id": "obsidian-horizon", "label": "Obsidian Horizon", "path": "themes/obsidian-horizon.css", "base": "dark", "assets": ["assets/obsidian-horizon.png"], "variables": [{ "name": "--nexus-backdrop-blur", "type": "length", "unit": "px", "min": 0, "max": 20, "default": 6 }] },
       { "id": "emerald-afterglow", "label": "Emerald Afterglow", "path": "themes/emerald-afterglow.css", "base": "dark", "assets": ["assets/emerald-afterglow.png"], "variables": [{ "name": "--nexus-backdrop-blur", "type": "length", "unit": "px", "min": 0, "max": 20, "default": 6 }] }
     ],
-    "settingsDestinations": [{ "id": "nexus-scenic-themes", "label": { "en": "Nexus Scenic Themes", "zh-CN": "Nexus 风景主题" }, "icon": "palette", "keywords": [{ "en": "scenic themes backdrop blur twilight alpine obsidian emerald", "zh-CN": "风景 主题 背景 模糊 暮光 高山 黑曜石 翡翠" }], "entry": "settings/index.html" }],
+    "scenicThemes": {
+      "id": "nexus-scenic-themes",
+      "label": { "en": "Nexus Scenic Themes", "zh-CN": "Nexus 风景主题" },
+      "description": { "en": "Choose a scenic backdrop and tune its blur.", "zh-CN": "选择风景背景并调整其模糊度。" },
+      "icon": "palette",
+      "keywords": [{ "en": "scenic themes backdrop blur twilight alpine obsidian emerald", "zh-CN": "风景 主题 背景 模糊 暮光 高山 黑曜石 翡翠" }],
+      "themes": [
+        { "themeId": "twilight-mountains", "label": { "en": "Twilight Mountains", "zh-CN": "暮光山脉" }, "description": { "en": "Blue-violet mountain glass", "zh-CN": "蓝紫色山峦玻璃" }, "previewAsset": "assets/twilight-mountains.png" },
+        { "themeId": "alpine-light", "label": { "en": "Alpine Light", "zh-CN": "高山浅光" }, "description": { "en": "Pale icy-blue glass", "zh-CN": "浅冰蓝色玻璃" }, "previewAsset": "assets/alpine-light.png" },
+        { "themeId": "obsidian-horizon", "label": { "en": "Obsidian Horizon", "zh-CN": "黑曜地平线" }, "description": { "en": "Moonlit charcoal glass", "zh-CN": "月光炭黑玻璃" }, "previewAsset": "assets/obsidian-horizon.png" },
+        { "themeId": "emerald-afterglow", "label": { "en": "Emerald Afterglow", "zh-CN": "翡翠余晖" }, "description": { "en": "Sunlit emerald forest glass", "zh-CN": "阳光翡翠森林玻璃" }, "previewAsset": "assets/emerald-afterglow.png" }
+      ]
+    },
     "windowAppearance": { "backgroundColor": { "light": "#dceef7", "dark": "#071326" } }
   },
   "permissions": ["ui.theme", "ui.settings", "ui.window.appearance"],

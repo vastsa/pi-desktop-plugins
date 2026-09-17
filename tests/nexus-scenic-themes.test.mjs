@@ -11,7 +11,7 @@ const manifestPath = path.join(pluginRoot, "manifest.json");
 function readJson(file) { return JSON.parse(fs.readFileSync(file, "utf8")); }
 function read(file) { return fs.readFileSync(path.join(pluginRoot, file), "utf8"); }
 
-test("manifest declares the four isolated scenic themes and Extensions page", () => {
+test("manifest declares the four isolated scenic themes and host scenic destination", () => {
   const manifest = readJson(manifestPath);
   assert.equal(manifest.id, "io.github.akshayxkill.nexus-scenic-themes");
   assert.equal(manifest.version, "0.1.0");
@@ -28,12 +28,16 @@ test("manifest declares the four isolated scenic themes and Extensions page", ()
     });
     assert.ok(theme.assets?.length === 1);
   }
-  const destination = manifest.contributes.settingsDestinations[0];
+  assert.equal(manifest.contributes.settingsDestinations, undefined);
+  const destination = manifest.contributes.scenicThemes;
   assert.equal(destination.id, "nexus-scenic-themes");
-  assert.equal(destination.entry, "settings/index.html");
   assert.equal(destination.icon, "palette");
   assert.equal(destination.label.en, "Nexus Scenic Themes");
   assert.equal(destination.label["zh-CN"], "Nexus 风景主题");
+  assert.deepEqual(destination.themes.map((theme) => theme.themeId), [
+    "twilight-mountains", "alpine-light", "obsidian-horizon", "emerald-afterglow",
+  ]);
+  for (const card of destination.themes) assert.match(card.previewAsset, /^assets\/.+\.png$/);
 });
 
 test("theme styles and bundled backdrop assets exist and stay scoped", () => {
@@ -49,24 +53,10 @@ test("theme styles and bundled backdrop assets exist and stay scoped", () => {
   }
 });
 
-test("settings page exposes accessible cards and a 0-20 blur control", () => {
-  const html = read("settings/index.html");
-  const js = read("settings/settings.js");
-  const settingsCss = read("settings/settings.css");
-  assert.match(settingsCss, /html, body, main\s*\{[^}]*background:\s*transparent\s*!important/s);
-  assert.match(html, /type="range"/);
-  assert.match(html, /min="0"/);
-  assert.match(html, /max="20"/);
-  assert.match(html, /aria-live/);
-  assert.match(html, /id="apply-blur"/);
-  assert.match(html, />Apply<\/button>/);
-  assert.match(js, /setTheme/);
-  assert.match(js, /setVariables/);
-  assert.match(js, /plugin\.getSettings/);
-  assert.doesNotMatch(js, /plugin\.setSettings/);
-  assert.match(js, /--nexus-backdrop-blur/);
-  assert.match(js, /180/);
-  assert.doesNotMatch(js, /innerHTML\s*=/);
+test("the obsolete plugin Settings document is absent", () => {
+  assert.equal(fs.existsSync(path.join(pluginRoot, "settings", "index.html")), false);
+  assert.equal(fs.existsSync(path.join(pluginRoot, "settings", "settings.css")), false);
+  assert.equal(fs.existsSync(path.join(pluginRoot, "settings", "settings.js")), false);
 });
 
 test("theme CSS uses the dynamic blur only on the scenic backdrop", () => {
@@ -93,9 +83,6 @@ test("scenic settings keeps the host canvas open and gives surfaces to named til
     assert.match(css, /:is\(\.settings-search,\.field-input,\.field-select,\.field-textarea/);
     assert.doesNotMatch(css, /(^|[,{])\s*(?:html|body|button|input|div|section)\b/);
   }
-
-  const settingsCss = read("settings/settings.css");
-  assert.match(settingsCss, /background:\s*transparent/);
 });
 
 test("scenic settings does not repaint the full app shell over its backdrop", () => {
