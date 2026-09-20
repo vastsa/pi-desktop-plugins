@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "id": "in.memcode.memory",
+  "name": "Memcode Memory",
+  "version": "0.1.0",
+  "description": "Give PI-Desktop agents explicit tools to save, search, and retrieve the signed-in user's Memcode memories.",
+  "changelog": "Initial release with credential verification, durable memory ingest, semantic search, and grounded retrieval tools.",
+  "safetyNotes": "Makes bounded requests only to memory.memcode.in. Reads MEMCODE_API_KEY from the PI-Desktop process environment and never stores or returns it. Saving memory is persistent and requires PI-Desktop's high-risk tool approval.",
+  "i18n": {
+    "en": {
+      "name": "Memcode Memory",
+      "description": "Give PI-Desktop agents explicit tools to save, search, and retrieve the signed-in user's Memcode memories.",
+      "safetyNotes": "Makes bounded requests only to memory.memcode.in. Reads MEMCODE_API_KEY from the PI-Desktop process environment and never stores or returns it. Saving memory is persistent and requires PI-Desktop's high-risk tool approval."
+    },
+    "zh-CN": {
+      "name": "Memcode 记忆",
+      "description": "为 PI-Desktop Agent 提供明确的工具，用于保存、搜索和检索当前用户的 Memcode 记忆。",
+      "safetyNotes": "仅向 memory.memcode.in 发起受限请求。从 PI-Desktop 进程环境读取 MEMCODE_API_KEY，绝不保存或返回该密钥。保存记忆是持久化操作，并受 PI-Desktop 高风险工具审批保护。"
+    }
+  },
+  "author": "Memcode",
+  "main": "main.js",
+  "categories": ["productivity", "ai", "memory"],
+  "contributes": {
+    "agentTools": [
+      {
+        "name": "memcode_test_connection",
+        "description": "Verify that the configured Memcode credential is valid without reading or writing memories.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "memcode_save_memory",
+        "description": "Persist user-approved text to the authenticated user's Memcode long-term memory.",
+        "risk": "high",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "text": { "type": "string", "minLength": 1, "maxLength": 20000 },
+            "agent_response": { "type": "string", "maxLength": 20000 },
+            "effort_level": { "type": "string", "enum": ["low", "high"] },
+            "forget": { "type": "boolean" },
+            "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 256 }
+          },
+          "required": ["text"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "memcode_search_memories",
+        "description": "Search the authenticated user's Memcode memories and original stored chunks.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "minLength": 1, "maxLength": 4000 },
+            "mode": { "type": "string", "enum": ["default", "chunks", "memories"] },
+            "top_k": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "original_top_k": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "include_original_chunks": { "type": "boolean" },
+            "search_mode": { "type": "string", "enum": ["default", "global"] },
+            "minimum_score": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "memcode_retrieve_answer",
+        "description": "Answer a question from the authenticated user's Memcode memories with source records.",
+        "risk": "medium",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "minLength": 1, "maxLength": 4000 },
+            "top_k": { "type": "integer", "minimum": 1, "maximum": 50 }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        }
+      }
+    ]
+  },
+  "permissions": ["agent.tool.register", "net.fetch"],
+  "net": { "domains": ["memory.memcode.in"] },
+  "engines": { "piDesktop": ">=0.2.0" }
+}

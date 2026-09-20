@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "providerId": "official",
   "name": "PI-Desktop Official Plugins",
-  "updatedAt": "2026-09-20T15:44:14Z",
+  "updatedAt": "2026-09-20T17:25:34Z",
   "homepage": "https://github.com/vastsa/pi-desktop-plugins",
   "plugins": [
     {
@@ -145,6 +145,51 @@
             "clipboard.write",
             "notify",
             "agent.tool.register"
+          ],
+          "fs": {}
+        }
+      ]
+    },
+    {
+      "id": "in.memcode.memory",
+      "name": "Memcode Memory",
+      "description": "Give PI-Desktop agents explicit tools to save, search, and retrieve the signed-in user's Memcode memories.",
+      "i18n": {
+        "en": {
+          "name": "Memcode Memory",
+          "description": "Give PI-Desktop agents explicit tools to save, search, and retrieve the signed-in user's Memcode memories.",
+          "safetyNotes": "Makes bounded requests only to memory.memcode.in. Reads MEMCODE_API_KEY from the PI-Desktop process environment and never stores or returns it. Saving memory is persistent and requires PI-Desktop's high-risk tool approval."
+        },
+        "zh-CN": {
+          "name": "Memcode \u8bb0\u5fc6",
+          "description": "\u4e3a PI-Desktop Agent \u63d0\u4f9b\u660e\u786e\u7684\u5de5\u5177\uff0c\u7528\u4e8e\u4fdd\u5b58\u3001\u641c\u7d22\u548c\u68c0\u7d22\u5f53\u524d\u7528\u6237\u7684 Memcode \u8bb0\u5fc6\u3002",
+          "safetyNotes": "\u4ec5\u5411 memory.memcode.in \u53d1\u8d77\u53d7\u9650\u8bf7\u6c42\u3002\u4ece PI-Desktop \u8fdb\u7a0b\u73af\u5883\u8bfb\u53d6 MEMCODE_API_KEY\uff0c\u7edd\u4e0d\u4fdd\u5b58\u6216\u8fd4\u56de\u8be5\u5bc6\u94a5\u3002\u4fdd\u5b58\u8bb0\u5fc6\u662f\u6301\u4e45\u5316\u64cd\u4f5c\uff0c\u5e76\u53d7 PI-Desktop \u9ad8\u98ce\u9669\u5de5\u5177\u5ba1\u6279\u4fdd\u62a4\u3002"
+        }
+      },
+      "author": "Memcode",
+      "categories": [
+        "productivity",
+        "ai",
+        "memory"
+      ],
+      "verified": true,
+      "downloads": 0,
+      "homepage": "https://github.com/vastsa/pi-desktop-plugins/tree/main/plugins/in.memcode.memory",
+      "repository": "https://github.com/vastsa/pi-desktop-plugins",
+      "readmeMarkdown": "# Memcode Memory\n\nAdds explicit Memcode long-term-memory tools to PI-Desktop agents. The plugin\nuses Memcode's personal v2 API, so the API credential determines the user; no\nuser ID or integration attribution is accepted from agent arguments.\n\n## Setup\n\nSet the credential in the environment that starts PI-Desktop, then restart the\napp:\n\n```bash\nexport MEMCODE_API_KEY=your_memcode_api_key\n```\n\nThe plugin never persists this value in PI-Desktop settings. Start with\n`memcode_test_connection`, then explicitly approve memory writes when PI asks.\n\n## Tools\n\n| Tool | Risk | Operation |\n| --- | --- | --- |\n| `memcode_test_connection` | Medium | `GET /v2/test`; validates the configured credential without reading memory |\n| `memcode_save_memory` | High | `POST /v2/memory/ingest`; persists user-approved text and returns an asynchronous job receipt |\n| `memcode_search_memories` | Medium | `POST /v2/memory/search`; searches the authenticated user's memory/chunk index |\n| `memcode_retrieve_answer` | Medium | `POST /v2/memory/retrieve`; returns a grounded answer and source records |\n\nPI-Desktop exposes these under its normal plugin-prefixed tool names.\n\n## Capability and data-flow review\n\n| Entry point | Data read | Destination | Permission | Confirmation/bounds | Cleanup |\n| --- | --- | --- | --- | --- | --- |\n| All tools | `MEMCODE_API_KEY` and tool arguments | `https://memory.memcode.in` only | `net.fetch` | PI install grant; 20s timeout; 256 KiB response cap; no redirects outside allowlist | No background task or retained token |\n| Save tool | User-approved text and optional assistant response | `/v2/memory/ingest` | `agent.tool.register`, `net.fetch` | High-risk agent-tool approval; 20,000-character fields | Durable data follows the user's Memcode retention settings |\n| Search/retrieve | Query and bounded numeric options | `/v2/memory/search`, `/v2/memory/retrieve` | `agent.tool.register`, `net.fetch` | Medium-risk tool policy; query and result bounds | No plugin-local cache |\n\nThe plugin has no third-party runtime dependencies, native code, dynamic code,\nfilesystem access, telemetry, retries, timers, or background services. It does\nnot send client-provided attribution headers or metadata; Memcode assigns any\nintegration attribution server-side.\n\n## Failure behavior\n\n- Missing or malformed credentials fail before the network call.\n- HTTP errors expose only the status (and bounded `Retry-After` for 429), not\n  response bodies that could contain sensitive details.\n- Malformed or oversized JSON responses are rejected.\n- The plugin never retries a write automatically.\n- Unload unregisters every tool, including after a partially failed load.\n\nDeleting memories is intentionally outside this first version because\nPI-Desktop agent tools must not perform destructive remote actions without a\nseparate, explicit design and confirmation path.\n",
+      "safetyNotes": "Makes bounded requests only to memory.memcode.in. Reads MEMCODE_API_KEY from the PI-Desktop process environment and never stores or returns it. Saving memory is persistent and requires PI-Desktop's high-risk tool approval.",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishedAt": "2026-09-20T17:25:34Z",
+          "changelog": "Initial release with credential verification, durable memory ingest, semantic search, and grounded retrieval tools.",
+          "minPiDesktop": ">=0.2.0",
+          "shasum": "c77e6aebaed1f09d9fb82568028b40910c97853fa289b114e819454279b54672",
+          "url": "packages/in.memcode.memory-0.1.0.piplug",
+          "sizeBytes": 14955,
+          "permissions": [
+            "agent.tool.register",
+            "net.fetch"
           ],
           "fs": {}
         }
