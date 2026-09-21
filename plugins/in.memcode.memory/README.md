@@ -6,14 +6,18 @@ user ID or integration attribution is accepted from agent arguments.
 
 ## Setup
 
-Set the credential in the environment that starts PI-Desktop, then restart the
-app:
+Open the [Memcode API-key dashboard](https://app.memcode.in/dashboard?section=api-keys&integration=pi-desktop) and create a
+key with **PI-Desktop** selected under integration attribution. Set that key in
+the environment that starts PI-Desktop, then restart the app:
 
 ```bash
 export MEMCODE_API_KEY=your_memcode_api_key
 ```
 
-The plugin never persists this value in PI-Desktop settings. Start with
+Memcode binds the `pi-desktop` identity when the key is issued; the plugin does
+not send an attribution header or metadata field. A generic personal key still
+works, but its traffic is counted as generic direct API usage. The plugin never
+persists this value in PI-Desktop settings. Start with
 `memcode_test_connection`, then explicitly approve memory writes when PI asks.
 
 ## Tools
