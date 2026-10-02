@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.yahooyuan666.zcode2pi",
+  "name": "ZCode Free Quota",
+  "version": "0.1.0",
+  "description": "Use the ZCode / BigModel Coding Plan free quota inside PI-Desktop: declares a model provider in the manifest (provider.register) and runs a loopback relay (background.service) that forwards requests to BigModel's OpenAI-compatible Coding Plan endpoint. Both ends speak Chat Completions, so no protocol translation happens and streaming is passed through untouched. Your API key stays in PI-Desktop's own secret store — the relay never sees it.",
+  "i18n": {
+    "en": {
+      "name": "ZCode Free Quota",
+      "description": "Use the ZCode / BigModel Coding Plan free quota inside PI-Desktop: declares a model provider in the manifest (provider.register) and runs a loopback relay (background.service) that forwards requests to BigModel's OpenAI-compatible Coding Plan endpoint. Both ends speak Chat Completions, so no protocol translation happens and streaming is passed through untouched. Your API key stays in PI-Desktop's own secret store — the relay never sees it.",
+      "safetyNotes": "The relay binds 127.0.0.1 only and rejects any request whose Host header is not loopback. Its one and only network destination is open.bigmodel.cn. It never reads, stores or logs your API key: PI-Desktop attaches the key from its own secret store to the outgoing request and the relay forwards request headers unchanged. It does not read or write any file, touch the clipboard, run a shell, or load remote code. On an upstream error it logs one line describing the request's field names and counts only — never message content, tool arguments or credentials. It rewrites nothing in the request body, so what the model sees is exactly what PI-Desktop sent."
+    },
+    "zh-CN": {
+      "name": "ZCode免费额度",
+      "description": "把 ZCode / BigModel Coding Plan 的免费额度接进 PI-Desktop：manifest 静态声明模型 provider（provider.register），后台常驻一个回环中继（background.service），把请求转发到 BigModel 的 OpenAI 兼容 Coding Plan 端点。两端都是 Chat Completions 方言，不做任何协议转换，流式输出逐块透传。API Key 始终留在 PI-Desktop 自己的密钥库里，中继接触不到它。",
+      "safetyNotes": "中继只绑定 127.0.0.1，凡 Host 头不是回环地址的请求一律拒绝。它唯一的对外连接目标是 open.bigmodel.cn。它不读取、不保存、不记录你的 API Key：Key 由 PI-Desktop 从自己的密钥库附到出站请求上，中继原样透传请求头。它不读写任何文件、不碰剪贴板、不起 shell、不加载远程代码。上游报错时它只打一行「请求里有哪些字段、各多少个」——绝不打消息正文、工具参数或凭据。它不改写请求体，模型看到的就是 PI-Desktop 发出的原样。"
+    }
+  },
+  "author": "YahooYuan666",
+  "main": "main.js",
+  "categories": [
+    "developer-tools",
+    "community"
+  ],
+  "changelog": "Release 0.1.0: first release. Declares GLM-5.3-Flash over BigModel's OpenAI-compatible Coding Plan endpoint (the wire style PI-Desktop uses natively for Zhipu Coding Plan, see PI-Desktop ADR 0155), so no protocol translation is involved and SSE is forwarded chunk by chunk. Request bodies are passed through byte for byte: `stream` is never forced, placeholder tools are never injected, and a non-streaming caller gets a complete JSON object back rather than SSE fragments. The relay binds loopback only, rejects non-loopback Host headers, and never touches the API key. 0.1.0：首个版本。经 BigModel 的 OpenAI 兼容 Coding Plan 端点接入 GLM-5.3-Flash（这是 PI-Desktop 对智谱 Coding Plan 原生使用的线路，见 ADR 0155），因此不涉及协议转换，SSE 逐块透传。请求体逐字节透传：不强制 stream、不注入占位工具，非流式调用方拿到的是完整 JSON 对象而不是 SSE 碎片。中继只绑回环、拒绝非回环 Host、不接触 API Key。",
+  "safetyNotes": "The relay binds 127.0.0.1 only and rejects any request whose Host header is not loopback. Its one and only network destination is open.bigmodel.cn. It never reads, stores or logs your API key: PI-Desktop attaches the key from its own secret store to the outgoing request and the relay forwards request headers unchanged. It does not read or write any file, touch the clipboard, run a shell, or load remote code. On an upstream error it logs one line describing the request's field names and counts only — never message content, tool arguments or credentials. It rewrites nothing in the request body, so what the model sees is exactly what PI-Desktop sent.",
+  "permissions": [
+    "provider.register",
+    "background.service"
+  ],
+  "engines": {
+    "piDesktop": ">=0.9.0"
+  },
+  "activationEvents": [
+    "onStartup"
+  ],
+  "contributes": {
+    "services": [
+      {
+        "id": "zcode-proxy",
+        "label": "ZCode free quota provider endpoint"
+      }
+    ],
+    "providers": [
+      {
+        "id": "bigmodel-free",
+        "name": "ZCode Free Quota",
+        "vendorKey": "custom",
+        "baseUrl": "http://127.0.0.1:41940/v1",
+        "apiStyle": "chat_completions",
+        "authKind": "api_key",
+        "models": [
+          {
+            "id": "GLM-5.3-Flash",
+            "name": "GLM-5.3-Flash",
+            "contextWindow": 1000000,
+            "maxTokens": 128000,
+            "supportsImages": true
+          }
+        ]
+      }
+    ]
+  }
+}
