@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_SOURCE = "https://plugins.aiuo.net/catalog.json"
+DEFAULT_ARTIFACT_BASE = "https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main"
 UA = "pi-desktop-plugins-mirror/1.0"
 MAX_PACKAGE_BYTES = 50 * 1024 * 1024
 CATALOG_TIMEOUT = 30
@@ -89,9 +90,9 @@ def resolve_download_url(catalog: dict[str, Any], rel: str) -> str:
     return base + rel.lstrip("/")
 
 
-def rewrite_for_mirror(src: dict[str, Any]) -> dict[str, Any]:
+def rewrite_for_mirror(src: dict[str, Any], artifact_base: str = DEFAULT_ARTIFACT_BASE) -> dict[str, Any]:
     out = copy.deepcopy(src)
-    out.pop("artifactBaseUrl", None)
+    out["artifactBaseUrl"] = artifact_base
     out.pop("artifactBaseURL", None)
     for p in out.get("plugins") or []:
         pid = p.get("id")
@@ -139,10 +140,11 @@ def sync(root: Path, source: str, dry_run: bool) -> int:
         raise SystemExit(f"catalog is not JSON: {e}") from e
     validate_catalog(src)
 
-    mirrored = rewrite_for_mirror(src)
+    existing = load_json(root / "catalog.json")
+    artifact_base = ((existing or {}).get("artifactBaseUrl") or (existing or {}).get("artifactBaseURL") or "").strip()
+    mirrored = rewrite_for_mirror(src, artifact_base or DEFAULT_ARTIFACT_BASE)
     validate_catalog(mirrored)
 
-    existing = load_json(root / "catalog.json")
     if existing and canonical(existing) == canonical(mirrored):
         print("catalog unchanged (ignoring generatedAt/catalogId/updatedAt)")
         return 0

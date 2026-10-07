@@ -9,6 +9,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -26,7 +27,7 @@ sync = load_sync()
 
 
 class RewriteTests(unittest.TestCase):
-    def test_rewrite_drops_artifact_base_and_uses_packages(self):
+    def test_rewrite_declares_mirror_artifact_base_and_uses_packages(self):
         src = {
             "schemaVersion": 2,
             "providerId": "official",
@@ -45,9 +46,17 @@ class RewriteTests(unittest.TestCase):
             ],
         }
         out = sync.rewrite_for_mirror(src)
-        self.assertNotIn("artifactBaseUrl", out)
+        self.assertEqual(out["artifactBaseUrl"], "https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main")
+        self.assertEqual(src["artifactBaseUrl"], "https://plugins.aiuo.net/api/pi/v1/")
         self.assertEqual(out["plugins"][0]["versions"][0]["url"], "packages/demo.hello-1.0.0.piplug")
         self.assertEqual(src["plugins"][0]["versions"][0]["url"], "plugins/demo.hello/versions/1.0.0/artifact")
+
+    def test_rewrite_uses_selected_mirror_base_not_source_alias(self):
+        src = {"artifactBaseURL": "https://center.example/artifacts/", "plugins": []}
+        out = sync.rewrite_for_mirror(src, "https://mirror.example/plugins/")
+        self.assertEqual(out["artifactBaseUrl"], "https://mirror.example/plugins/")
+        self.assertNotIn("artifactBaseURL", out)
+        self.assertEqual(src["artifactBaseURL"], "https://center.example/artifacts/")
 
     def test_empty_catalog_rejected(self):
         with self.assertRaises(SystemExit):
@@ -121,7 +130,7 @@ class SyncHttpTests(unittest.TestCase):
                 self.assertEqual(rc, 0)
                 new = json.loads((root / "catalog.json").read_text(encoding="utf-8"))
                 self.assertEqual(new["plugins"][0]["id"], "demo.hello")
-                self.assertNotIn("artifactBaseUrl", new)
+                self.assertEqual(new["artifactBaseUrl"], "https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main")
                 pkg = root / "packages" / "demo.hello-1.0.0.piplug"
                 self.assertTrue(pkg.exists())
                 self.assertEqual(pkg.read_bytes(), blob)
@@ -139,6 +148,28 @@ class SyncHttpTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 sync.sync(root, "http://127.0.0.1:1/catalog.json", dry_run=False)
             self.assertEqual((root / "catalog.json").read_text(encoding="utf-8"), old)
+
+    def test_sync_keeps_existing_mirror_base(self):
+        blob = b"hello-piplug"
+        src = {
+            "providerId": "official",
+            "artifactBaseUrl": "https://center.example/artifacts/",
+            "plugins": [{"id": "demo.hello", "versions": [{
+                "version": "1.0.0", "shasum": sync.sha256_bytes(blob), "url": "hello.piplug",
+            }]}],
+        }
+        for key in ("artifactBaseUrl", "artifactBaseURL"):
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                old = {"providerId": "official", key: "https://mirror.example/releases/", "plugins": []}
+                (root / "catalog.json").write_text(json.dumps(old), encoding="utf-8")
+                with patch.object(sync, "fetch", side_effect=[json.dumps(src).encode(), blob, b"signature"]) as fetch:
+                    self.assertEqual(sync.sync(root, "https://center.example/catalog.json", False), 0)
+                new = json.loads((root / "catalog.json").read_text(encoding="utf-8"))
+                self.assertEqual(new["artifactBaseUrl"], "https://mirror.example/releases/")
+                self.assertNotIn("artifactBaseURL", new)
+                self.assertEqual(new["plugins"][0]["versions"][0]["url"], "packages/demo.hello-1.0.0.piplug")
+                self.assertEqual(fetch.call_args_list[1].args[0], "https://center.example/artifacts/hello.piplug")
 
 
 if __name__ == "__main__":
