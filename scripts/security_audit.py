@@ -459,8 +459,8 @@ def main(argv: list[str] | None = None) -> int:
     if not dirs and PLUGINS.is_dir():
         add(findings, "BLOCKER", "plugins", "no plugin directories found")
     for plugin_dir in dirs:
-        if not plugin_dir.is_dir() or not plugin_dir.is_relative_to(PLUGINS):
-            add(findings, "BLOCKER", str(plugin_dir), "plugin path must be a directory below plugins/")
+        if not plugin_dir.is_dir():
+            add(findings, "BLOCKER", str(plugin_dir), "plugin path must be a directory")
             continue
         plugin_findings, _ = audit_plugin(plugin_dir)
         findings.extend(plugin_findings)
@@ -469,8 +469,8 @@ def main(argv: list[str] | None = None) -> int:
 
     blockers = [finding for finding in findings if finding.severity == "BLOCKER"]
     reviews = [finding for finding in findings if finding.severity == "REVIEW"]
-    if not PLUGINS.is_dir():
-        print("Source audit skipped: this repository keeps packages only; every package in packages/ is audited directly.")
+    if not dirs and not PLUGINS.is_dir():
+        print("Source audit skipped: no source directories supplied and this repository keeps packages only.")
     print(f"Security audit: {len(dirs)} plugin source(s), {len(blockers)} blocker(s), {len(reviews)} manual-review signal(s)")
     for finding in findings:
         print(finding.render())
