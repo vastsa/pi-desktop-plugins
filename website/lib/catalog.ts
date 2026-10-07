@@ -1,4 +1,5 @@
 import { defaultLocale, siteLocales, type Locale } from "./i18n";
+import { resolvePackageUrl } from "./package-url";
 
 export type Permission = string;
 
@@ -100,10 +101,8 @@ export function currentVersion(plugin: Plugin): PluginVersion {
   return plugin.versions[0];
 }
 
-export function packageUrl(plugin: Plugin): string {
-  const url = currentVersion(plugin).url;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return new URL(url, CATALOG_URL).toString();
+export function packageUrl(plugin: Plugin, catalog: Pick<Catalog, "artifactBaseUrl">): string {
+  return resolvePackageUrl(currentVersion(plugin).url, CATALOG_URL, catalog.artifactBaseUrl);
 }
 
 export function formatBytes(bytes?: number): string {

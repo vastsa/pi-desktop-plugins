@@ -25,6 +25,10 @@ https://raw.githubusercontent.com/vastsa/pi-desktop-plugins/main/catalog.json
 Catalog responses are revalidated every five minutes. Set `CATALOG_URL` to
 use a different catalog provider during preview or development.
 
+Package downloads use the catalog's `artifactBaseUrl` when it is present, and
+otherwise resolve relative to `CATALOG_URL`. Run `pnpm test` with Node.js 22.6 or
+later to check URL resolution.
+
 The site defaults to English and uses `?lang=<locale>` for language selection.
 When no explicit language is present, it matches the browser's
 `Accept-Language` header against the locales available in the catalog. A manual
