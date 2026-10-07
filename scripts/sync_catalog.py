@@ -125,6 +125,16 @@ def plan_downloads(src: dict[str, Any]) -> list[dict[str, Any]]:
     return items
 
 
+def required_packages_match(src: dict[str, Any], packages_dir: Path) -> bool:
+    for item in plan_downloads(src):
+        if item["yanked"]:
+            continue
+        local = packages_dir / item["name"]
+        if not local.is_file() or sha256_file(local).lower() != item["shasum"]:
+            return False
+    return True
+
+
 def load_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
@@ -144,8 +154,9 @@ def sync(root: Path, source: str, dry_run: bool) -> int:
 
     existing = load_json(root / "catalog.json")
     if existing and canonical(existing) == canonical(mirrored):
-        print("catalog unchanged (ignoring generatedAt/catalogId/updatedAt)")
-        return 0
+        if required_packages_match(src, root / "packages"):
+            print("catalog unchanged (ignoring generatedAt/catalogId/updatedAt)")
+            return 0
 
     packages_dir = root / "packages"
     wanted = plan_downloads(src)
@@ -157,7 +168,7 @@ def sync(root: Path, source: str, dry_run: bool) -> int:
         for item in wanted:
             dest = staged_packages / item["name"]
             local = packages_dir / item["name"]
-            if local.exists() and sha256_file(local).lower() == item["shasum"]:
+            if local.is_file() and sha256_file(local).lower() == item["shasum"]:
                 shutil.copy2(local, dest)
                 print(f"keep {item['name']}")
                 continue
